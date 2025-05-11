@@ -6,15 +6,25 @@
     <title>Game</title>
 
     <link href="css/style.css" rel="stylesheet">
-    <script src="https://cdn.socket.io/socket.io-1.4.5.js">
-    </script> 
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script> 
     <script src="http://unpkg.com/tone"></script> 
     <script src="js/main.js" defer>
     </script>
 </head>
 <body>
-    <canvas id="ctx" width="500" height="500"></canvas>
-    <button id="sound-btn"></button>   
+    <div id="header">
+        <div id="signInDiv">
+            <label>Sign in:</label>
+            <input id="loginInput" type="text" placeholder="username"></input>
+            <input id="passwordInput" type="password" placeholder="password"></input>
+            <button id="signBtn">Sign in</button>
+        </div>
+        <button id="signOutBtn" style="display: none;">Sign out</button>
+    </div>
+    <div id="game">
+        <canvas id="ctx" width="500" height="500"></canvas>
+        <button id="sound-btn"></button>
+    </div>  
 </body>
 </html>
 

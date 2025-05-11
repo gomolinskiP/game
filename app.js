@@ -52,28 +52,56 @@ var io = require('socket.io')(serv, {
     },
     allowEIO3: true
 });
+
+//user connects to the app:
 io.sockets.on('connection', function(socket){
     socket.id = Math.random();
     socketList[socket.id] = socket;
     console.log("Socket connection: id=" + socket.id);
 
-    var player = Player(socket.id);
-    playerList[socket.id] = player;
+
+    let player = null;
+    socket.on('signIn', function(data){
+        if(data.username === 'test' && data.password === 'test'){
+            socket.emit('signInResponse', {success: true});
+            player = Player(socket.id);
+            playerList[socket.id] = player;
+        }
+        else{
+            socket.emit('signInResponse', {success: false});
+            socket.emit('error', "Wrong username or password.");
+        }
+    })
+
+    socket.on('signOut', function(){
+        if(player != null){
+            socket.emit('signOutResponse');
+            player = null;
+            delete playerList[socket.id];
+        }
+        else{
+            socket.emit('error', "Cannot logout, because user is not signed in.");
+        }
+    })
+
+
 
     socket.on('disconnect', function(){
         delete socketList[socket.id];
-        delete playerList[socket.id];
+        
     })
 
     socket.on('keyPress', function(data){
-        if(data.inputId === 'up')
-            player.pressingUp = data.state;
-        else if(data.inputId === 'down')
-            player.pressingDown = data.state;
-        else if(data.inputId === 'left')
-            player.pressingLeft = data.state;
-        else if(data.inputId === 'right')
-            player.pressingRight = data.state;
+        if(player != null){
+            if(data.inputId === 'up')
+                player.pressingUp = data.state;
+            else if(data.inputId === 'down')
+                player.pressingDown = data.state;
+            else if(data.inputId === 'left')
+                player.pressingLeft = data.state;
+            else if(data.inputId === 'right')
+                player.pressingRight = data.state;
+        }
     })
 
     socket.on('noteTest', function(){
@@ -97,7 +125,7 @@ setInterval(function(){
         })
     }
 
-    for(var i in socketList){
+    for(var i in playerList){
         var socket = socketList[i];
         socket.emit('newPosition', pack);
     }

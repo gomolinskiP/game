@@ -1,5 +1,38 @@
 var socket = io();
 
+//signIn:
+let signInDiv = document.getElementById("signInDiv")
+let loginInput = document.getElementById("loginInput")
+let passwordInput = document.getElementById("passwordInput")
+let signBtn = document.getElementById("signBtn")
+let signOutBtn = document.getElementById("signOutBtn")
+
+signBtn.onclick = function(){
+    socket.emit('signIn', 
+        {username: loginInput.value,
+        password: passwordInput.value});
+}
+
+socket.on('signInResponse', function(data){
+    if(data.success){
+        signInDiv.style.display = 'none';
+        signOutBtn.style.display = 'inline-block';
+    }
+})
+
+//signOut:
+signOutBtn.onclick = function(){
+    socket.emit('signOut')
+}
+
+socket.on('signOutResponse', function(){
+    ctx.clearRect(0, 0, 500, 500);
+    signInDiv.style.display = 'inline-block';
+    signOutBtn.style.display = 'none';
+})
+
+
+// game:
 var ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = '30px Arial';
 
@@ -12,6 +45,10 @@ socket.on('newPosition', function(data){
 
 socket.on('playTestNote', function(){
     synth.triggerAttackRelease("C" + + Math.floor(7*Math.random()), "8n");
+})
+
+socket.on('error', function(errorMsg){
+    alert(errorMsg)
 })
 
 
