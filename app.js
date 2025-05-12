@@ -3,6 +3,10 @@ var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
 
+//first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
+//mongoDB:
+var mongojs = require('mongojs')
+var db = mongojs('localhost:27017/mgrGame', ['account', 'progress']);
 
 //express for file communication:
 app.get('/', function(req, res){
@@ -62,15 +66,27 @@ io.sockets.on('connection', function(socket){
 
     let player = null;
     socket.on('signIn', function(data){
-        if(data.username === 'test' && data.password === 'test'){
-            socket.emit('signInResponse', {success: true});
-            player = Player(socket.id);
-            playerList[socket.id] = player;
-        }
-        else{
-            socket.emit('signInResponse', {success: false});
-            socket.emit('error', "Wrong username or password.");
-        }
+        db.account.find({username: data.username}, function(err, res){
+            if(res.length > 0){
+                //account exists
+                if(res[0].password == data.password){
+                    //password correct - sign in success
+                    socket.emit('signInResponse', {success: true});
+                    player = Player(socket.id);
+                    playerList[socket.id] = player;
+                }
+                else{
+                    //pasword incorrect
+                        socket.emit('signInResponse', {success: false});
+                        socket.emit('error', "Wrong password.");
+                }
+            }
+            else{
+                //incorrect username
+                socket.emit('signInResponse', {success: false});
+                socket.emit('error', "Wrong username.");
+            }
+        })
     })
 
     socket.on('signOut', function(){
@@ -82,6 +98,21 @@ io.sockets.on('connection', function(socket){
         else{
             socket.emit('error', "Cannot logout, because user is not signed in.");
         }
+    })
+
+    socket.on('signUp', function(data){
+        //HAVE TO ADD VALIDATION
+        db.account.find({username: data.username}, function(err, res){
+            if(res.length > 0){
+                //acount already exists
+                socket.emit('signUpResponse', {success: false});
+                socket.emit('error', "Account with this username already exists.");
+            }
+            else{
+                db.account.insertOne({username: data.username, password: data.password});
+                socket.emit('error', "Account created.");
+            }
+        })
     })
 
 
@@ -112,6 +143,8 @@ io.sockets.on('connection', function(socket){
     })
 })
 
+
+//main loop:
 setInterval(function(){
     var pack = [];
 

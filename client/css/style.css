@@ -24,3 +24,18 @@ input{
     text-align: center;
     max-width: 8ch;
 }
+
+input, button{
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+button:hover{
+    background: rgba(255, 255, 255, 0.75);
+}
+
+/* #sound-btn{
+
+} */

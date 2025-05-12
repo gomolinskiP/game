@@ -6,7 +6,10 @@ let loginInput = document.getElementById("loginInput")
 let passwordInput = document.getElementById("passwordInput")
 let signBtn = document.getElementById("signBtn")
 let signOutBtn = document.getElementById("signOutBtn")
+let signUpBtn = document.getElementById("signUpBtn")
 
+
+//sign IN:
 signBtn.onclick = function(){
     socket.emit('signIn', 
         {username: loginInput.value,
@@ -20,7 +23,7 @@ socket.on('signInResponse', function(data){
     }
 })
 
-//signOut:
+//sign Out:
 signOutBtn.onclick = function(){
     socket.emit('signOut')
 }
@@ -30,6 +33,19 @@ socket.on('signOutResponse', function(){
     signInDiv.style.display = 'inline-block';
     signOutBtn.style.display = 'none';
 })
+
+//sign UP:
+signUpBtn.onclick = function(){
+    socket.emit('signUp', 
+        {username: loginInput.value,
+        password: passwordInput.value})
+}
+// socket.on('signUpResponse', function(data){
+//     if(data.success){
+//         signInDiv.style.display = 'none';
+//         signOutBtn.style.display = 'inline-block';
+//     }
+// })
 
 
 // game:
