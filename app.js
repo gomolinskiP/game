@@ -79,7 +79,6 @@ io.sockets.on('connection', function(socket){
 
                     //retrieve player progress:
                     db.progress.find({username: data.username}, function(err, res){
-                        console.log(res)
                         if(res.length > 0){
                             //progress already in DB
                             player = Player(socket.id, res[0].x, res[0].y)
