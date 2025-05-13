@@ -21,10 +21,10 @@ console.log("Server started.");
 var socketList = {};
 var playerList = {};
 
-var Player = function(id){
+var Player = function(id, x, y){
     var self = {
-        x: 250,
-        y: 250,
+        x: x,
+        y: y,
         id: id,
         number: "" + Math.floor(10*Math.random()),
         pressingUp: false,
@@ -57,6 +57,8 @@ var io = require('socket.io')(serv, {
     allowEIO3: true
 });
 
+
+
 //user connects to the app:
 io.sockets.on('connection', function(socket){
     socket.id = Math.random();
@@ -65,6 +67,7 @@ io.sockets.on('connection', function(socket){
 
 
     let player = null;
+    let username = null;
     socket.on('signIn', function(data){
         db.account.find({username: data.username}, function(err, res){
             if(res.length > 0){
@@ -72,8 +75,24 @@ io.sockets.on('connection', function(socket){
                 if(res[0].password == data.password){
                     //password correct - sign in success
                     socket.emit('signInResponse', {success: true});
-                    player = Player(socket.id);
-                    playerList[socket.id] = player;
+                    username = data.username;
+
+                    //retrieve player progress:
+                    db.progress.find({username: data.username}, function(err, res){
+                        console.log(res)
+                        if(res.length > 0){
+                            //progress already in DB
+                            player = Player(socket.id, res[0].x, res[0].y)
+                            
+                        }
+                        else{
+                            //no progress, set starting values
+                            player = Player(socket.id, 250, 250);
+                            db.progress.insert({username: data.username, x: 250, y: 250})
+                        }
+                        playerList[socket.id] = player;
+                    })
+                    // playerList[socket.id] = player;
                 }
                 else{
                     //pasword incorrect
@@ -92,6 +111,9 @@ io.sockets.on('connection', function(socket){
     socket.on('signOut', function(){
         if(player != null){
             socket.emit('signOutResponse');
+
+            db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
+            username = null;
             player = null;
             delete playerList[socket.id];
         }
@@ -118,6 +140,13 @@ io.sockets.on('connection', function(socket){
 
 
     socket.on('disconnect', function(){
+        if(playerList[socket.id]){
+            //a logged in player disconnected
+            delete playerList[socket.id];
+            db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
+            username = null;
+        }
+        
         delete socketList[socket.id];
         
     })
