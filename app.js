@@ -21,17 +21,17 @@ console.log("Server started.");
 var socketList = {};
 var playerList = {};
 
-var Player = function(id, x, y){
+var Player = function(id, x, y, username){
     var self = {
         x: x,
         y: y,
         id: id,
-        number: "" + Math.floor(10*Math.random()),
+        name: username,
         pressingUp: false,
         pressingDown: false,
         pressingLeft: false,
         pressingRight: false,
-        speed: 5,
+        speed: 10,
     }
     self.updatePosition = function(){
         if(self.pressingUp)
@@ -81,12 +81,12 @@ io.sockets.on('connection', function(socket){
                     db.progress.find({username: data.username}, function(err, res){
                         if(res.length > 0){
                             //progress already in DB
-                            player = Player(socket.id, res[0].x, res[0].y)
+                            player = Player(socket.id, res[0].x, res[0].y, data.username)
                             
                         }
                         else{
                             //no progress, set starting values
-                            player = Player(socket.id, 250, 250);
+                            player = Player(socket.id, 250, 250, data.username);
                             db.progress.insert({username: data.username, x: 250, y: 250})
                         }
                         playerList[socket.id] = player;
@@ -182,7 +182,7 @@ setInterval(function(){
         pack.push({
             x: player.x,
             y: player.y,
-            number: player.number
+            name: player.name
         })
     }
 

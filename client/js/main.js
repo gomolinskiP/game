@@ -8,9 +8,13 @@ let signBtn = document.getElementById("signBtn")
 let signOutBtn = document.getElementById("signOutBtn")
 let signUpBtn = document.getElementById("signUpBtn")
 
+let gameWidth = 1000;
+let gameHeight = 1000;
+
 
 //sign IN:
-signBtn.onclick = function(){
+signBtn.onclick = function(e){
+    e.preventDefault();
     socket.emit('signIn', 
         {username: loginInput.value,
         password: passwordInput.value});
@@ -24,18 +28,20 @@ socket.on('signInResponse', function(data){
 })
 
 //sign Out:
-signOutBtn.onclick = function(){
+signOutBtn.onclick = function(e){
+    e.preventDefault();
     socket.emit('signOut')
 }
 
 socket.on('signOutResponse', function(){
-    ctx.clearRect(0, 0, 500, 500);
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
     signInDiv.style.display = 'inline-block';
     signOutBtn.style.display = 'none';
 })
 
 //sign UP:
-signUpBtn.onclick = function(){
+signUpBtn.onclick = function(e){
+    e.preventDefault();
     socket.emit('signUp', 
         {username: loginInput.value,
         password: passwordInput.value})
@@ -51,11 +57,19 @@ signUpBtn.onclick = function(){
 // game:
 var ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = '30px Arial';
+const image = new Image();
+image.src = "../placeholder.png"
 
 socket.on('newPosition', function(data){
-    ctx.clearRect(0, 0, 500, 500);
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    ctx.strokeStyle = "red";
+    ctx.beginPath();
+    ctx.roundRect(10, 20, 150, 100, 0);
+    ctx.stroke();
+
     for(var i=0; i < data.length; i++){
-        ctx.fillText(data[i].number, data[i].x, data[i].y);
+        ctx.drawImage(image, data[i].x, data[i].y);
+        ctx.fillText(data[i].name, data[i].x, data[i].y);
     };
 })
 

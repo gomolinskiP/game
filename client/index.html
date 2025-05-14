@@ -14,16 +14,18 @@
 <body>
     <div id="header">
         <div id="signInDiv">
-            <label>Sign in:</label>
-            <input id="loginInput" type="text" placeholder="username"></input>
-            <input id="passwordInput" type="password" placeholder="password"></input>
-            <button id="signBtn">Sign in</button>
-            <button id="signUpBtn">Sign up</button>
+            <form>
+                <label>Sign in:</label>
+                <input id="loginInput" type="text" placeholder="username"></input>
+                <input id="passwordInput" type="password" placeholder="password"></input>
+                <button id="signBtn" type="submit">Sign in</button>
+                <button id="signUpBtn">Sign up</button>
+            </form>
         </div>
         <button id="signOutBtn" style="display: none;">Sign out</button>
     </div>
     <div id="game">
-        <canvas id="ctx" width="500" height="500"></canvas>
+        <canvas id="ctx" width="1000" height="1000"></canvas>
         <button id="sound-btn">📢</button>
     </div>  
 </body>
