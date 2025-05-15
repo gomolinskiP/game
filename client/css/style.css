@@ -5,10 +5,7 @@ body{
 }
 
 #ctx{
-    /* width: 80vw;
-    height: 80vh; */
-
-    border: 1px solid #111111
+    border: 1px solid #111111;
 }
 
 #header{
@@ -36,6 +33,6 @@ button:hover{
     background: rgba(255, 255, 255, 0.75);
 }
 
-/* #sound-btn{
-
-} */
+#sound-btn{
+    display: inline-block;
+}

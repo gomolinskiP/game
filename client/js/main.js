@@ -8,9 +8,6 @@ let signBtn = document.getElementById("signBtn")
 let signOutBtn = document.getElementById("signOutBtn")
 let signUpBtn = document.getElementById("signUpBtn")
 
-let gameWidth = 1000;
-let gameHeight = 1000;
-
 
 //sign IN:
 signBtn.onclick = function(e){
@@ -55,20 +52,44 @@ signUpBtn.onclick = function(e){
 
 
 // game:
+
+let gameWidth = window.innerWidth - 100;
+let gameHeight = window.innerHeight - 100;
+
 var ctx = document.getElementById("ctx").getContext("2d");
-ctx.font = '30px Arial';
+var canvas = document.getElementById("ctx")
+
+
+
+canvasResize()
+
+function canvasResize() {
+    gameWidth = window.innerWidth - 100;
+    gameHeight = window.innerHeight - 100;
+    canvas.width = gameWidth;
+    canvas.height = gameHeight;
+};
+
+window.addEventListener('resize', canvasResize);
+
+
 const image = new Image();
 image.src = "../placeholder.png"
 
 socket.on('newPosition', function(data){
-    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    ctx.fillStyle = "#006e56";
     ctx.strokeStyle = "red";
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
     ctx.beginPath();
     ctx.roundRect(10, 20, 150, 100, 0);
     ctx.stroke();
 
+    ctx.fillStyle = "black";
     for(var i=0; i < data.length; i++){
         ctx.drawImage(image, data[i].x, data[i].y);
+        ctx.textAlign = "center";
+        ctx.font = '20px Arial';
         ctx.fillText(data[i].name, data[i].x, data[i].y);
     };
 })
@@ -84,49 +105,91 @@ socket.on('error', function(errorMsg){
 
 
 document.onkeydown = function(event){
-    if(event.keyCode === 68) //d
-        socket.emit('keyPress', {
+    switch(event.key){
+        case "d":
+            socket.emit('keyPress', {
             inputId: 'right',
             state: true
-        });
-    if(event.keyCode === 83) //s
-        socket.emit('keyPress', {
+            });
+            break;
+        case "s":
+            socket.emit('keyPress', {
             inputId: 'down',
             state: true
-        });
-    if(event.keyCode === 65) //a
-        socket.emit('keyPress', {
+            });
+            break;
+        case "a":
+            socket.emit('keyPress', {
             inputId: 'left',
             state: true
-        });
-    if(event.keyCode === 87) //w
-        socket.emit('keyPress', {
+            });
+            break;
+        case "w":
+            socket.emit('keyPress', {
             inputId: 'up',
             state: true
-        });
+            });
+            break;
+        case " ":
+            socket.emit('noteTest');
+            break;
+    }
+
+    // if(event.key === "d") //d
+    //     socket.emit('keyPress', {
+    //         inputId: 'right',
+    //         state: true
+    //     });
+    // if(event.key === "s") //s
+    //     socket.emit('keyPress', {
+    //         inputId: 'down',
+    //         state: true
+    //     });
+    // if(event.key === "a") //a
+    //     socket.emit('keyPress', {
+    //         inputId: 'left',
+    //         state: true
+    //     });
+    // if(event.key === "w") //w
+    //     socket.emit('keyPress', {
+    //         inputId: 'up',
+    //         state: true
+    //     });
 }
 
 document.onkeyup = function(event){
-    if(event.keyCode === 68) //d
-        socket.emit('keyPress', {
+    switch(event.key){
+        case "d":
+            socket.emit('keyPress', {
             inputId: 'right',
             state: false
-        });
-    if(event.keyCode === 83) //s
-        socket.emit('keyPress', {
+            });
+            break;
+        case "s":
+            socket.emit('keyPress', {
             inputId: 'down',
             state: false
-        });
-    if(event.keyCode === 65) //a
-        socket.emit('keyPress', {
+            });
+            break;
+        case "a":
+            socket.emit('keyPress', {
             inputId: 'left',
             state: false
-        });
-    if(event.keyCode === 87) //w
-        socket.emit('keyPress', {
+            });
+            break;
+        case "w":
+            socket.emit('keyPress', {
             inputId: 'up',
             state: false
-        });
+            });
+            break;
+        case " ":
+            socket.emit('keyPress', {
+            inputId: 'space',
+            state: false
+            });
+            break;
+    }
 }
 
 

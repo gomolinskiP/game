@@ -164,7 +164,7 @@ io.sockets.on('connection', function(socket){
     })
 
     socket.on('noteTest', function(){
-        for(var i in socketList){
+        for(var i in playerList){
             var socket = socketList[i];
             socket.emit('playTestNote');
         }
