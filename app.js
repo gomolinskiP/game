@@ -1,17 +1,65 @@
 const { transports } = require('engine.io');
 var express = require('express');
 var app = express();
+const session = require('express-session')
 var serv = require('http').Server(app);
+
+const { checkLoggedIn, bypassLogin } = require('./middlewares')
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
 //mongoDB:
 var mongojs = require('mongojs')
 var db = mongojs('localhost:27017/mgrGame', ['account', 'progress']);
 
+
+app.use(express.urlencoded({extended: false}));
+app.use(session({
+    secret: 'placeholder_session_secret',
+    resave: true,
+    saveUninitialized: false,
+    name: 'cookieName'
+}))
 //express for file communication:
-app.get('/', function(req, res){
+app.get('/', bypassLogin, function(req, res){
     res.sendFile(__dirname + '/client/index.html');
 });
+
+app.post('/', function(req, postRes){
+     console.log(req.body)
+     db.account.findOne({username: req.body.username}, (err, res)=>{
+        if(res){
+            //account exists
+                if(res.password == req.body.password){
+                    //password correct - sign in success
+                    console.log("//password correct - sign in success")
+
+                    //create session:
+                    req.session.user = {username: req.body.username}
+
+                    postRes.redirect('/game');
+                }
+                else{
+                    //pasword incorrect
+                        console.log("incorrect password")
+                }
+            }
+            else{
+                //incorrect username
+                console.log("no such username")
+            }
+        })
+})
+
+app.get('/game', checkLoggedIn, function(req, res){
+    res.sendFile(__dirname + '/client/game.html')
+})
+
+app.get('/logout', function(req, res){
+    req.session.destroy();
+    res.clearCookie('cookieName');
+    res.redirect('/game');
+})
+
 app.use('/client', express.static(__dirname + '/client'));
 app.use(express.static('client'));
 serv.listen(2000);

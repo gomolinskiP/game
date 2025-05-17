@@ -3,32 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game</title>
-
+    <title>Home</title>
     <link href="css/style.css" rel="stylesheet">
-    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script> 
-    <script src="http://unpkg.com/tone"></script> 
-    <script src="js/main.js" defer>
-    </script>
 </head>
 <body>
     <div id="header">
-        
-        <div id="signInDiv">
-            <form>
-                <label>Sign in:</label>
-                <input id="loginInput" type="text" placeholder="username"></input>
-                <input id="passwordInput" type="password" placeholder="password"></input>
-                <button id="signBtn" type="submit">Sign in</button>
-                <button id="signUpBtn">Sign up</button>
-            </form>
-        </div>
-        <button id="signOutBtn" style="display: none;">Sign out</button>
-        <button id="sound-btn">📢</button>
+        <a href="./game">Play the game</a>
     </div>
-    <div id="game">
-        <canvas id="ctx" width="1000" height="1000"></canvas>
-    </div>  
+    <form action="/" method="post">
+        <label>Sign in:</label>
+            <input id="loginInput" type="text" placeholder="username" name="username"></input>
+            <input id="passwordInput" type="password" placeholder="password" name="password"></input>
+            <button id="signBtn" type="submit">Sign in</button>
+            <button id="signUpBtn">Sign up</button>
+    </form>    
 </body>
 </html>
 
