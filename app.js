@@ -8,17 +8,19 @@ const { checkLoggedIn, bypassLogin } = require('./middlewares')
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
 //mongoDB:
-var mongojs = require('mongojs')
+var mongojs = require('mongojs');
 var db = mongojs('localhost:27017/mgrGame', ['account', 'progress']);
 
 
 app.use(express.urlencoded({extended: false}));
-app.use(session({
+const ses = session({
     secret: 'placeholder_session_secret',
     resave: true,
     saveUninitialized: false,
     name: 'cookieName'
-}))
+});
+
+app.use(ses);
 //express for file communication:
 app.get('/', bypassLogin, function(req, res){
     res.sendFile(__dirname + '/client/index.html');
@@ -105,55 +107,76 @@ var io = require('socket.io')(serv, {
     allowEIO3: true
 });
 
-
+io.use((socket, next)=>{
+    ses(socket.request, {}, next)
+})
 
 //user connects to the app:
 io.sockets.on('connection', function(socket){
     socket.id = Math.random();
     socketList[socket.id] = socket;
+
     console.log("Socket connection: id=" + socket.id);
+
+    let username = socket.request.session?.user?.username;
+    console.log(username)
+    //retrieve player progress:
+    db.progress.find({username: username}, function(err, res){
+        if(res.length > 0){
+            //progress already in DB
+            player = Player(socket.id, res[0].x, res[0].y, username)
+                            
+        }
+        else{
+            //no progress, set starting values
+            player = Player(socket.id, 250, 250, username);
+            db.progress.insert({username: username, x: 250, y: 250})
+        }
+        playerList[socket.id] = player;
+    })    
+
+    
 
 
     let player = null;
-    let username = null;
-    socket.on('signIn', function(data){
-        db.account.find({username: data.username}, function(err, res){
-            if(res.length > 0){
-                //account exists
-                if(res[0].password == data.password){
-                    //password correct - sign in success
-                    socket.emit('signInResponse', {success: true});
-                    username = data.username;
+    // socket.on('signIn', function(data){
+    //     db.account.find({username: data.username}, function(err, res){
+    //         if(res.length > 0){
+    //             //account exists
+    //             if(res[0].password == data.password){
+    //                 //password correct - sign in success
+    //                 socket.emit('signInResponse', {success: true});
+    //                 username = data.username;
 
-                    //retrieve player progress:
-                    db.progress.find({username: data.username}, function(err, res){
-                        if(res.length > 0){
-                            //progress already in DB
-                            player = Player(socket.id, res[0].x, res[0].y, data.username)
+    //                 //retrieve player progress:
+    //                 db.progress.find({username: data.username}, function(err, res){
+    //                     if(res.length > 0){
+    //                         //progress already in DB
+    //                         player = Player(socket.id, res[0].x, res[0].y, data.username)
                             
-                        }
-                        else{
-                            //no progress, set starting values
-                            player = Player(socket.id, 250, 250, data.username);
-                            db.progress.insert({username: data.username, x: 250, y: 250})
-                        }
-                        playerList[socket.id] = player;
-                    })
-                    // playerList[socket.id] = player;
-                }
-                else{
-                    //pasword incorrect
-                        socket.emit('signInResponse', {success: false});
-                        socket.emit('error', "Wrong password.");
-                }
-            }
-            else{
-                //incorrect username
-                socket.emit('signInResponse', {success: false});
-                socket.emit('error', "Wrong username.");
-            }
-        })
-    })
+    //                     }
+    //                     else{
+    //                         //no progress, set starting values
+    //                         player = Player(socket.id, 250, 250, data.username);
+    //                         db.progress.insert({username: data.username, x: 250, y: 250})
+    //                     }
+    //                     playerList[socket.id] = player;
+    //                 })
+    //                 // playerList[socket.id] = player;
+    //             }
+    //             else{
+    //                 //pasword incorrect
+    //                     socket.emit('signInResponse', {success: false});
+    //                     socket.emit('error', "Wrong password.");
+    //             }
+    //         }
+    //         else{
+    //             //incorrect username
+    //             socket.emit('signInResponse', {success: false});
+    //             socket.emit('error', "Wrong username.");
+    //         }
+    //     })
+    // })
 
     socket.on('signOut', function(){
         if(player != null){

@@ -9,40 +9,40 @@ let signOutBtn = document.getElementById("signOutBtn")
 let signUpBtn = document.getElementById("signUpBtn")
 
 
-//sign IN:
-signBtn.onclick = function(e){
-    e.preventDefault();
-    socket.emit('signIn', 
-        {username: loginInput.value,
-        password: passwordInput.value});
-}
+// //sign IN:
+// signBtn.onclick = function(e){
+//     e.preventDefault();
+//     socket.emit('signIn', 
+//         {username: loginInput.value,
+//         password: passwordInput.value});
+// }
 
-socket.on('signInResponse', function(data){
-    if(data.success){
-        signInDiv.style.display = 'none';
-        signOutBtn.style.display = 'inline-block';
-    }
-})
+// socket.on('signInResponse', function(data){
+//     if(data.success){
+//         signInDiv.style.display = 'none';
+//         signOutBtn.style.display = 'inline-block';
+//     }
+// })
 
-//sign Out:
-signOutBtn.onclick = function(e){
-    e.preventDefault();
-    socket.emit('signOut')
-}
+// //sign Out:
+// signOutBtn.onclick = function(e){
+//     e.preventDefault();
+//     socket.emit('signOut')
+// }
 
-socket.on('signOutResponse', function(){
-    ctx.clearRect(0, 0, gameWidth, gameHeight);
-    signInDiv.style.display = 'inline-block';
-    signOutBtn.style.display = 'none';
-})
+// socket.on('signOutResponse', function(){
+//     ctx.clearRect(0, 0, gameWidth, gameHeight);
+//     signInDiv.style.display = 'inline-block';
+//     signOutBtn.style.display = 'none';
+// })
 
-//sign UP:
-signUpBtn.onclick = function(e){
-    e.preventDefault();
-    socket.emit('signUp', 
-        {username: loginInput.value,
-        password: passwordInput.value})
-}
+// //sign UP:
+// signUpBtn.onclick = function(e){
+//     e.preventDefault();
+//     socket.emit('signUp', 
+//         {username: loginInput.value,
+//         password: passwordInput.value})
+// }
 // socket.on('signUpResponse', function(data){
 //     if(data.success){
 //         signInDiv.style.display = 'none';
