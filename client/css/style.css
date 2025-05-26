@@ -36,3 +36,12 @@ button:hover{
 #sound-btn{
     display: inline-block;
 }
+
+#errorMsg{
+    font-weight: bold;
+    background-color: red;
+    display: inline-block;
+    padding: 10px;
+    margin: 20px;
+    border-radius: 4px;
+}

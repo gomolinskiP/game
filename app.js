@@ -26,9 +26,9 @@ app.get('/', bypassLogin, function(req, res){
     res.sendFile(__dirname + '/client/index.html');
 });
 
-app.post('/', function(req, postRes){
-     console.log(req.body)
-     db.account.findOne({username: req.body.username}, (err, res)=>{
+app.post('/login', function(req, postRes){
+    console.log(req.body)
+    db.account.findOne({username: req.body.username}, (err, res)=>{
         if(res){
             //account exists
                 if(res.password == req.body.password){
@@ -43,13 +43,30 @@ app.post('/', function(req, postRes){
                 else{
                     //pasword incorrect
                         console.log("incorrect password")
+                        postRes.redirect('/?err=wrongPass');
                 }
             }
             else{
                 //incorrect username
                 console.log("no such username")
+                postRes.redirect('/?err=noUser');
             }
         })
+})
+
+app.post('/register', function(req, postRes){
+    //HAVE TO ADD VALIDATION
+    db.account.findOne({username: req.body.username}, function(err, res){
+        console.log(res)
+        if(res){
+            //acount already exists
+            postRes.redirect('/?err=usernameTaken');
+        }
+        else{
+            db.account.insertOne({username: req.body.username, password: req.body.password});
+            postRes.redirect('/?err=registerSuccess');
+        }
+    })
 })
 
 app.get('/game', checkLoggedIn, function(req, res){
@@ -118,6 +135,7 @@ io.sockets.on('connection', function(socket){
 
     console.log("Socket connection: id=" + socket.id);
 
+    //get username from logged session:
     let username = socket.request.session?.user?.username;
     console.log(username)
     //retrieve player progress:

@@ -5,18 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
     <link href="css/style.css" rel="stylesheet">
+    <script src="js/errorMsg.js" defer></script>
 </head>
 <body>
     <div id="header">
         <a href="./game">Play the game</a>
-        <form action="/" method="post">
+        <form action="/login" method="post">
             <label>Sign in:</label>
             <input id="loginInput" type="text" placeholder="username" name="username"></input>
             <input id="passwordInput" type="password" placeholder="password" name="password"></input>
             <button id="signBtn" type="submit">Sign in</button>
-            <button id="signUpBtn">Sign up</button>
-        </form>    
+        </form>
+        <form action="/register" method="post" autocomplete="off">
+            <label>Register:</label>
+            <input id="registerInput" type="text" placeholder="username" name="username" autocomplete="off"></input>
+            <input id="registerInput" type="password" placeholder="password" name="password" autocomplete="new-password"></input>
+            <button id="signUpBtn">Register</button>
+        </form>
     </div>
+    <div id="errorMsg" style="display: none;"></div>
 
 </body>
 </html>

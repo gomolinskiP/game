@@ -3,7 +3,7 @@ exports.checkLoggedIn = (req, res, next)=>{
         next();
     }
     else{
-        res.redirect('/')
+        res.redirect('/?err=notLogged')
     }
 }
 
