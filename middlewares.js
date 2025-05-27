@@ -1,4 +1,4 @@
-exports.checkLoggedIn = (req, res, next)=>{
+export function checkLoggedIn(req, res, next){
     if(req.session.user){
         next();
     }
@@ -7,7 +7,7 @@ exports.checkLoggedIn = (req, res, next)=>{
     }
 }
 
-exports.bypassLogin = (req, res, next)=>{
+export function bypassLogin(req, res, next){
     if(!req.session.user){
         next()
     }
