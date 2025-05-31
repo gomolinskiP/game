@@ -58,30 +58,47 @@ export default function webSocketSetUp(serv, ses, db){
         socket.id = Math.random();
         socketList[socket.id] = socket;
 
+        let player = null;
+
         console.log("Socket connection: id=" + socket.id);
 
         //get username from logged session:
         let username = socket.request.session?.user?.username;
-        console.log(username)
-        //retrieve player progress:
-        db.progress.find({username: username}, function(err, res){
-            if(res.length > 0){
-                //progress already in DB
-                player = Player(socket.id, res[0].x, res[0].y, username)
-                                
-            }
-            else{
-                //no progress, set starting values
-                player = Player(socket.id, 250, 250, username);
-                db.progress.insert({username: username, x: 250, y: 250})
-            }
-            playerList[socket.id] = player;
-        })    
+
+        //check if user is already in game on another socket:
+        let loggedPlayer = Object.values(playerList).find(player => player.name === username)
+        if(loggedPlayer != undefined){
+            player = playerList[loggedPlayer.id]
+            // console.log(playerList[loggedPlayer.id])
+        }
+        else{
+            //retrieve player progress:
+            db.progress.find({username: username}, function(err, res){
+                if(res.length > 0){
+                    //progress already in DB
+                    player = Player(socket.id, res[0].x, res[0].y, username)
+                                    
+                }
+                else{
+                    //no progress, set starting values
+                    player = Player(socket.id, 250, 250, username);
+                    db.progress.insert({username: username, x: 250, y: 250})
+                }
+                playerList[socket.id] = player;
+            })   
+        }
+        // console.log(loggedPlayer)
+        // if(isAlreadyPlaying != -1){
+        //     player = playerList[isAlreadyPlaying]
+        // }
+
+
+         
 
         
 
 
-        let player = null;
+        
         // socket.on('signIn', function(data){
         //     db.account.find({username: data.username}, function(err, res){
         //         if(res.length > 0){
@@ -156,6 +173,7 @@ export default function webSocketSetUp(serv, ses, db){
             if(playerList[socket.id]){
                 //a logged in player disconnected
                 delete playerList[socket.id];
+                // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this
                 db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
                 username = null;
             }
@@ -200,7 +218,7 @@ export default function webSocketSetUp(serv, ses, db){
             })
         }
 
-        for(var i in playerList){
+        for(var i in socketList){
             var socket = socketList[i];
             socket.emit('newPosition', pack);
         }
