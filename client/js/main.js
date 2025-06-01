@@ -1,60 +1,9 @@
 var socket = io();
 
-//signIn:
-let signInDiv = document.getElementById("signInDiv")
-let loginInput = document.getElementById("loginInput")
-let passwordInput = document.getElementById("passwordInput")
-let signBtn = document.getElementById("signBtn")
-let signOutBtn = document.getElementById("signOutBtn")
-let signUpBtn = document.getElementById("signUpBtn")
-
-
-// //sign IN:
-// signBtn.onclick = function(e){
-//     e.preventDefault();
-//     socket.emit('signIn', 
-//         {username: loginInput.value,
-//         password: passwordInput.value});
-// }
-
-// socket.on('signInResponse', function(data){
-//     if(data.success){
-//         signInDiv.style.display = 'none';
-//         signOutBtn.style.display = 'inline-block';
-//     }
-// })
-
-// //sign Out:
-// signOutBtn.onclick = function(e){
-//     e.preventDefault();
-//     socket.emit('signOut')
-// }
-
-// socket.on('signOutResponse', function(){
-//     ctx.clearRect(0, 0, gameWidth, gameHeight);
-//     signInDiv.style.display = 'inline-block';
-//     signOutBtn.style.display = 'none';
-// })
-
-// //sign UP:
-// signUpBtn.onclick = function(e){
-//     e.preventDefault();
-//     socket.emit('signUp', 
-//         {username: loginInput.value,
-//         password: passwordInput.value})
-// }
-// socket.on('signUpResponse', function(data){
-//     if(data.success){
-//         signInDiv.style.display = 'none';
-//         signOutBtn.style.display = 'inline-block';
-//     }
-// })
-
-
 // game:
 
-let gameWidth = window.innerWidth - 100;
-let gameHeight = window.innerHeight - 100;
+let gameWidth = window.innerWidth;
+let gameHeight = window.innerHeight;
 
 var ctx = document.getElementById("ctx").getContext("2d");
 var canvas = document.getElementById("ctx")
@@ -64,8 +13,8 @@ var canvas = document.getElementById("ctx")
 canvasResize()
 
 function canvasResize() {
-    gameWidth = window.innerWidth - 100;
-    gameHeight = window.innerHeight - 100;
+    gameWidth = window.innerWidth;
+    gameHeight = window.innerHeight - 50;
     canvas.width = gameWidth;
     canvas.height = gameHeight;
 };
@@ -89,7 +38,7 @@ socket.on('newPosition', function(data){
     for(var i=0; i < data.length; i++){
         ctx.drawImage(image, data[i].x, data[i].y);
         ctx.textAlign = "center";
-        ctx.font = '20px Arial';
+        ctx.font = '20px Cascadia Mono';
         ctx.fillText(data[i].name, data[i].x, data[i].y);
     };
 })

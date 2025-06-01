@@ -10,19 +10,26 @@
 <body>
     <div id="header">
         <a href="./game">Play the game</a>
-        <form action="/login" method="post">
+
+        <div id="errorMsg" style="display: none;"></div>
+    </div>
+
+    <div>
+         <form action="/login" method="post">
             <label>Sign in:</label>
             <input id="loginInput" type="text" placeholder="username" name="username"></input>
             <input id="passwordInput" type="password" placeholder="password" name="password"></input>
             <button id="signBtn" type="submit">Sign in</button>
-        </form>
+        </form>       
+    </div>
+
+    <div>
         <form action="/register" method="post" autocomplete="off">
             <label>Register:</label>
             <input id="registerInput" type="text" placeholder="username" name="username" autocomplete="off"></input>
             <input id="registerInput" type="password" placeholder="password" name="password" autocomplete="new-password"></input>
             <button id="signUpBtn">Register</button>
         </form>
-        <div id="errorMsg" style="display: none;"></div>
     </div>
 
 </body>

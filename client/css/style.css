@@ -1,20 +1,29 @@
 body{
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: monospace;
     text-align: center;
     padding-top: 10vh;
 }
 
 #ctx{
-    border: 1px solid #111111;
+    border: none;
+    margin: 0;
+    padding: 0;
+
+    position: absolute;
+    left: 0;
+    top: 50px;
+
 }
 
 #header{
     width: 100%;
+    height: 50px;
     position: absolute;
     top: 0;
     left: 0;
     background: #006e56;
     padding: 10px 0;
+
 }
 
 input{
@@ -27,10 +36,17 @@ input, button{
     border: none;
     border-radius: 5px;
     padding: 5px;
+
+    font-family: monospace;
+}
+
+label{
+    font-weight: bold;
 }
 
 button:hover{
     background: rgba(255, 255, 255, 0.75);
+    font-weight: bold;
 }
 
 #sound-btn{
@@ -44,4 +60,22 @@ button:hover{
     padding: 10px;
     margin: 20px;
     border-radius: 4px;
+}
+
+a{
+    color: #ffd900;
+}
+
+a:hover{
+    color: #a68700;
+    filter: brightness(2);
+    font-weight: bold;
+}
+
+form{
+    background-color: #006e56;
+
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px;
 }

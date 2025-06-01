@@ -12,6 +12,7 @@ export var Player = function(id, x, y, username){
         y: y,
         id: id,
         name: username,
+        socketIDs: [id],
         pressingUp: false,
         pressingDown: false,
         pressingLeft: false,
@@ -69,6 +70,7 @@ export default function webSocketSetUp(serv, ses, db){
         let loggedPlayer = Object.values(playerList).find(player => player.name === username)
         if(loggedPlayer != undefined){
             player = playerList[loggedPlayer.id]
+            player.socketIDs.push(socket.id)
             // console.log(playerList[loggedPlayer.id])
         }
         else{
@@ -87,99 +89,28 @@ export default function webSocketSetUp(serv, ses, db){
                 playerList[socket.id] = player;
             })   
         }
-        // console.log(loggedPlayer)
-        // if(isAlreadyPlaying != -1){
-        //     player = playerList[isAlreadyPlaying]
-        // }
-
-
-         
-
-        
-
-
-        
-        // socket.on('signIn', function(data){
-        //     db.account.find({username: data.username}, function(err, res){
-        //         if(res.length > 0){
-        //             //account exists
-        //             if(res[0].password == data.password){
-        //                 //password correct - sign in success
-        //                 socket.emit('signInResponse', {success: true});
-        //                 username = data.username;
-
-        //                 //retrieve player progress:
-        //                 db.progress.find({username: data.username}, function(err, res){
-        //                     if(res.length > 0){
-        //                         //progress already in DB
-        //                         player = Player(socket.id, res[0].x, res[0].y, data.username)
-                                
-        //                     }
-        //                     else{
-        //                         //no progress, set starting values
-        //                         player = Player(socket.id, 250, 250, data.username);
-        //                         db.progress.insert({username: data.username, x: 250, y: 250})
-        //                     }
-        //                     playerList[socket.id] = player;
-        //                 })
-        //                 // playerList[socket.id] = player;
-        //             }
-        //             else{
-        //                 //pasword incorrect
-        //                     socket.emit('signInResponse', {success: false});
-        //                     socket.emit('error', "Wrong password.");
-        //             }
-        //         }
-        //         else{
-        //             //incorrect username
-        //             socket.emit('signInResponse', {success: false});
-        //             socket.emit('error', "Wrong username.");
-        //         }
-        //     })
-        // })
-
-        socket.on('signOut', function(){
-            if(player != null){
-                socket.emit('signOutResponse');
-
-                db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
-                username = null;
-                player = null;
-                delete playerList[socket.id];
-            }
-            else{
-                socket.emit('error', "Cannot logout, because user is not signed in.");
-            }
-        })
-
-        socket.on('signUp', function(data){
-            //HAVE TO ADD VALIDATION
-            db.account.find({username: data.username}, function(err, res){
-                if(res.length > 0){
-                    //acount already exists
-                    socket.emit('signUpResponse', {success: false});
-                    socket.emit('error', "Account with this username already exists.");
-                }
-                else{
-                    db.account.insertOne({username: data.username, password: data.password});
-                    socket.emit('error', "Account created.");
-                }
-            })
-        })
-
-
-
+ 
         socket.on('disconnect', function(){
-            if(playerList[socket.id]){
-                //a logged in player disconnected
-                delete playerList[socket.id];
-                // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this
+            //socket disconnected
+
+            //check if player is logged from multiple sockets:
+            if(player.socketIDs.length > 1){
+                    //if yes remove this socket from the player object
+                    let index = player.socketIDs.indexOf(socket.id)
+                    if(index > -1){
+                        player.socketIDs.splice(index, 1)
+                        playerList[player.socketIDs[0]] = player;
+                        delete playerList[socket.id]
+                    }
+                } else{
+                    delete playerList[socket.id];
+                }
+                
+                // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
                 db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
                 username = null;
-            }
-            
+             
             delete socketList[socket.id];
-            
         })
 
         socket.on('keyPress', function(data){
