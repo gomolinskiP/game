@@ -14,7 +14,7 @@ export default function expressSetUp(db){
     const { checkLoggedIn, bypassLogin } = require('./middlewares')
     var serv = require('http').Server(app);
 
-    app.use(favicon('client/placeholder.png'))
+    app.use(favicon('client/img/placeholder.png'))
     app.use(express.urlencoded({extended: false}));
     const ses = session({
         secret: 'placeholder_session_secret',

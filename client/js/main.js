@@ -8,7 +8,20 @@ let gameHeight = window.innerHeight;
 var ctx = document.getElementById("ctx").getContext("2d");
 var canvas = document.getElementById("ctx")
 
+var Player = function(initPack){
+    var self = {
+        x: initPack.x,
+        y: initPack.y,
+        id: initPack.id,
+        name: initPack.name,
+    }
+    Player.list[self.id] = self;
+    return self;
+}
+Player.list = {}
 
+
+let selfId = null;
 
 canvasResize()
 
@@ -22,25 +35,90 @@ function canvasResize() {
 window.addEventListener('resize', canvasResize);
 
 
-const image = new Image();
-image.src = "../placeholder.png"
+const Img = {}
 
-socket.on('newPosition', function(data){
+Img.player = new Image();
+Img.player.src = "../img/placeholder.png"
+
+Img.map = new Image();
+Img.map.src = "../img/map.png"
+
+function drawMap(){
+    ctx.drawImage(Img.map, 0, 0)
+}
+
+socket.on('init', function(data){
+    for(var i=0; i<data.player.length; i++){
+        new Player(data.player[i]);
+        console.log(data.player[i])
+    }
+})
+
+socket.on('update', function(data){
+    for(var i=0; i<data.player.length; i++){
+        let pack = data.player[i]
+        let p = Player.list[pack.id]
+
+        if(p){
+            p.x = pack.x
+            p.y = pack.y
+        }
+    }
+})
+
+socket.on('remove', function(data){
+    for(var i=0; i<data.player.length; i++){
+        delete Player.list[data.player[i]]
+    }
+})
+
+
+//game loop:
+setInterval(function(){
+    
     ctx.fillStyle = "#006e56";
     ctx.strokeStyle = "red";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    // drawMap()
 
     ctx.beginPath();
     ctx.roundRect(10, 20, 150, 100, 0);
     ctx.stroke();
 
     ctx.fillStyle = "black";
-    for(var i=0; i < data.length; i++){
-        ctx.drawImage(image, data[i].x, data[i].y);
+    for(var i in Player.list){
+        ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
         ctx.textAlign = "center";
         ctx.font = '20px Cascadia Mono';
-        ctx.fillText(data[i].name, data[i].x, data[i].y);
+        ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
     };
+}, 40)
+
+
+// socket.on('newPosition', function(data){
+//     console.log(selfId)
+//     ctx.fillStyle = "#006e56";
+//     ctx.strokeStyle = "red";
+//     ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+//     drawMap()
+
+//     ctx.beginPath();
+//     ctx.roundRect(10, 20, 150, 100, 0);
+//     ctx.stroke();
+
+//     ctx.fillStyle = "black";
+//     for(var i=0; i < data.length; i++){
+//         ctx.drawImage(Img.player, data[i].x, data[i].y);
+//         ctx.textAlign = "center";
+//         ctx.font = '20px Cascadia Mono';
+//         ctx.fillText(data[i].name, data[i].x, data[i].y);
+//     };
+// })
+
+socket.on('selfIdInfo', function(id){
+    selfId = id;
 })
 
 socket.on('playTestNote', function(){
@@ -83,27 +161,6 @@ document.onkeydown = function(event){
             socket.emit('noteTest');
             break;
     }
-
-    // if(event.key === "d") //d
-    //     socket.emit('keyPress', {
-    //         inputId: 'right',
-    //         state: true
-    //     });
-    // if(event.key === "s") //s
-    //     socket.emit('keyPress', {
-    //         inputId: 'down',
-    //         state: true
-    //     });
-    // if(event.key === "a") //a
-    //     socket.emit('keyPress', {
-    //         inputId: 'left',
-    //         state: true
-    //     });
-    // if(event.key === "w") //w
-    //     socket.emit('keyPress', {
-    //         inputId: 'up',
-    //         state: true
-    //     });
 }
 
 document.onkeyup = function(event){
@@ -153,5 +210,6 @@ playBTN.addEventListener("click", ()=>{
         Tone.start();
 
     socket.emit('noteTest')
+    console.log(Player.list)
     // synth.triggerAttackRelease("C3", "8n");
 })

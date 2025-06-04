@@ -28,6 +28,7 @@ export var Player = function(id, x, y, username){
             self.x -= self.speed;
         if(self.pressingRight)
             self.x += self.speed;
+
     }
 
     return self;
@@ -87,7 +88,16 @@ export default function webSocketSetUp(serv, ses, db){
                     db.progress.insert({username: username, x: 250, y: 250})
                 }
                 playerList[socket.id] = player;
-            })   
+                initPack.player.push({
+                    x: player.x,
+                    y: player.y,
+                    id: player.id,
+                    name: player.name,
+                })
+                socket.emit('selfIdInfo', player.id)
+            })
+            
+            
         }
  
         socket.on('disconnect', function(){
@@ -101,9 +111,11 @@ export default function webSocketSetUp(serv, ses, db){
                         player.socketIDs.splice(index, 1)
                         playerList[player.socketIDs[0]] = player;
                         delete playerList[socket.id]
+                        removePack.player.push[socket.id]
                     }
                 } else{
                     delete playerList[socket.id];
+                    removePack.player.push[socket.id]
                 }
                 
                 // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
@@ -135,11 +147,17 @@ export default function webSocketSetUp(serv, ses, db){
     })
 
 
+
+    let initPack = {player: []};
+    let updatePack = {player: []};
+    let removePack = {player: []};
+
     //main loop:
     setInterval(function(){
         var pack = [];
 
-        for(var i in playerList){
+        for(var i in playerList){ 
+
             var player = playerList[i];
             player.updatePosition();
             pack.push({
@@ -147,11 +165,26 @@ export default function webSocketSetUp(serv, ses, db){
                 y: player.y,
                 name: player.name
             })
+
+            
+            updatePack.player.push(player)
         }
 
         for(var i in socketList){
             var socket = socketList[i];
-            socket.emit('newPosition', pack);
+            // socket.emit('newPosition', pack);
+
+            //init should be only on start:
+            socket.emit('init', initPack)
+
+            socket.emit('update', updatePack)
+
+            socket.emit('remove', removePack)
         }
+
+        // TODO: only first player sees all the players bcs we empty the lists here - we have to do better with the initPack!!!!
+        initPack.player = []
+        updatePack.player = []
+        removePack.player = []
     }, 1000/25);
 }
