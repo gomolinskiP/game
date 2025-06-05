@@ -48,13 +48,17 @@ function drawMap(){
 }
 
 socket.on('init', function(data){
+    console.log("InitPack:")
+    console.log(data.player)
     for(var i=0; i<data.player.length; i++){
         new Player(data.player[i]);
-        console.log(data.player[i])
     }
 })
 
 socket.on('update', function(data){
+    console.log("updatePack:")
+    console.log(data)
+
     for(var i=0; i<data.player.length; i++){
         let pack = data.player[i]
         let p = Player.list[pack.id]
@@ -62,6 +66,8 @@ socket.on('update', function(data){
         if(p){
             p.x = pack.x
             p.y = pack.y
+        } else{
+            new Player(data.player[i]);
         }
     }
 })
@@ -70,12 +76,15 @@ socket.on('remove', function(data){
     for(var i=0; i<data.player.length; i++){
         delete Player.list[data.player[i]]
     }
+
+    console.log("removePack:")
+    console.log(data)
 })
 
 
 //game loop:
 setInterval(function(){
-    
+    // console.log(Player.list)
     ctx.fillStyle = "#006e56";
     ctx.strokeStyle = "red";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
@@ -88,9 +97,16 @@ setInterval(function(){
 
     ctx.fillStyle = "black";
     for(var i in Player.list){
-        ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
         ctx.textAlign = "center";
-        ctx.font = '20px Cascadia Mono';
+        if(Player.list[i].id == selfId){
+            ctx.filter = "hue-rotate(180deg)"
+            ctx.font = 'bold 20px Cascadia Mono';
+        }
+        else{
+            ctx.font = '16px Cascadia Mono';
+        }
+        ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
+        ctx.filter = "none";
         ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
     };
 }, 40)
