@@ -104,9 +104,9 @@ export default function webSocketSetUp(serv, ses, db){
                     })
                 }
 
+                initPack.selfId = player.id;
                 socket.emit('init', initPack)
                 player.needsUpdate = true
-                socket.emit('selfIdInfo', player.id)
             })
             
             

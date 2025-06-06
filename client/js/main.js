@@ -44,10 +44,16 @@ Img.map = new Image();
 Img.map.src = "../img/map.png"
 
 function drawMap(){
-    ctx.drawImage(Img.map, 0, 0)
+    if(Player.list[selfId]){
+        let x = gameWidth/2 - Player.list[selfId].x;
+        let y = gameHeight/2 - Player.list[selfId].y;
+        ctx.drawImage(Img.map, x, y)
+    }
+    
 }
 
 socket.on('init', function(data){
+    selfId = data.selfId;
     console.log("InitPack:")
     console.log(data.player)
     for(var i=0; i<data.player.length; i++){
@@ -82,14 +88,13 @@ socket.on('remove', function(data){
 })
 
 
-//game loop:
-setInterval(function(){
+function gameLoop(){
     // console.log(Player.list)
     ctx.fillStyle = "#006e56";
     ctx.strokeStyle = "red";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-    // drawMap()
+    drawMap()
 
     ctx.beginPath();
     ctx.roundRect(10, 20, 150, 100, 0);
@@ -105,11 +110,48 @@ setInterval(function(){
         else{
             ctx.font = '16px Cascadia Mono';
         }
-        ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
+
+        let x = Player.list[i].x - Player.list[selfId].x + gameWidth/2;
+        let y = Player.list[i].y - Player.list[selfId].y + gameHeight/2;
+
+        ctx.drawImage(Img.player, x, y);
         ctx.filter = "none";
-        ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
+        ctx.fillText(Player.list[i].name, x, y);
     };
-}, 40)
+
+    requestAnimationFrame(gameLoop)
+}
+
+requestAnimationFrame(gameLoop);
+
+// //game loop:
+// setInterval(function(){
+//     // console.log(Player.list)
+//     ctx.fillStyle = "#006e56";
+//     ctx.strokeStyle = "red";
+//     ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+//     // drawMap()
+
+//     ctx.beginPath();
+//     ctx.roundRect(10, 20, 150, 100, 0);
+//     ctx.stroke();
+
+//     ctx.fillStyle = "black";
+//     for(var i in Player.list){
+//         ctx.textAlign = "center";
+//         if(Player.list[i].id == selfId){
+//             ctx.filter = "hue-rotate(180deg)"
+//             ctx.font = 'bold 20px Cascadia Mono';
+//         }
+//         else{
+//             ctx.font = '16px Cascadia Mono';
+//         }
+//         ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
+//         ctx.filter = "none";
+//         ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
+//     };
+// }, 40)
 
 
 // socket.on('newPosition', function(data){
@@ -133,9 +175,6 @@ setInterval(function(){
 //     };
 // })
 
-socket.on('selfIdInfo', function(id){
-    selfId = id;
-})
 
 socket.on('playTestNote', function(){
     synth.triggerAttackRelease("C" + + Math.floor(7*Math.random()), "8n");
