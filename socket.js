@@ -13,31 +13,98 @@ export var Player = function(id, x, y, username){
         id: id,
         name: username,
         socketIDs: [id],
+        needsUpdate: true,
         pressingUp: false,
         pressingDown: false,
         pressingLeft: false,
         pressingRight: false,
+        pressingSpace: false,
         speed: 10,
+        lastAngle: 90
     }
-    self.updatePosition = function(){
 
+
+    self.updatePosition = function(){
         
-        if(self.pressingUp)
-            self.y -= self.speed;
-        if(self.pressingDown)
-            self.y += self.speed;
-        if(self.pressingLeft)
-            self.x -= self.speed;
-        if(self.pressingRight)
-            self.x += self.speed;
+        
+
+        if(self.pressingUp){
+            self.dirY = -1
+        } 
+        else if(self.pressingDown){
+            self.dirY = 1
+        }
+        else{
+            self.dirY = 0
+        }
+            
+        if(self.pressingLeft){
+            self.dirX = -1
+        }
+            
+        else if(self.pressingRight){
+            self.dirX = 1
+        }
+        else{
+            self.dirX = 0
+        }
 
         if(!self.pressingUp && !self.pressingDown && !self.pressingLeft && !self.pressingRight)
             self.needsUpdate = false
+        else{
+            self.lastAngle = Math.atan2(self.dirY, self.dirX) * 180/Math.PI;
+            self.spdX = Math.cos(self.lastAngle/180*Math.PI) * self.speed
+            self.spdY = Math.sin(self.lastAngle/180*Math.PI) * self.speed
+
+            self.x += self.spdX
+            self.y += self.spdY
+        }
+
+        
+
+        if(self.pressingSpace){
+            let bulletId = Math.random()
+            Bullet(self, self.lastAngle)
+        }
     }
 
     return self;
 }
 
+export var Bullet = function(parent, angle){
+    let self = {
+        id: Math.random(),
+        parent: parent,
+        x: parent.x,
+        y: parent.y,
+        speed: 20,
+    }
+
+    self.spdX = Math.cos(angle/180*Math.PI) * self.speed
+    self.spdY = Math.sin(angle/180*Math.PI) * self.speed
+
+    self.update = function(){
+        self.x += self.spdX;
+        self.y += self.spdY;
+    }
+
+    setTimeout(()=>{
+        // delete itself after timeout??
+        delete Bullet.list[self.id]
+        removePack.bullet.push(self.id)
+
+    }, 1000)
+
+    Bullet.list[self.id] = self;
+
+    return self;
+}
+Bullet.list = {};
+
+
+    let initPack = {player: [], bullet: []};
+    let updatePack = {player: [], bullet: []};
+    let removePack = {player: [], bullet: []};
 
 export default function webSocketSetUp(serv, ses, db){
 
@@ -143,14 +210,32 @@ export default function webSocketSetUp(serv, ses, db){
             if(player != null){
                 player.needsUpdate = true
 
-                if(data.inputId === 'up')
-                    player.pressingUp = data.state;
-                else if(data.inputId === 'down')
-                    player.pressingDown = data.state;
-                else if(data.inputId === 'left')
-                    player.pressingLeft = data.state;
-                else if(data.inputId === 'right')
-                    player.pressingRight = data.state;
+                switch(data.inputId){
+                    case "up":
+                        player.pressingUp = data.state;
+                        break;
+                    case "down":
+                        player.pressingDown = data.state;
+                        break;
+                    case "left":
+                        player.pressingLeft = data.state;
+                        break;
+                    case "right":
+                        player.pressingRight = data.state;
+                        break;
+                    case "space":
+                        player.pressingSpace = data.state;
+                        break;
+                }
+
+                // if(data.inputId === 'up')
+                //     player.pressingUp = data.state;
+                // else if(data.inputId === 'down')
+                //     player.pressingDown = data.state;
+                // else if(data.inputId === 'left')
+                //     player.pressingLeft = data.state;
+                // else if(data.inputId === 'right')
+                //     player.pressingRight = data.state;
             }
         })
 
@@ -166,9 +251,7 @@ export default function webSocketSetUp(serv, ses, db){
 
 
 
-    let initPack = {player: []};
-    let updatePack = {player: []};
-    let removePack = {player: []};
+
 
     //main loop:
     setInterval(function(){
@@ -193,12 +276,26 @@ export default function webSocketSetUp(serv, ses, db){
                     name: player.name
                 })
             }
-            
-            
-            
+        }
 
+        for(var i in Bullet.list){ 
+
+            var bullet = Bullet.list[i];
             
-            
+            // if(player.needsUpdate){
+                bullet.update();
+                // pack.push({
+                //     x: player.x,
+                //     y: player.y,
+                //     name: player.name
+                // })
+                // console.log(pack)
+                updatePack.bullet.push({
+                    x: bullet.x,
+                    y: bullet.y,
+                    id: bullet.id,
+                })
+            // }
         }
 
         //emit to all sockets:
@@ -209,12 +306,12 @@ export default function webSocketSetUp(serv, ses, db){
             //init should be only on start:
             // socket.emit('init', initPack)
 
-            if(updatePack.player.length>0){
+            if(updatePack.player.length>0 || updatePack.bullet.length>0){
                 socket.emit('update', updatePack)
             }
             
 
-            if(removePack.player.length>0){
+            if(removePack.player.length>0 || removePack.bullet.length>0){
                 socket.emit('remove', removePack)
             }
             
@@ -224,5 +321,7 @@ export default function webSocketSetUp(serv, ses, db){
         
         updatePack.player = []
         removePack.player = []
+        updatePack.bullet = []
+        removePack.bullet = []
     }, 1000/25);
 }

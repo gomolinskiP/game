@@ -20,6 +20,17 @@ var Player = function(initPack){
 }
 Player.list = {}
 
+var Bullet = function(initPack){
+    var self = {
+        x: initPack.x,
+        y: initPack.y,
+        id: initPack.id,
+    }
+    Bullet.list[self.id] = self;
+    return self;
+}
+Bullet.list = {}
+
 
 let selfId = null;
 
@@ -41,7 +52,7 @@ Img.player = new Image();
 Img.player.src = "../img/placeholder.png"
 
 Img.map = new Image();
-Img.map.src = "../img/map.png"
+Img.map.src = "../img/map.jpg"
 
 function drawMap(){
     if(Player.list[selfId]){
@@ -58,6 +69,10 @@ socket.on('init', function(data){
     console.log(data.player)
     for(var i=0; i<data.player.length; i++){
         new Player(data.player[i]);
+    }
+
+    for(var i=0; i<data.bullet.length; i++){
+        new Bullet(data.bullet[i]);
     }
 })
 
@@ -76,11 +91,27 @@ socket.on('update', function(data){
             new Player(data.player[i]);
         }
     }
+
+    for(var i=0; i<data.bullet.length; i++){
+        let pack = data.bullet[i]
+        let b = Bullet.list[pack.id]
+
+        if(b){
+            b.x = pack.x
+            b.y = pack.y
+        } else{
+            new Bullet(data.bullet[i]);
+        }
+    }
 })
 
 socket.on('remove', function(data){
     for(var i=0; i<data.player.length; i++){
         delete Player.list[data.player[i]]
+    }
+
+    for(var i=0; i<data.bullet.length; i++){
+        delete Bullet.list[data.bullet[i]]
     }
 
     console.log("removePack:")
@@ -114,10 +145,17 @@ function gameLoop(){
         let x = Player.list[i].x - Player.list[selfId].x + gameWidth/2;
         let y = Player.list[i].y - Player.list[selfId].y + gameHeight/2;
 
-        ctx.drawImage(Img.player, x, y);
+        ctx.drawImage(Img.player, x-32, y-32);
         ctx.filter = "none";
-        ctx.fillText(Player.list[i].name, x, y);
+        ctx.fillText(Player.list[i].name, x, y-32);
     };
+
+    for(var i in Bullet.list){
+        let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;
+        let y = Bullet.list[i].y - Player.list[selfId].y + gameHeight/2;
+
+        ctx.fillRect(x-5, y-5, 10, 10);
+    }
 
     requestAnimationFrame(gameLoop)
 }
@@ -213,7 +251,11 @@ document.onkeydown = function(event){
             });
             break;
         case " ":
-            socket.emit('noteTest');
+            socket.emit('keyPress', {
+                inputId: 'space',
+                state: true
+            });
+            // socket.emit('noteTest');
             break;
     }
 }
