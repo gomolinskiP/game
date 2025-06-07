@@ -15,6 +15,19 @@ var Player = function(initPack){
         id: initPack.id,
         name: initPack.name,
     }
+    let synOptions = {
+        noise:{
+            type: "pink"
+        },
+        envelope:{
+            attack: 0.15,
+            decay: 0.15,
+        }
+    }
+
+    self.synthTimeout = false;
+    self.synth = new Tone.NoiseSynth(synOptions).toDestination();
+
     Player.list[self.id] = self;
     return self;
 }
@@ -26,7 +39,13 @@ var Bullet = function(initPack){
         y: initPack.y,
         id: initPack.id,
     }
+
+    self.synth = new Tone.Synth().toDestination();
     Bullet.list[self.id] = self;
+    self.interval = setInterval(()=>{
+        self.synth.triggerAttackRelease("C5", "64n")
+    }, 200)
+    self.synth.triggerAttackRelease("C6", "32n")
     return self;
 }
 Bullet.list = {}
@@ -77,14 +96,23 @@ socket.on('init', function(data){
 })
 
 socket.on('update', function(data){
-    console.log("updatePack:")
-    console.log(data)
+    // console.log("updatePack:")
+    // console.log(data)
 
     for(var i=0; i<data.player.length; i++){
         let pack = data.player[i]
         let p = Player.list[pack.id]
 
         if(p){
+            if((p.x != pack.x || p.y != pack.y)){
+                if(!p.synthTimeout){
+                    p.synthTimeout = true
+                    p.synth.triggerAttackRelease("128n");
+                    setTimeout(()=>{
+                    p.synthTimeout = false
+                }, 300)
+                }
+            }
             p.x = pack.x
             p.y = pack.y
         } else{
@@ -111,6 +139,8 @@ socket.on('remove', function(data){
     }
 
     for(var i=0; i<data.bullet.length; i++){
+        clearInterval(Bullet.list[data.bullet[i]].interval)
+        Bullet.list[data.bullet[i]].synth.triggerAttackRelease("C3", "32n");
         delete Bullet.list[data.bullet[i]]
     }
 
@@ -159,64 +189,16 @@ function gameLoop(){
 
     requestAnimationFrame(gameLoop)
 }
-
 requestAnimationFrame(gameLoop);
-
-// //game loop:
-// setInterval(function(){
-//     // console.log(Player.list)
-//     ctx.fillStyle = "#006e56";
-//     ctx.strokeStyle = "red";
-//     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
-//     // drawMap()
-
-//     ctx.beginPath();
-//     ctx.roundRect(10, 20, 150, 100, 0);
-//     ctx.stroke();
-
-//     ctx.fillStyle = "black";
-//     for(var i in Player.list){
-//         ctx.textAlign = "center";
-//         if(Player.list[i].id == selfId){
-//             ctx.filter = "hue-rotate(180deg)"
-//             ctx.font = 'bold 20px Cascadia Mono';
-//         }
-//         else{
-//             ctx.font = '16px Cascadia Mono';
-//         }
-//         ctx.drawImage(Img.player, Player.list[i].x, Player.list[i].y);
-//         ctx.filter = "none";
-//         ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
-//     };
-// }, 40)
-
-
-// socket.on('newPosition', function(data){
-//     console.log(selfId)
-//     ctx.fillStyle = "#006e56";
-//     ctx.strokeStyle = "red";
-//     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
-//     drawMap()
-
-//     ctx.beginPath();
-//     ctx.roundRect(10, 20, 150, 100, 0);
-//     ctx.stroke();
-
-//     ctx.fillStyle = "black";
-//     for(var i=0; i < data.length; i++){
-//         ctx.drawImage(Img.player, data[i].x, data[i].y);
-//         ctx.textAlign = "center";
-//         ctx.font = '20px Cascadia Mono';
-//         ctx.fillText(data[i].name, data[i].x, data[i].y);
-//     };
-// })
 
 
 socket.on('playTestNote', function(){
     synth.triggerAttackRelease("C" + + Math.floor(7*Math.random()), "8n");
 })
+
+// socket.on('playNote', function(){
+//     synth.triggerAttackRelease("C" + + 4, "16n");
+// })
 
 socket.on('error', function(errorMsg){
     alert(errorMsg)
@@ -300,7 +282,7 @@ document.onkeyup = function(event){
 const playBTN = document.getElementById("sound-btn");
 
 const synth = new Tone.Synth().toDestination();
-
+const synth2 = new Tone.Synth().toDestination();
 
 playBTN.addEventListener("click", ()=>{
     if(Tone.context.state != "running")

@@ -20,7 +20,8 @@ export var Player = function(id, x, y, username){
         pressingRight: false,
         pressingSpace: false,
         speed: 10,
-        lastAngle: 90
+        lastAngle: 90,
+        shootTimeout: false,
     }
 
 
@@ -52,6 +53,7 @@ export var Player = function(id, x, y, username){
         if(!self.pressingUp && !self.pressingDown && !self.pressingLeft && !self.pressingRight)
             self.needsUpdate = false
         else{
+            self.dirY *= 58/100 //SCALER if map image is in perspective
             self.lastAngle = Math.atan2(self.dirY, self.dirX) * 180/Math.PI;
             self.spdX = Math.cos(self.lastAngle/180*Math.PI) * self.speed
             self.spdY = Math.sin(self.lastAngle/180*Math.PI) * self.speed
@@ -63,8 +65,17 @@ export var Player = function(id, x, y, username){
         
 
         if(self.pressingSpace){
-            let bulletId = Math.random()
-            Bullet(self, self.lastAngle)
+
+            if(!self.shootTimeout){
+                self.shootTimeout = true;
+                let bulletId = Math.random()
+                Bullet(self, self.lastAngle)
+
+                setTimeout(()=>{
+                    self.shootTimeout = false
+                }, 100)
+            }
+            
         }
     }
 
@@ -224,23 +235,15 @@ export default function webSocketSetUp(serv, ses, db){
                         player.pressingRight = data.state;
                         break;
                     case "space":
+                        if(!player.shootTimeout) socket.emit('playNote');
                         player.pressingSpace = data.state;
                         break;
                 }
-
-                // if(data.inputId === 'up')
-                //     player.pressingUp = data.state;
-                // else if(data.inputId === 'down')
-                //     player.pressingDown = data.state;
-                // else if(data.inputId === 'left')
-                //     player.pressingLeft = data.state;
-                // else if(data.inputId === 'right')
-                //     player.pressingRight = data.state;
             }
         })
 
         socket.on('noteTest', function(){
-            console.log()
+            // console.log()
 
             for(var i in playerList){
                 var socket = socketList[i];
@@ -301,10 +304,6 @@ export default function webSocketSetUp(serv, ses, db){
         //emit to all sockets:
         for(var i in socketList){
             var socket = socketList[i];
-            // socket.emit('newPosition', pack);
-
-            //init should be only on start:
-            // socket.emit('init', initPack)
 
             if(updatePack.player.length>0 || updatePack.bullet.length>0){
                 socket.emit('update', updatePack)
@@ -316,8 +315,6 @@ export default function webSocketSetUp(serv, ses, db){
             }
             
         }
-
-        // TODO: only first player sees all the players bcs we empty the lists here - we have to do better with the initPack!!!!
         
         updatePack.player = []
         removePack.player = []
