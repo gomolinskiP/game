@@ -20,7 +20,7 @@ var Player = function(initPack){
             type: "pink"
         },
         envelope:{
-            attack: 0.15,
+            attack: 0.35,
             decay: 0.15,
         }
     }
@@ -32,6 +32,8 @@ var Player = function(initPack){
     return self;
 }
 Player.list = {}
+const reverb = new Tone.Reverb();
+reverb.toDestination();
 
 var Bullet = function(initPack){
     var self = {
@@ -40,7 +42,8 @@ var Bullet = function(initPack){
         id: initPack.id,
     }
 
-    self.synth = new Tone.Synth().toDestination();
+    self.synth = new Tone.DuoSynth();
+    self.synth.connect(reverb);
     Bullet.list[self.id] = self;
     self.interval = setInterval(()=>{
         self.synth.triggerAttackRelease("C5", "64n")
@@ -110,7 +113,7 @@ socket.on('update', function(data){
                     p.synth.triggerAttackRelease("128n");
                     setTimeout(()=>{
                     p.synthTimeout = false
-                }, 300)
+                }, 250)
                 }
             }
             p.x = pack.x
