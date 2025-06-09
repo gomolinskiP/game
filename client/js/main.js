@@ -26,7 +26,11 @@ var Player = function(initPack){
     }
 
     self.synthTimeout = false;
-    self.synth = new Tone.NoiseSynth(synOptions).toDestination();
+    self.pan3d = new Tone.Panner3D(0, 0, 0);
+    self.pan3d.connect(reverb);
+    self.synth = new Tone.NoiseSynth(synOptions);
+    self.synth.connect(self.pan3d);
+    
 
     Player.list[self.id] = self;
     return self;
@@ -43,12 +47,16 @@ var Bullet = function(initPack){
     }
 
     self.synth = new Tone.DuoSynth();
-    self.synth.connect(reverb);
+    self.pan3d = new Tone.Panner3D(0, 0, 0);
+    self.pan3d.connect(reverb);
+    self.synth.connect(self.pan3d);
+
     Bullet.list[self.id] = self;
     self.interval = setInterval(()=>{
         self.synth.triggerAttackRelease("C5", "64n")
     }, 200)
     self.synth.triggerAttackRelease("C6", "32n")
+
     return self;
 }
 Bullet.list = {}
@@ -109,15 +117,21 @@ socket.on('update', function(data){
         if(p){
             if((p.x != pack.x || p.y != pack.y)){
                 if(!p.synthTimeout){
+                    //TODO synth timeout aproach incorrect if player connected through multiple sockets - maybe just disallow multisocket connection?
                     p.synthTimeout = true
                     p.synth.triggerAttackRelease("128n");
                     setTimeout(()=>{
-                    p.synthTimeout = false
-                }, 250)
+                        p.synthTimeout = false
+                    }, 250)
                 }
             }
             p.x = pack.x
             p.y = pack.y
+            p.pan3d.setPosition(
+                (p.x - Player.list[selfId].x)*0.05,
+                (p.y - Player.list[selfId].y)*0.05,
+                0
+            )
         } else{
             new Player(data.player[i]);
         }
@@ -130,8 +144,18 @@ socket.on('update', function(data){
         if(b){
             b.x = pack.x
             b.y = pack.y
+            b.pan3d.setPosition(
+                (b.x - Player.list[selfId].x)*0.1,
+                (b.y - Player.list[selfId].y)*0.1,
+                0
+            )
         } else{
-            new Bullet(data.bullet[i]);
+            let b = new Bullet(data.bullet[i]);
+            b.pan3d.setPosition(
+                (b.x - Player.list[selfId].x)*0.1,
+                (b.y - Player.list[selfId].y)*0.1,
+                0
+            )
         }
     }
 })
@@ -142,9 +166,16 @@ socket.on('remove', function(data){
     }
 
     for(var i=0; i<data.bullet.length; i++){
-        clearInterval(Bullet.list[data.bullet[i]].interval)
-        Bullet.list[data.bullet[i]].synth.triggerAttackRelease("C3", "32n");
-        delete Bullet.list[data.bullet[i]]
+        let bID = data.bullet[i]
+
+        clearInterval(Bullet.list[bID].interval)
+        Bullet.list[bID].synth.triggerAttackRelease("C3", "32n");
+        setTimeout(()=>{
+            Bullet.list[bID].synth.dispose();
+            Bullet.list[bID].pan3d.dispose();
+            delete Bullet.list[bID]
+        }, 500)
+        
     }
 
     console.log("removePack:")
@@ -292,6 +323,6 @@ playBTN.addEventListener("click", ()=>{
         Tone.start();
 
     socket.emit('noteTest')
-    console.log(Player.list)
+    console.log(Bullet.list)
     // synth.triggerAttackRelease("C3", "8n");
 })

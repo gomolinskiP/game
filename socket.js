@@ -154,6 +154,11 @@ export default function webSocketSetUp(serv, ses, db){
         if(loggedPlayer != undefined){
             player = playerList[loggedPlayer.id]
             player.socketIDs.push(socket.id)
+
+
+            initPack.selfId = player.id;
+            socket.emit('init', initPack)
+            player.needsUpdate = true
             // console.log(playerList[loggedPlayer.id])
         }
         else{
