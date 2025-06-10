@@ -5,7 +5,7 @@ import {transports} from 'engine.io'
 
 
 import expressSetUp from './express.js'
-import webSocketSetUp, {Player, Bullet} from './socket.js'
+import webSocketSetUp, {Entity, Player, Bullet} from './socket.js'
 
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod

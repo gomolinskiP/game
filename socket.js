@@ -6,116 +6,110 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export var Player = function(id, x, y, username){
-    var self = {
-        x: x,
-        y: y,
-        id: id,
-        name: username,
-        socketIDs: [id],
-        needsUpdate: true,
-        pressingUp: false,
-        pressingDown: false,
-        pressingLeft: false,
-        pressingRight: false,
-        pressingSpace: false,
-        speed: 10,
-        lastAngle: 90,
-        shootTimeout: false,
+export class Entity{
+    constructor(x, y){
+        this.x = x;
+        this.y = y;
+    }
+}
+
+export class Player extends Entity{
+    constructor(id, x, y, username){
+        super(x, y);
+        this.id = id;
+        this.name = username;
+
+        this.socketIDs = [id];
+        this.needsUpdate = true;
+        this.pressingUp = false;
+        this.pressingDown = false;
+        this.pressingLeft = false;
+        this.pressingRight = false;
+        this.pressingSpace = false;
+        this.speed = 10;
+        this.lastAngle = 90;
+        this.shootTimeout = false;
+
+        return this;
     }
 
-
-    self.updatePosition = function(){
-        
-        
-
-        if(self.pressingUp){
-            self.dirY = -1
+    updatePosition(){
+        if(this.pressingUp){
+            this.dirY = -1
         } 
-        else if(self.pressingDown){
-            self.dirY = 1
+        else if(this.pressingDown){
+            this.dirY = 1
         }
         else{
-            self.dirY = 0
+            this.dirY = 0
         }
-            
-        if(self.pressingLeft){
-            self.dirX = -1
+        if(this.pressingLeft){
+            this.dirX = -1
         }
-            
-        else if(self.pressingRight){
-            self.dirX = 1
+        else if(this.pressingRight){
+            this.dirX = 1
         }
         else{
-            self.dirX = 0
+            this.dirX = 0
         }
 
-        if(!self.pressingUp && !self.pressingDown && !self.pressingLeft && !self.pressingRight)
-            self.needsUpdate = false
+        if(!this.pressingUp && !this.pressingDown && !this.pressingLeft && !this.pressingRight)
+            this.needsUpdate = false
         else{
-            self.dirY *= 58/100 //SCALER if map image is in perspective
-            self.lastAngle = Math.atan2(self.dirY, self.dirX) * 180/Math.PI;
-            self.spdX = Math.cos(self.lastAngle/180*Math.PI) * self.speed
-            self.spdY = Math.sin(self.lastAngle/180*Math.PI) * self.speed
+            this.dirY *= 58/100 //SCALER if map image is in perspective
+            this.lastAngle = Math.atan2(this.dirY, this.dirX) * 180/Math.PI;
+            this.spdX = Math.cos(this.lastAngle/180*Math.PI) * this.speed
+            this.spdY = Math.sin(this.lastAngle/180*Math.PI) * this.speed
 
-            self.x += self.spdX
-            self.y += self.spdY
+            this.x += this.spdX
+            this.y += this.spdY
         }
 
-        
+        if(this.pressingSpace){
 
-        if(self.pressingSpace){
-
-            if(!self.shootTimeout){
-                self.shootTimeout = true;
+            if(!this.shootTimeout){
+                this.shootTimeout = true;
                 let bulletId = Math.random()
-                Bullet(self, self.lastAngle)
+                new Bullet(this, this.lastAngle)
 
                 setTimeout(()=>{
-                    self.shootTimeout = false
+                    this.shootTimeout = false
                 }, 100)
             }
-            
         }
     }
-
-    return self;
 }
 
-export var Bullet = function(parent, angle){
-    let self = {
-        id: Math.random(),
-        parent: parent,
-        x: parent.x,
-        y: parent.y,
-        speed: 20,
+export class Bullet extends Entity{
+    static list = {};
+
+    constructor(parent, angle){
+        super(parent.x, parent.y);
+        this.id = Math.random();
+        this.parent = parent;
+        this.speed = 20;
+
+        this.spdX = Math.cos(angle/180*Math.PI) * this.speed;
+        this.spdY = Math.sin(angle/180*Math.PI) * this.speed;
+
+        Bullet.list[this.id] = this;
+        setTimeout(()=>{
+            // delete itself after timeout??
+            removePack.bullet.push(this.id)
+            delete Bullet.list[this.id]
+        }, 1000)
+        return this;
     }
 
-    self.spdX = Math.cos(angle/180*Math.PI) * self.speed
-    self.spdY = Math.sin(angle/180*Math.PI) * self.speed
-
-    self.update = function(){
-        self.x += self.spdX;
-        self.y += self.spdY;
+    update(){
+        this.x += this.spdX;
+        this.y += this.spdY;
     }
-
-    setTimeout(()=>{
-        // delete itself after timeout??
-        delete Bullet.list[self.id]
-        removePack.bullet.push(self.id)
-
-    }, 1000)
-
-    Bullet.list[self.id] = self;
-
-    return self;
 }
-Bullet.list = {};
 
-
-    let initPack = {player: [], bullet: []};
-    let updatePack = {player: [], bullet: []};
-    let removePack = {player: [], bullet: []};
+let initPack = {player: [], bullet: []};
+let updatePack = {player: [], bullet: []};
+let removePack = {player: [], bullet: []};
 
 export default function webSocketSetUp(serv, ses, db){
 
@@ -166,12 +160,12 @@ export default function webSocketSetUp(serv, ses, db){
             db.progress.find({username: username}, function(err, res){
                 if(res.length > 0){
                     //progress already in DB
-                    player = Player(socket.id, res[0].x, res[0].y, username)
+                    player = new Player(socket.id, res[0].x, res[0].y, username)
                                     
                 }
                 else{
                     //no progress, set starting values
-                    player = Player(socket.id, 250, 250, username);
+                    player = new Player(socket.id, 250, 250, username);
                     db.progress.insert({username: username, x: 250, y: 250})
                 }
                 playerList[socket.id] = player;
@@ -266,17 +260,10 @@ export default function webSocketSetUp(serv, ses, db){
         var pack = [];
 
         for(var i in playerList){ 
-
             var player = playerList[i];
             
             if(player.needsUpdate){
                 player.updatePosition();
-                // pack.push({
-                //     x: player.x,
-                //     y: player.y,
-                //     name: player.name
-                // })
-                // console.log(pack)
                 updatePack.player.push({
                     x: player.x,
                     y: player.y,
@@ -287,38 +274,27 @@ export default function webSocketSetUp(serv, ses, db){
         }
 
         for(var i in Bullet.list){ 
-
             var bullet = Bullet.list[i];
             
-            // if(player.needsUpdate){
                 bullet.update();
-                // pack.push({
-                //     x: player.x,
-                //     y: player.y,
-                //     name: player.name
-                // })
-                // console.log(pack)
                 updatePack.bullet.push({
                     x: bullet.x,
                     y: bullet.y,
                     id: bullet.id,
                 })
-            // }
         }
 
         //emit to all sockets:
         for(var i in socketList){
             var socket = socketList[i];
 
-            if(updatePack.player.length>0 || updatePack.bullet.length>0){
+            if(updatePack.player.length || updatePack.bullet.length){
                 socket.emit('update', updatePack)
             }
             
-
-            if(removePack.player.length>0 || removePack.bullet.length>0){
+            if(removePack.player.length || removePack.bullet.length){
                 socket.emit('remove', removePack)
             }
-            
         }
         
         updatePack.player = []
