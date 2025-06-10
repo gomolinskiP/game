@@ -5,61 +5,117 @@ var socket = io();
 let gameWidth = window.innerWidth;
 let gameHeight = window.innerHeight;
 
-var ctx = document.getElementById("ctx").getContext("2d");
-var canvas = document.getElementById("ctx")
+var canvas = document.getElementById("ctx");
+var ctx = canvas.getContext("2d");
 
-var Player = function(initPack){
-    var self = {
-        x: initPack.x,
-        y: initPack.y,
-        id: initPack.id,
-        name: initPack.name,
+
+class Entity{
+    constructor(initPack){
+        this.x = initPack.x;
+        this.y = initPack.y;
+        this.id = initPack.id;
+
+        this.pan3d = new Tone.Panner3D(
+            0,
+            0,
+            0
+        );
+        this.pan3d.connect(limiter);
     }
-    let synOptions = {
-        noise:{
-            type: "pink"
-        },
-        envelope:{
-            attack: 0.35,
-            decay: 0.15,
+
+    update(pack){
+        this.x = pack.x
+        this.y = pack.y
+        if(Player.list[selfId]){
+            this.pan3d.setPosition(
+                (this.x - Player.list[selfId].x)*0.1,
+                (this.y - Player.list[selfId].y)*0.1,
+                0
+            );
         }
     }
-
-    self.synthTimeout = false;
-    self.pan3d = new Tone.Panner3D(0, 0, 0);
-    self.pan3d.connect(reverb);
-    self.synth = new Tone.NoiseSynth(synOptions);
-    self.synth.connect(self.pan3d);
-    
-
-    Player.list[self.id] = self;
-    return self;
 }
-Player.list = {}
-const reverb = new Tone.Reverb();
-reverb.toDestination();
 
-var Bullet = function(initPack){
-    var self = {
-        x: initPack.x,
-        y: initPack.y,
-        id: initPack.id,
+class Player extends Entity{
+    static list = {};
+
+    constructor(initPack){
+        super(initPack);
+        this.name = initPack.name;
+
+        this.synthTimeout = false;
+        this.footstepSyn = new Tone.NoiseSynth(synOptions);
+        this.footstepSyn.connect(this.pan3d);
+
+        Player.list[this.id] = this;
     }
 
-    self.synth = new Tone.DuoSynth();
-    self.pan3d = new Tone.Panner3D(0, 0, 0);
-    self.pan3d.connect(reverb);
-    self.synth.connect(self.pan3d);
+    update(pack){
+        if(this.x !== pack.x || this.y !== pack.y){
+            super.update(pack);
 
-    Bullet.list[self.id] = self;
-    self.interval = setInterval(()=>{
-        self.synth.triggerAttackRelease("C5", "64n")
-    }, 200)
-    self.synth.triggerAttackRelease("C6", "32n")
-
-    return self;
+            if(!this.synthTimeout){
+                this.synthTimeout = true;
+                this.footstepSyn.triggerAttackRelease("128n");
+                setTimeout(()=>{
+                    this.synthTimeout = false;
+                }, 250);
+            }
+        }
+    }
 }
-Bullet.list = {}
+
+class Bullet extends Entity{
+    static list = {};
+
+    constructor(initPack){
+        super(initPack);
+        this.synth = new Tone.DuoSynth();
+        this.pan3d.setPosition(
+            (this.x - Player.list[selfId].x)*0.1,
+            (this.y - Player.list[selfId].y)*0.1,
+            0
+        )
+        this.synth.connect(this.pan3d);
+
+        Bullet.list[this.id] = this;
+
+        this.interval = setInterval(()=>{
+            // this.synth.triggerAttackRelease("C5", "64n");
+        }, 200);
+
+        this.synth.triggerAttackRelease("C6", "2n");
+    }
+
+    destroy(){
+        clearInterval(this.interval);
+        // this.synth.triggerAttackRelease("C3", "32n");
+
+        setTimeout(()=>{
+            this.synth.dispose();
+            this.pan3d.dispose();
+            delete Bullet.list[this.id]
+        }, 500);
+    }
+}
+
+let synOptions = {
+    noise:{
+        type: "pink"
+    },
+    envelope:{
+        attack: 0.35,
+        decay: 0.15,
+    }
+}
+
+const limiter = new Tone.Compressor(
+    -0.1,
+    20
+)
+const reverb = new Tone.Reverb();
+limiter.connect(reverb)
+reverb.toDestination();
 
 
 let selfId = null;
@@ -96,7 +152,7 @@ function drawMap(){
 socket.on('init', function(data){
     selfId = data.selfId;
     console.log("InitPack:")
-    console.log(data.player)
+    console.log(data)
     for(var i=0; i<data.player.length; i++){
         new Player(data.player[i]);
     }
@@ -115,23 +171,7 @@ socket.on('update', function(data){
         let p = Player.list[pack.id]
 
         if(p){
-            if((p.x != pack.x || p.y != pack.y)){
-                if(!p.synthTimeout){
-                    //TODO synth timeout aproach incorrect if player connected through multiple sockets - maybe just disallow multisocket connection?
-                    p.synthTimeout = true
-                    p.synth.triggerAttackRelease("128n");
-                    setTimeout(()=>{
-                        p.synthTimeout = false
-                    }, 250)
-                }
-            }
-            p.x = pack.x
-            p.y = pack.y
-            p.pan3d.setPosition(
-                (p.x - Player.list[selfId].x)*0.05,
-                (p.y - Player.list[selfId].y)*0.05,
-                0
-            )
+            p.update(pack);   
         } else{
             new Player(data.player[i]);
         }
@@ -142,20 +182,9 @@ socket.on('update', function(data){
         let b = Bullet.list[pack.id]
 
         if(b){
-            b.x = pack.x
-            b.y = pack.y
-            b.pan3d.setPosition(
-                (b.x - Player.list[selfId].x)*0.1,
-                (b.y - Player.list[selfId].y)*0.1,
-                0
-            )
+            b.update(pack);
         } else{
             let b = new Bullet(data.bullet[i]);
-            b.pan3d.setPosition(
-                (b.x - Player.list[selfId].x)*0.1,
-                (b.y - Player.list[selfId].y)*0.1,
-                0
-            )
         }
     }
 })
@@ -164,25 +193,14 @@ socket.on('remove', function(data){
     for(var i=0; i<data.player.length; i++){
         delete Player.list[data.player[i]]
     }
-
     for(var i=0; i<data.bullet.length; i++){
-        let bID = data.bullet[i]
-
-        clearInterval(Bullet.list[bID].interval)
-        Bullet.list[bID].synth.triggerAttackRelease("C3", "32n");
-        setTimeout(()=>{
-            Bullet.list[bID].synth.dispose();
-            Bullet.list[bID].pan3d.dispose();
-            delete Bullet.list[bID]
-        }, 500)
-        
+        Bullet.list[data.bullet[i]].destroy();
     }
-
     console.log("removePack:")
     console.log(data)
 })
 
-
+//game Loop:
 function gameLoop(){
     // console.log(Player.list)
     ctx.fillStyle = "#006e56";
@@ -226,20 +244,7 @@ function gameLoop(){
 requestAnimationFrame(gameLoop);
 
 
-socket.on('playTestNote', function(){
-    synth.triggerAttackRelease("C" + + Math.floor(7*Math.random()), "8n");
-})
-
-// socket.on('playNote', function(){
-//     synth.triggerAttackRelease("C" + + 4, "16n");
-// })
-
-socket.on('error', function(errorMsg){
-    alert(errorMsg)
-})
-
-
-
+//key handling:
 document.onkeydown = function(event){
     switch(event.key){
         case "d":
