@@ -20,6 +20,8 @@ class Entity{
             0,
             0
         );
+        this.pan3d.panningModel = "HRTF";
+        this.pan3d.distanceModel = "inverse";
         this.pan3d.connect(limiter);
     }
 
@@ -42,7 +44,7 @@ class Player extends Entity{
     constructor(initPack){
         super(initPack);
         this.name = initPack.name;
-
+        this.hp = initPack.hp;
         this.synthTimeout = false;
         this.footstepSyn = new Tone.NoiseSynth(synOptions);
         this.footstepSyn.connect(this.pan3d);
@@ -51,6 +53,7 @@ class Player extends Entity{
     }
 
     update(pack){
+        this.hp = pack.hp;
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
 
@@ -84,18 +87,20 @@ class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttackRelease("C6", "2n");
+        this.synth.triggerAttack("C6");
     }
 
     destroy(){
         clearInterval(this.interval);
-        // this.synth.triggerAttackRelease("C3", "32n");
+        this.synth.triggerRelease();
+        this.synth.triggerAttack("C3");
 
         setTimeout(()=>{
+            this.synth.triggerRelease();
             this.synth.dispose();
             this.pan3d.dispose();
             delete Bullet.list[this.id]
-        }, 500);
+        }, 250);
     }
 }
 
@@ -203,32 +208,45 @@ socket.on('remove', function(data){
 //game Loop:
 function gameLoop(){
     // console.log(Player.list)
-    ctx.fillStyle = "#006e56";
-    ctx.strokeStyle = "red";
+    ctx.fillStyle = "white";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
     drawMap()
-
-    ctx.beginPath();
-    ctx.roundRect(10, 20, 150, 100, 0);
-    ctx.stroke();
 
     ctx.fillStyle = "black";
     for(var i in Player.list){
         ctx.textAlign = "center";
-        if(Player.list[i].id == selfId){
-            ctx.filter = "hue-rotate(180deg)"
-            ctx.font = 'bold 20px Cascadia Mono';
-        }
-        else{
-            ctx.font = '16px Cascadia Mono';
-        }
+
 
         let x = Player.list[i].x - Player.list[selfId].x + gameWidth/2;
         let y = Player.list[i].y - Player.list[selfId].y + gameHeight/2;
 
+        if(Player.list[i].id == selfId){
+            //hp bar:
+            ctx.fillStyle = "grey";
+            ctx.fillRect(20, 20, 100, 16)
+            ctx.fillStyle = "red";
+            ctx.fillRect(20, 20, (Player.list[i].hp/100)*100, 16)
+            ctx.fillStyle = "black";
+            ctx.font = 'bold 18px Cascadia Mono';
+            ctx.fillText(Player.list[i].hp, 70, 35);
+
+            // ctx.filter = "hue-rotate(180deg)"
+            ctx.font = 'bold 20px Cascadia Mono';
+        }
+        else{
+            //hp bar:
+            ctx.fillStyle = "grey";
+            ctx.fillRect(x-25, y-58, 50, 8)
+            ctx.fillStyle = "red";
+            ctx.fillRect(x-25, y-58, (Player.list[i].hp/100)*50, 8)
+            ctx.fillStyle = "black";
+            ctx.font = '12px Cascadia Mono';
+            ctx.fillText(Player.list[i].hp, x, y-50);
+
+            ctx.filter = "none";
+            ctx.font = '16px Cascadia Mono';
+        }    
         ctx.drawImage(Img.player, x-32, y-32);
-        ctx.filter = "none";
         ctx.fillText(Player.list[i].name, x, y-32);
     };
 

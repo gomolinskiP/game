@@ -11,14 +11,25 @@ export class Entity{
         this.x = x;
         this.y = y;
     }
+
+    isColliding(other){
+        let dx = this.x - other.x;
+        let dy = this.y - other.y;
+        let distSq = dx*dx + dy*dy;
+
+        if(distSq < 500) return true;
+        else return false;
+    }
 }
 
 export class Player extends Entity{
+    static list = {}
+
     constructor(id, x, y, username){
         super(x, y);
         this.id = id;
         this.name = username;
-
+        this.hp = 100;
         this.socketIDs = [id];
         this.needsUpdate = true;
         this.pressingUp = false;
@@ -78,6 +89,20 @@ export class Player extends Entity{
             }
         }
     }
+
+    takeDmg(damage){
+        this.hp -= damage;
+        if(this.hp <= 0) this.die();
+        this.needsUpdate = true;
+    }
+
+    die(){
+        this.hp = 100;
+        this.x = 250 + 100*(Math.random()-0.5);
+        this.y = 250 + 100*(Math.random()-0.5);
+        this.needsUpdate = true;
+    }
+    
 }
 
 export class Bullet extends Entity{
@@ -93,10 +118,9 @@ export class Bullet extends Entity{
         this.spdY = Math.sin(angle/180*Math.PI) * this.speed;
 
         Bullet.list[this.id] = this;
-        setTimeout(()=>{
+        this.timeout = setTimeout(()=>{
             // delete itself after timeout??
-            removePack.bullet.push(this.id)
-            delete Bullet.list[this.id]
+            this.destroy();
         }, 1000)
         return this;
     }
@@ -104,6 +128,21 @@ export class Bullet extends Entity{
     update(){
         this.x += this.spdX;
         this.y += this.spdY;
+
+        //collision check
+        for(let i in Player.list){
+            let targetPlayer = Player.list[i];
+            if(this.parent != targetPlayer && this.isColliding(targetPlayer)){
+                clearTimeout(this.timeout);
+                this.destroy();
+                targetPlayer.takeDmg(1);
+            }
+        }
+    }
+
+    destroy(){
+        removePack.bullet.push(this.id)
+        delete Bullet.list[this.id]
     }
 }
 
@@ -115,7 +154,6 @@ export default function webSocketSetUp(serv, ses, db){
 
     //socket.io:
     var socketList = {};
-    var playerList = {};
 
     var io = require('socket.io')(serv, {
     cors: {
@@ -144,16 +182,16 @@ export default function webSocketSetUp(serv, ses, db){
         let username = socket.request.session?.user?.username;
 
         //check if user is already in game on another socket:
-        let loggedPlayer = Object.values(playerList).find(player => player.name === username)
+        let loggedPlayer = Object.values(Player.list).find(player => player.name === username)
         if(loggedPlayer != undefined){
-            player = playerList[loggedPlayer.id]
+            player = Player.list[loggedPlayer.id]
             player.socketIDs.push(socket.id)
 
 
             initPack.selfId = player.id;
             socket.emit('init', initPack)
             player.needsUpdate = true
-            // console.log(playerList[loggedPlayer.id])
+            // console.log(Player.list[loggedPlayer.id])
         }
         else{
             //retrieve player progress:
@@ -168,16 +206,17 @@ export default function webSocketSetUp(serv, ses, db){
                     player = new Player(socket.id, 250, 250, username);
                     db.progress.insert({username: username, x: 250, y: 250})
                 }
-                playerList[socket.id] = player;
+                Player.list[socket.id] = player;
 
-                // console.log(playerList)
+                // console.log(Player.list)
                 initPack.player = []
-                for(var i in playerList){
+                for(var i in Player.list){
                     initPack.player.push({
-                        x: playerList[i].x,
-                        y: playerList[i].y,
-                        id: playerList[i].id,
-                        name: playerList[i].name,
+                        x: Player.list[i].x,
+                        y: Player.list[i].y,
+                        id: Player.list[i].id,
+                        name: Player.list[i].name,
+                        hp: Player.list[i].hp
                     })
                 }
 
@@ -198,15 +237,13 @@ export default function webSocketSetUp(serv, ses, db){
                     let index = player.socketIDs.indexOf(socket.id)
                     if(index > -1){
                         player.socketIDs.splice(index, 1)
-                        playerList[player.socketIDs[0]] = player;
-                        delete playerList[socket.id]
+                        Player.list[player.socketIDs[0]] = player;
+                        delete Player.list[socket.id]
                         removePack.player.push(socket.id)
-                        console.log(removePack.player)
                     }
                 } else{
-                    delete playerList[socket.id];
+                    delete Player.list[socket.id];
                     removePack.player.push(socket.id)
-                    console.log(removePack.player)
                 }
                 
                 // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
@@ -244,23 +281,19 @@ export default function webSocketSetUp(serv, ses, db){
         socket.on('noteTest', function(){
             // console.log()
 
-            for(var i in playerList){
+            for(var i in Player.list){
                 var socket = socketList[i];
                 socket.emit('playTestNote');
             }
         })
     })
 
-
-
-
-
     //main loop:
     setInterval(function(){
         var pack = [];
 
-        for(var i in playerList){ 
-            var player = playerList[i];
+        for(var i in Player.list){ 
+            var player = Player.list[i];
             
             if(player.needsUpdate){
                 player.updatePosition();
@@ -268,7 +301,8 @@ export default function webSocketSetUp(serv, ses, db){
                     x: player.x,
                     y: player.y,
                     id: player.id,
-                    name: player.name
+                    name: player.name,
+                    hp: player.hp
                 })
             }
         }
@@ -277,6 +311,7 @@ export default function webSocketSetUp(serv, ses, db){
             var bullet = Bullet.list[i];
             
                 bullet.update();
+                
                 updatePack.bullet.push({
                     x: bullet.x,
                     y: bullet.y,
