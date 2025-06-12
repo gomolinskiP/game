@@ -73,7 +73,8 @@ class Bullet extends Entity{
 
     constructor(initPack){
         super(initPack);
-        this.synth = new Tone.DuoSynth();
+        // let synthClass = Tone[initPack.sound];
+        this.synth = new Tone[initPack.sound];
         this.pan3d.setPosition(
             (this.x - Player.list[selfId].x)*0.1,
             (this.y - Player.list[selfId].y)*0.1,
@@ -87,13 +88,13 @@ class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttack("C6");
+        this.synth.triggerAttack("C5");
     }
 
     destroy(){
         clearInterval(this.interval);
         this.synth.triggerRelease();
-        this.synth.triggerAttack("C3");
+        this.synth.triggerAttack("C4");
 
         setTimeout(()=>{
             this.synth.triggerRelease();
@@ -294,7 +295,6 @@ document.onkeydown = function(event){
                 inputId: 'space',
                 state: true
             });
-            // socket.emit('noteTest');
             break;
     }
 }
@@ -345,7 +345,6 @@ playBTN.addEventListener("click", ()=>{
     if(Tone.context.state != "running")
         Tone.start();
 
-    socket.emit('noteTest')
     console.log(Bullet.list)
     // synth.triggerAttackRelease("C3", "8n");
 })

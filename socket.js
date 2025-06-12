@@ -25,7 +25,7 @@ export class Entity{
 export class Player extends Entity{
     static list = {}
 
-    constructor(id, x, y, username){
+    constructor(id, x, y, username, weapon){
         super(x, y);
         this.id = id;
         this.name = username;
@@ -41,6 +41,7 @@ export class Player extends Entity{
         this.lastAngle = 90;
         this.shootTimeout = false;
 
+        this.giveWeapon(weapon.sound, weapon.duration);
         return this;
     }
 
@@ -80,7 +81,6 @@ export class Player extends Entity{
 
             if(!this.shootTimeout){
                 this.shootTimeout = true;
-                let bulletId = Math.random()
                 new Bullet(this, this.lastAngle)
 
                 setTimeout(()=>{
@@ -88,6 +88,11 @@ export class Player extends Entity{
                 }, 100)
             }
         }
+    }
+
+    giveWeapon(sound, duration){
+        this.weapon = new Weapon(sound, duration)
+        console.log(this.weapon)
     }
 
     takeDmg(damage){
@@ -117,6 +122,9 @@ export class Bullet extends Entity{
         this.spdX = Math.cos(angle/180*Math.PI) * this.speed;
         this.spdY = Math.sin(angle/180*Math.PI) * this.speed;
 
+        this.sound = parent.weapon.sound;
+        this.duration = parent.weapon.duration;
+
         Bullet.list[this.id] = this;
         this.timeout = setTimeout(()=>{
             // delete itself after timeout??
@@ -143,6 +151,13 @@ export class Bullet extends Entity{
     destroy(){
         removePack.bullet.push(this.id)
         delete Bullet.list[this.id]
+    }
+}
+
+export class Weapon{
+    constructor(sound, duration){
+        this.sound = sound;
+        this.duration = duration;
     }
 }
 
@@ -198,7 +213,7 @@ export default function webSocketSetUp(serv, ses, db){
             db.progress.find({username: username}, function(err, res){
                 if(res.length > 0){
                     //progress already in DB
-                    player = new Player(socket.id, res[0].x, res[0].y, username)
+                    player = new Player(socket.id, res[0].x, res[0].y, username, res[0].weapon)
                                     
                 }
                 else{
@@ -206,6 +221,7 @@ export default function webSocketSetUp(serv, ses, db){
                     player = new Player(socket.id, 250, 250, username);
                     db.progress.insert({username: username, x: 250, y: 250})
                 }
+
                 Player.list[socket.id] = player;
 
                 // console.log(Player.list)
@@ -247,7 +263,7 @@ export default function webSocketSetUp(serv, ses, db){
                 }
                 
                 // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
-                db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
+                db.progress.update({username: username}, {$set: {x: player.x, y: player.y, weapon: player.weapon}});
                 username = null;
              
             delete socketList[socket.id];
@@ -275,15 +291,6 @@ export default function webSocketSetUp(serv, ses, db){
                         player.pressingSpace = data.state;
                         break;
                 }
-            }
-        })
-
-        socket.on('noteTest', function(){
-            // console.log()
-
-            for(var i in Player.list){
-                var socket = socketList[i];
-                socket.emit('playTestNote');
             }
         })
     })
@@ -316,6 +323,9 @@ export default function webSocketSetUp(serv, ses, db){
                     x: bullet.x,
                     y: bullet.y,
                     id: bullet.id,
+
+                    sound: bullet.sound,
+                    duration: bullet.duration
                 })
         }
 
