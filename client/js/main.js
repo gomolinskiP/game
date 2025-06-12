@@ -6,6 +6,7 @@ let gameWidth = window.innerWidth;
 let gameHeight = window.innerHeight;
 
 var canvas = document.getElementById("ctx");
+canvas.tabIndex = 1000; //so I can listen to events on canvas specifically
 var ctx = canvas.getContext("2d");
 
 
@@ -264,7 +265,7 @@ requestAnimationFrame(gameLoop);
 
 
 //key handling:
-document.onkeydown = function(event){
+canvas.onkeydown = function(event){
     switch(event.key){
         case "d":
             socket.emit('keyPress', {
@@ -299,7 +300,7 @@ document.onkeydown = function(event){
     }
 }
 
-document.onkeyup = function(event){
+canvas.onkeyup = function(event){
     switch(event.key){
         case "d":
             socket.emit('keyPress', {
@@ -338,13 +339,24 @@ document.onkeyup = function(event){
 
 const playBTN = document.getElementById("sound-btn");
 
-const synth = new Tone.Synth().toDestination();
-const synth2 = new Tone.Synth().toDestination();
-
 playBTN.addEventListener("click", ()=>{
     if(Tone.context.state != "running")
         Tone.start();
 
     console.log(Bullet.list)
     // synth.triggerAttackRelease("C3", "8n");
+})
+
+const chatSendBTN = document.getElementById("chat-send-btn");
+const chatInput = document.getElementById("chat-input");
+const chatContent = document.getElementById("chat-content");
+chatSendBTN.addEventListener("click", ()=>{
+    if(chatInput.value.length>0){
+        socket.emit("chat", chatInput.value)
+    }
+})
+
+socket.on('chatBroadcast', (signedMsg)=>{
+    chatContent.innerHTML += signedMsg + "<br>";
+    chatContent.scrollTop = chatContent.scrollHeight;
 })

@@ -293,6 +293,14 @@ export default function webSocketSetUp(serv, ses, db){
                 }
             }
         })
+
+        socket.on('chat', function(msg){
+            let signedMsg = "<b>"+player.name+":</b>"+" "+msg;
+            for(var i in socketList){
+                var socket = socketList[i];
+                socket.emit('chatBroadcast', signedMsg);
+            }
+        })
     })
 
     //main loop:

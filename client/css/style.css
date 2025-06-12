@@ -79,3 +79,32 @@ form{
     padding: 10px;
     margin: 10px;
 }
+
+#chat{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: stretch;
+    align-content: space-between;
+
+    padding: 10px;
+
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+
+    width:200px;
+    height: fit-content;
+    max-height: 300px;
+    background-color: #ffd90088;
+    backdrop-filter: blur(5px);
+}
+
+#chat-content{
+    overflow-y: scroll;
+    flex-direction: column-reverse;
+}
+
+#chat-input, #chat-send-btn{
+    align-self: flex-end;
+}
