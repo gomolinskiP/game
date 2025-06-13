@@ -106,6 +106,19 @@ class Bullet extends Entity{
     }
 }
 
+class Pickup extends Entity{
+    static list = {}
+
+    constructor(initPack){
+        super(initPack);
+        Pickup.list[this.id] = this;
+    }
+
+    destroy(){
+        delete Pickup.list[this.id];
+    }
+}
+
 let synOptions = {
     noise:{
         type: "pink"
@@ -158,8 +171,8 @@ function drawMap(){
 
 socket.on('init', function(data){
     selfId = data.selfId;
-    console.log("InitPack:")
-    console.log(data)
+    console.log("InitPack:", data)
+    
     for(var i=0; i<data.player.length; i++){
         new Player(data.player[i]);
     }
@@ -167,11 +180,14 @@ socket.on('init', function(data){
     for(var i=0; i<data.bullet.length; i++){
         new Bullet(data.bullet[i]);
     }
+
+    for(var i=0; i<data.pickup.length; i++){
+        new Pickup(data.pickup[i]);
+    }
 })
 
 socket.on('update', function(data){
-    // console.log("updatePack:")
-    // console.log(data)
+    console.log("updatePack:", data)
 
     for(var i=0; i<data.player.length; i++){
         let pack = data.player[i]
@@ -194,6 +210,17 @@ socket.on('update', function(data){
             let b = new Bullet(data.bullet[i]);
         }
     }
+
+    for(var i=0; i<data.pickup.length; i++){
+        let pack = data.pickup[i]
+        let b = Pickup.list[pack.id]
+
+        if(b){
+            // b.update(pack);
+        } else{
+            let b = new Pickup(data.pickup[i]);
+        }
+    }
 })
 
 socket.on('remove', function(data){
@@ -203,8 +230,11 @@ socket.on('remove', function(data){
     for(var i=0; i<data.bullet.length; i++){
         Bullet.list[data.bullet[i]].destroy();
     }
-    console.log("removePack:")
-    console.log(data)
+    for(var i=0; i<data.pickup.length; i++){
+        Pickup.list[data.pickup[i]].destroy();
+    }
+
+    console.log("removePack:", data)
 })
 
 //game Loop:
@@ -257,6 +287,13 @@ function gameLoop(){
         let y = Bullet.list[i].y - Player.list[selfId].y + gameHeight/2;
 
         ctx.fillRect(x-5, y-5, 10, 10);
+    }
+
+    for(var i in Pickup.list){
+        let x = Pickup.list[i].x - Player.list[selfId].x + gameWidth/2;
+        let y = Pickup.list[i].y - Player.list[selfId].y + gameHeight/2;
+
+        ctx.fillRect(x-15, y-15, 30, 30);
     }
 
     requestAnimationFrame(gameLoop)

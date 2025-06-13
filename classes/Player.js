@@ -58,8 +58,9 @@ export class Player extends Entity{
         }
 
         if(this.pressingSpace){
-
+            this.needsUpdate = true;
             if(!this.shootTimeout){
+                
                 this.shootTimeout = true;
                 new Bullet(this, this.lastAngle)
 
@@ -82,8 +83,8 @@ export class Player extends Entity{
 
     die(){
         this.hp = 100;
-        this.x = 250 + 100*(Math.random()-0.5);
-        this.y = 250 + 100*(Math.random()-0.5);
+        this.x = 1000 + 250*(Math.random());
+        this.y = 500 + 120*(Math.random());
         this.needsUpdate = true;
     }
     

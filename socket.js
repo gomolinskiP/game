@@ -9,14 +9,14 @@ const __dirname = dirname(__filename);
 // import {Entity, Player, Bullet, Weapon} from './classes.js'
 import { Player } from './classes/Player.js';
 import { Bullet } from './classes/Bullet.js';
-import { Weapon } from './classes/Weapon.js';
+import { Pickup } from './classes/Pickup.js';
 
 
 
 
-let initPack = {player: [], bullet: []};
-let updatePack = {player: [], bullet: []};
-export let removePack = {player: [], bullet: []};
+let initPack = {player: [], bullet: [], pickup: []};
+let updatePack = {player: [], bullet: [], pickup: []};
+export let removePack = {player: [], bullet: [], pickup: []};
 
 export default function webSocketSetUp(serv, ses, db){
 
@@ -88,13 +88,18 @@ export default function webSocketSetUp(serv, ses, db){
                         hp: Player.list[i].hp
                     })
                 }
+                for(var i in Pickup.list){
+                    initPack.pickup.push({
+                        x: Pickup.list[i].x,
+                        y: Pickup.list[i].y,
+                        id: Pickup.list[i].id,
+                    })
+                }
 
                 initPack.selfId = player.id;
                 socket.emit('init', initPack)
                 player.needsUpdate = true
-            })
-            
-            
+            }) 
         }
  
         socket.on('disconnect', function(){
@@ -158,6 +163,34 @@ export default function webSocketSetUp(serv, ses, db){
 
     //main loop:
     setInterval(function(){
+        //random pickup spawn:
+        if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
+            console.log("pickup spawned")
+            new Pickup();
+        }
+
+        for(let i in Pickup.list){
+            let pickup = Pickup.list[i]
+
+            if(pickup.collidingPlayerId() != null){
+                console.log(pickup.collidingPlayerId())
+                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration)
+
+                pickup.destroy();
+            }
+                
+
+            if(pickup.needsUpdate){
+                updatePack.pickup.push({
+                    x: pickup.x,
+                    y: pickup.y,
+                    id: pickup.id
+                })
+
+                pickup.needsUpdate = false;
+            }
+        }
+
         var pack = [];
 
         for(var i in Player.list){ 
@@ -194,11 +227,11 @@ export default function webSocketSetUp(serv, ses, db){
         for(var i in socketList){
             var socket = socketList[i];
 
-            if(updatePack.player.length || updatePack.bullet.length){
+            if(updatePack.player.length || updatePack.bullet.length || updatePack.pickup.length){
                 socket.emit('update', updatePack)
             }
             
-            if(removePack.player.length || removePack.bullet.length){
+            if(removePack.player.length || removePack.bullet.length || removePack.pickup.length){
                 socket.emit('remove', removePack)
             }
         }
@@ -207,5 +240,8 @@ export default function webSocketSetUp(serv, ses, db){
         removePack.player = []
         updatePack.bullet = []
         removePack.bullet = []
+
+        updatePack.pickup = []
+        removePack.pickup = []
     }, 1000/25);
 }
