@@ -115,15 +115,21 @@ form{
     position: absolute;
     bottom: 10px;
     left: 10px;
+    padding: 10px;
+
+    background-color: transparent;
+    backdrop-filter: blur(5px);
 }
 
 .note{
     height: 60px;
     width: 30px;
-
+    margin: 1px;
     background-color: white;
-    color: black
+    color: black;
 }
+
+
 
 .note.blk{
     background-color: black;
@@ -132,9 +138,16 @@ form{
     position: relative;
     height: 30px;
     bottom: 15px;
+    margin: 0 -20px 0 -20px;
+}
+
+.note:hover{
+    color: #ffd900;
+    background-color: #a68700;
 }
 
 .note.active{
-    color: #ffd900;
-    background-color: #a68700;
+    color: #006e56;
+    background-color: #00daaa;
+    font-weight: bold;
 }

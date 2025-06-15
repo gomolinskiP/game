@@ -48,6 +48,7 @@ class Player extends Entity{
         this.hp = initPack.hp;
         this.synthTimeout = false;
         this.footstepSyn = new Tone.NoiseSynth(synOptions);
+        
         this.footstepSyn.connect(this.pan3d);
 
         Player.list[this.id] = this;
@@ -171,6 +172,8 @@ function drawMap(){
 
 socket.on('init', function(data){
     selfId = data.selfId;
+    setActiveNote(data.selectedNote)
+
     console.log("InitPack:", data)
     
     for(var i=0; i<data.player.length; i++){
@@ -398,20 +401,25 @@ chatSendBTN.addEventListener("click", ()=>{
     }
 })
 
+//TODO sanitize chat messages, it`s really not secure haha
 socket.on('chatBroadcast', (signedMsg)=>{
     chatContent.innerHTML += signedMsg + "<br>";
     chatContent.scrollTop = chatContent.scrollHeight;
 })
 
+
+
 const noteBTNs = document.querySelectorAll(".note")
+function setActiveNote(note){
+    noteBTNs.forEach((btn)=>{
+            btn.classList.remove("active")
+    })
+    document.querySelector(`[data-note="${note}"]`).classList.add('active');
+}
 noteBTNs.forEach((item)=>{
     item.addEventListener("click", ()=>{
         canvas.focus();
-        noteBTNs.forEach((btn)=>{
-            btn.classList.remove("active")
-        })
-        console.log(item.innerHTML)
+        setActiveNote(item.dataset.note)
         socket.emit('noteChange', item.innerHTML)
-        item.classList.add("active");
     })
 })
