@@ -48,6 +48,9 @@ export default function webSocketSetUp(serv, ses, db){
 
         //get username from logged session:
         let username = socket.request.session?.user?.username;
+        if(username == undefined){
+            return;
+        }
 
         //check if user is already in game on another socket:
         let loggedPlayer = Object.values(Player.list).find(player => player.name === username)
@@ -57,6 +60,7 @@ export default function webSocketSetUp(serv, ses, db){
 
 
             initPack.selfId = player.id;
+            initPack.selectedNote = player.selectedNote;
             socket.emit('init', initPack)
             player.needsUpdate = true
             // console.log(Player.list[loggedPlayer.id])
@@ -97,7 +101,9 @@ export default function webSocketSetUp(serv, ses, db){
                     })
                 }
 
+                //TODO: fix code duplication here and lines above:
                 initPack.selfId = player.id;
+                initPack.selectedNote = player.selectedNote;
                 socket.emit('init', initPack)
                 player.needsUpdate = true
             }) 
