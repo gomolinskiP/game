@@ -110,3 +110,31 @@ form{
 #chat-input, #chat-send-btn{
     align-self: flex-end;
 }
+
+#notes{
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+}
+
+.note{
+    height: 60px;
+    width: 30px;
+
+    background-color: white;
+    color: black
+}
+
+.note.blk{
+    background-color: black;
+    color: white;
+
+    position: relative;
+    height: 30px;
+    width: 20px;
+    bottom: 15px;
+}
+
+.note.active{
+    box-shadow: #ffd900 0px 0px 10px;
+}

@@ -12,7 +12,7 @@ export class Pickup extends Entity{
         let y = 1000*(Math.random())
         super(x, y)
 
-        this.sound = soundList[Math.round(Math.random() * soundList.length)]
+        this.sound = soundList[Math.floor(Math.random() * soundList.length)]
         this.duration = "2n"
 
         this.id = Math.random();

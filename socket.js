@@ -88,6 +88,7 @@ export default function webSocketSetUp(serv, ses, db){
                         hp: Player.list[i].hp
                     })
                 }
+                initPack.pickup = []
                 for(var i in Pickup.list){
                     initPack.pickup.push({
                         x: Pickup.list[i].x,
@@ -152,8 +153,12 @@ export default function webSocketSetUp(serv, ses, db){
             }
         })
 
+        socket.on('noteChange', (note)=>{
+            player.selectedNote = note;
+        })
+
         socket.on('chat', function(msg){
-            let signedMsg = "<b>"+player.name+":</b>"+" "+msg;
+            let signedMsg = `<b>${player.name}:</b> ${msg}`;
             for(var i in socketList){
                 var socket = socketList[i];
                 socket.emit('chatBroadcast', signedMsg);
@@ -165,7 +170,7 @@ export default function webSocketSetUp(serv, ses, db){
     setInterval(function(){
         //random pickup spawn:
         if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
-            console.log("pickup spawned")
+            // console.log("pickup spawned")
             new Pickup();
         }
 
@@ -219,7 +224,8 @@ export default function webSocketSetUp(serv, ses, db){
                     id: bullet.id,
 
                     sound: bullet.sound,
-                    duration: bullet.duration
+                    duration: bullet.duration,
+                    note: bullet.note
                 })
         }
 

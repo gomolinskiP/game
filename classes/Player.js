@@ -21,6 +21,8 @@ export class Player extends Entity{
         this.lastAngle = 90;
         this.shootTimeout = false;
 
+        this.selectedNote = "F"
+
         this.giveWeapon(weapon.sound, weapon.duration);
         return this;
     }
@@ -62,7 +64,7 @@ export class Player extends Entity{
             if(!this.shootTimeout){
                 
                 this.shootTimeout = true;
-                new Bullet(this, this.lastAngle)
+                new Bullet(this, this.lastAngle, this.selectedNote)
 
                 setTimeout(()=>{
                     this.shootTimeout = false

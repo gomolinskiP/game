@@ -89,7 +89,7 @@ class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttack("C5");
+        this.synth.triggerAttack(`${initPack.note}5`);
     }
 
     destroy(){
@@ -245,6 +245,15 @@ function gameLoop(){
     drawMap()
 
     ctx.fillStyle = "black";
+    for(var i in Pickup.list){
+        let x = Pickup.list[i].x - Player.list[selfId].x + gameWidth/2;
+        let y = Pickup.list[i].y - Player.list[selfId].y + gameHeight/2;
+
+        ctx.fillRect(x-15, y-15, 30, 30);
+    }
+
+
+    
     for(var i in Player.list){
         ctx.textAlign = "center";
 
@@ -288,18 +297,13 @@ function gameLoop(){
 
         ctx.fillRect(x-5, y-5, 10, 10);
     }
-
-    for(var i in Pickup.list){
-        let x = Pickup.list[i].x - Player.list[selfId].x + gameWidth/2;
-        let y = Pickup.list[i].y - Player.list[selfId].y + gameHeight/2;
-
-        ctx.fillRect(x-15, y-15, 30, 30);
-    }
-
     requestAnimationFrame(gameLoop)
 }
 requestAnimationFrame(gameLoop);
 
+canvas.onmousemove = ()=>{
+    canvas.focus();
+}
 
 //key handling:
 canvas.onkeydown = function(event){
@@ -390,10 +394,24 @@ const chatContent = document.getElementById("chat-content");
 chatSendBTN.addEventListener("click", ()=>{
     if(chatInput.value.length>0){
         socket.emit("chat", chatInput.value)
+        chatInput.value = '';
     }
 })
 
 socket.on('chatBroadcast', (signedMsg)=>{
     chatContent.innerHTML += signedMsg + "<br>";
     chatContent.scrollTop = chatContent.scrollHeight;
+})
+
+const noteBTNs = document.querySelectorAll(".note")
+noteBTNs.forEach((item)=>{
+    item.addEventListener("click", ()=>{
+        canvas.focus();
+        noteBTNs.forEach((btn)=>{
+            btn.classList.remove("active")
+        })
+        console.log(item.innerHTML)
+        socket.emit('noteChange', item.innerHTML)
+        item.classList.add("active");
+    })
 })

@@ -6,19 +6,20 @@ import {removePack} from '../socket.js'
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(parent, angle){
+    constructor(parent, angle, note){
         super(parent.x, parent.y);
         this.id = Math.random();
         this.parent = parent;
         this.speed = 20;
 
-        angle = angle + 10*Math.random();
+        angle = angle + 10*(Math.random()-0.5);
 
         this.spdX = Math.cos(angle/180*Math.PI) * this.speed;
         this.spdY = Math.sin(angle/180*Math.PI) * this.speed;
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
+        this.note = note;
 
         Bullet.list[this.id] = this;
         this.timeout = setTimeout(()=>{
