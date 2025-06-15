@@ -131,10 +131,10 @@ form{
 
     position: relative;
     height: 30px;
-    width: 20px;
     bottom: 15px;
 }
 
 .note.active{
-    box-shadow: #ffd900 0px 0px 10px;
+    color: #ffd900;
+    background-color: #a68700;
 }
