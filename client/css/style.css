@@ -83,11 +83,13 @@ form{
 }
 
 #chat{
-    display: flex;
+    /* display: flex;
     flex-direction: column;
     gap: 5px;
-    align-items: stretch;
+    align-items: normal;
     align-content: space-between;
+    flex-wrap: wrap; */
+
 
     padding: 10px;
 
@@ -99,16 +101,26 @@ form{
     height: fit-content;
     max-height: 300px;
     background-color: #ffd90088;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
 }
+
+
 
 #chat-content{
+    text-align: left;
+    padding: 10px;
     overflow-y: scroll;
-    flex-direction: column-reverse;
+    max-height: 230px;
 }
 
-#chat-input, #chat-send-btn{
-    align-self: flex-end;
+#chat-input{
+    min-width: 140px;
+    max-width: 140px;
+    font-size: smaller;
+}
+
+#chat-send-btn{
+    width: 40px;
 }
 
 #notes{
@@ -118,7 +130,7 @@ form{
     padding: 10px;
 
     background-color: transparent;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
 }
 
 .note{

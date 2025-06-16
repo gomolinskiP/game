@@ -22,7 +22,7 @@ class Entity{
             0
         );
         this.pan3d.panningModel = "HRTF";
-        this.pan3d.distanceModel = "inverse";
+        // this.pan3d.distanceModel = "inverse";
         this.pan3d.connect(limiter);
     }
 
@@ -75,6 +75,8 @@ class Bullet extends Entity{
 
     constructor(initPack){
         super(initPack);
+        this.note = initPack.note;
+
         // let synthClass = Tone[initPack.sound];
         this.synth = new Tone[initPack.sound];
         this.pan3d.setPosition(
@@ -90,13 +92,13 @@ class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttack(`${initPack.note}5`);
+        this.synth.triggerAttack(`${this.note}5`);
     }
 
     destroy(){
         clearInterval(this.interval);
         this.synth.triggerRelease();
-        this.synth.triggerAttack("C4");
+        this.synth.triggerAttack(`${this.note}4`);
 
         setTimeout(()=>{
             this.synth.triggerRelease();
@@ -135,8 +137,8 @@ const limiter = new Tone.Compressor(
     20
 )
 const reverb = new Tone.Reverb();
-limiter.connect(reverb)
-reverb.toDestination();
+// limiter.connect(reverb)
+limiter.toDestination();
 
 
 let selfId = null;
@@ -306,10 +308,32 @@ requestAnimationFrame(gameLoop);
 
 canvas.onmousemove = ()=>{
     canvas.focus();
+    isInChat = false;
+    chatInput.placeholder = "press T to start typing"
+
 }
 
+canvas.onblur = ()=>{
+    // alert("xd")
+}
+
+let isInChat = false;
 //key handling:
-canvas.onkeydown = function(event){
+document.onkeydown = function(event){
+    if(isInChat) {
+        if(event.key == "Enter"){
+            if(chatSend()) {
+                chatInput.focus();
+            } else{
+                isInChat = false;
+                chatInput.placeholder = "press T to start typing"
+
+                chatInput.blur();
+            }
+        }
+        else return
+    }
+
     switch(event.key){
         case "d":
             socket.emit('keyPress', {
@@ -341,10 +365,23 @@ canvas.onkeydown = function(event){
                 state: true
             });
             break;
+        case "q":
+            previousNote();
+            break;
+        case "e":
+            nextNote();
+            break;
+        case "t":
+        case "T":
+            isInChat = true;
+            chatInput.focus();
+            chatInput.placeholder = "press ENTER to leave chat"
+            event.preventDefault();
+            break;
     }
 }
 
-canvas.onkeyup = function(event){
+document.onkeyup = function(event){
     switch(event.key){
         case "d":
             socket.emit('keyPress', {
@@ -393,13 +430,31 @@ playBTN.addEventListener("click", ()=>{
 
 const chatSendBTN = document.getElementById("chat-send-btn");
 const chatInput = document.getElementById("chat-input");
+chatInput.value = '';
+chatInput.onclick = function(event){
+    isInChat = true;
+    chatInput.placeholder = "press ENTER to leave chat"
+
+}
 const chatContent = document.getElementById("chat-content");
-chatSendBTN.addEventListener("click", ()=>{
+
+function chatSend(){
     if(chatInput.value.length>0){
         socket.emit("chat", chatInput.value)
         chatInput.value = '';
+
+        return true;
+    } else return false;
+}
+
+chatSendBTN.addEventListener("click", ()=>{
+    if(chatSend()){
+        return;
+    } else{
+        chatInput.focus();
     }
 })
+
 
 //TODO sanitize chat messages, it`s really not secure haha
 socket.on('chatBroadcast', (signedMsg)=>{
@@ -415,11 +470,35 @@ function setActiveNote(note){
             btn.classList.remove("active")
     })
     document.querySelector(`[data-note="${note}"]`).classList.add('active');
+    activeNote = note;
 }
+
+function previousNote(){
+    i = notes.findIndex((n)=>{
+        return n==activeNote;
+    })
+    let iNew = (i>0) ? (i-1) : notes.length-1
+    setActiveNote(notes[iNew])
+    socket.emit('noteChange', activeNote);
+}
+
+function nextNote(){
+    i = notes.findIndex((n)=>{
+        return n==activeNote;
+    })
+    let iNew = (i<notes.length-1) ? (i+1) : 0
+    setActiveNote(notes[iNew])
+    socket.emit('noteChange', activeNote);
+}
+
+let activeNote = null
+notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
 noteBTNs.forEach((item)=>{
     item.addEventListener("click", ()=>{
         canvas.focus();
         setActiveNote(item.dataset.note)
-        socket.emit('noteChange', item.innerHTML)
+
+        socket.emit('noteChange', item.dataset.note)
     })
 })
