@@ -213,6 +213,7 @@ socket.on('update', function(data){
             b.update(pack);
         } else{
             let b = new Bullet(data.bullet[i]);
+            
         }
     }
 
@@ -337,8 +338,8 @@ document.onkeydown = function(event){
     switch(event.key){
         case "d":
             socket.emit('keyPress', {
-            inputId: 'right',
-            state: true
+                inputId: 'right',
+                state: true
             });
             break;
         case "s":
@@ -502,3 +503,26 @@ noteBTNs.forEach((item)=>{
         socket.emit('noteChange', item.dataset.note)
     })
 })
+
+
+let timeSig = 4;
+Tone.Transport.bpm.value = 120;
+Tone.Transport.timeSignature = timeSig;
+let beatCounter = 0;
+Tone.Transport.start();
+const metronome = new Tone.MetalSynth();
+let metrVol = new Tone.Volume(-24);
+metronome.chain(metrVol, Tone.Master);
+
+function playClick(time){
+    console.log(Tone.Transport.position)
+
+    if(beatCounter%timeSig === 0){
+        metronome.triggerAttackRelease("C5", "8n", time)
+    } else{
+        metronome.triggerAttackRelease("C6", "8n", time)
+    }
+    beatCounter++;
+}
+
+Tone.Transport.scheduleRepeat(playClick, "4n");
