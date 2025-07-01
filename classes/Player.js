@@ -1,6 +1,6 @@
 import { Entity } from './Entity.js';
 import { Weapon } from './Weapon.js';
-import { Bullet } from './Bullet.js';
+import { Bullet, scheduledBullet } from './Bullet.js';
 
 export class Player extends Entity{
     static list = {}
@@ -64,11 +64,11 @@ export class Player extends Entity{
             if(!this.shootTimeout){
                 
                 this.shootTimeout = true;
-                new Bullet(this, this.lastAngle, this.selectedNote)
+                new scheduledBullet(this)
 
                 setTimeout(()=>{
                     this.shootTimeout = false
-                }, 100)
+                }, 60000/120)
             }
         }
     }

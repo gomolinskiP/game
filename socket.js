@@ -8,10 +8,8 @@ const __dirname = dirname(__filename);
 
 // import {Entity, Player, Bullet, Weapon} from './classes.js'
 import { Player } from './classes/Player.js';
-import { Bullet } from './classes/Bullet.js';
+import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
-
-
 
 
 let initPack = {player: [], bullet: [], pickup: []};
@@ -256,4 +254,33 @@ export default function webSocketSetUp(serv, ses, db){
         updatePack.pickup = []
         removePack.pickup = []
     }, 1000/25);
+
+    const BPM = 120;
+    const beatInterval = 60000/BPM;
+    let tick = 0;
+
+    setInterval(()=>{
+        const now = Date.now();
+
+        for(var i in socketList){
+                var socket = socketList[i];
+                socket.emit("tick", {now, tick});
+        }
+
+        for(var i in Bullet.list){ 
+            var bullet = Bullet.list[i];
+            bullet.destroy();
+        }
+
+        for(var i in scheduledBullet.list){ 
+                var bullet = scheduledBullet.list[i];
+                
+                    bullet.spawn();
+                    delete scheduledBullet.list[i];
+            }
+
+        console.log(`Now: ${now}, tick: ${tick}`);
+        tick++;
+    }, beatInterval)
 }
+

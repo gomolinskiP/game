@@ -2,6 +2,25 @@ import { Entity } from './Entity.js';
 import { Player } from './Player.js';
 import {removePack} from '../socket.js'
 
+export class scheduledBullet{
+    static list = {};
+
+    constructor(parent){
+        this.id = Math.random();
+        this.parent = parent;
+
+        this.sound = parent.weapon.sound;
+        this.duration = parent.weapon.duration;
+        this.note = parent.selectedNote;
+
+        scheduledBullet.list[this.id] = this;
+        return this;
+    }
+
+    spawn(){
+        new Bullet(this.parent, this.parent.lastAngle, this.note);
+    }
+}
 
 export class Bullet extends Entity{
     static list = {};
@@ -22,10 +41,10 @@ export class Bullet extends Entity{
         this.note = note;
 
         Bullet.list[this.id] = this;
-        this.timeout = setTimeout(()=>{
-            // delete itself after timeout??
-            this.destroy();
-        }, 1000)
+        // this.timeout = setTimeout(()=>{
+        //     // delete itself after timeout??
+        //     this.destroy();
+        // }, 1000)
         return this;
     }
 

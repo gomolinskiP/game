@@ -192,7 +192,7 @@ socket.on('init', function(data){
 })
 
 socket.on('update', function(data){
-    console.log("updatePack:", data)
+    // console.log("updatePack:", data)
 
     for(var i=0; i<data.player.length; i++){
         let pack = data.player[i]
@@ -240,7 +240,7 @@ socket.on('remove', function(data){
         Pickup.list[data.pickup[i]].destroy();
     }
 
-    console.log("removePack:", data)
+    // console.log("removePack:", data)
 })
 
 //game Loop:
@@ -505,12 +505,14 @@ noteBTNs.forEach((item)=>{
 })
 
 
+
+
 let timeSig = 4;
 Tone.Transport.bpm.value = 120;
 Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
 Tone.Transport.start();
-const metronome = new Tone.MetalSynth();
+const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-24);
 metronome.chain(metrVol, Tone.Master);
 
@@ -525,4 +527,18 @@ function playClick(time){
     beatCounter++;
 }
 
-Tone.Transport.scheduleRepeat(playClick, "4n");
+// Tone.Transport.scheduleRepeat(playClick, "4n");
+
+socket.on("tick", (data)=>{
+    let clientNow = Date.now()
+
+    if(Tone.Transport.state != 'started') Tone.Transport.start();
+
+    let pitch = data.tick%4==0 ? "C6" : "C5"; 
+
+    Tone.Transport.scheduleOnce((time)=>{
+        metronome.triggerAttackRelease(pitch, "8n", time)
+    }, Tone.Transport.toSeconds())
+
+    console.log(data.now, data.tick, data.now - clientNow)
+})
