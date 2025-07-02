@@ -68,13 +68,16 @@ export class Player extends Entity{
 
                 setTimeout(()=>{
                     this.shootTimeout = false
-                }, 60000/120)
+                }, this.shootTimeoutTime)
             }
         }
     }
 
     giveWeapon(sound, duration){
         this.weapon = new Weapon(sound, duration)
+        let durationInt = parseInt(duration.replace("n", ""))
+        this.shootTimeoutTime = 60000/120 * (4/durationInt)
+        console.log(this.weapon)
     }
 
     takeDmg(damage){

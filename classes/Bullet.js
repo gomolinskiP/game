@@ -41,10 +41,13 @@ export class Bullet extends Entity{
         this.note = note;
 
         Bullet.list[this.id] = this;
-        // this.timeout = setTimeout(()=>{
-        //     // delete itself after timeout??
-        //     this.destroy();
-        // }, 1000)
+
+        let durationTimeout = 60000/120 * (4/parseInt(this.duration.replace("n", "")))
+
+        this.timeout = setTimeout(()=>{
+            // delete itself after timeout??
+            this.destroy();
+        }, durationTimeout)
         return this;
     }
 

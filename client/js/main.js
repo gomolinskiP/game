@@ -534,7 +534,7 @@ socket.on("tick", (data)=>{
 
     if(Tone.Transport.state != 'started') Tone.Transport.start();
 
-    let pitch = data.tick%4==0 ? "C6" : "C5"; 
+    let pitch = data.tick%8==0 ? "C6" : "C5"; 
 
     Tone.Transport.scheduleOnce((time)=>{
         metronome.triggerAttackRelease(pitch, "8n", time)

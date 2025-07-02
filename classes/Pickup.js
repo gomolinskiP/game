@@ -3,6 +3,7 @@ import {removePack} from '../socket.js'
 
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
+let durationList = ["1n", "2n", "4n", "8n"] //TODO: add triplets "8t", add dotted notes "4n."
 
 export class Pickup extends Entity{
     static list = {};
@@ -13,7 +14,7 @@ export class Pickup extends Entity{
         super(x, y)
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
-        this.duration = "2n"
+        this.duration = durationList[Math.floor(Math.random() * durationList.length)]
 
         this.id = Math.random();
 

@@ -259,28 +259,37 @@ export default function webSocketSetUp(serv, ses, db){
     const beatInterval = 60000/BPM;
     let tick = 0;
 
+    //music time intervals:
     setInterval(()=>{
         const now = Date.now();
 
-        for(var i in socketList){
-                var socket = socketList[i];
-                socket.emit("tick", {now, tick});
+        if(tick%2 == 0){
+            for(var i in socketList){
+                    var socket = socketList[i];
+                    socket.emit("tick", {now, tick});
+            }
         }
 
-        for(var i in Bullet.list){ 
-            var bullet = Bullet.list[i];
-            bullet.destroy();
-        }
+        // for(var i in Bullet.list){ 
+        //     var bullet = Bullet.list[i];
+        //     bullet.destroy();
+        // }
 
         for(var i in scheduledBullet.list){ 
                 var bullet = scheduledBullet.list[i];
-                
+                let durationInt = parseInt(bullet.duration.replace("n", ""));
+                let eightsNum = 8/durationInt;
+                console.log(eightsNum)
+                console.log(tick%eightsNum)
+
+                if(tick%eightsNum == 0){
                     bullet.spawn();
                     delete scheduledBullet.list[i];
+                }
             }
 
-        console.log(`Now: ${now}, tick: ${tick}`);
+        // console.log(`Now: ${now}, tick: ${tick}`);
         tick++;
-    }, beatInterval)
+    }, beatInterval/2)
 }
 
