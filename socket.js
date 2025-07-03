@@ -279,8 +279,7 @@ export default function webSocketSetUp(serv, ses, db){
                 var bullet = scheduledBullet.list[i];
                 let durationInt = parseInt(bullet.duration.replace("n", ""));
                 let eightsNum = 8/durationInt;
-                console.log(eightsNum)
-                console.log(tick%eightsNum)
+
 
                 if(tick%eightsNum == 0){
                     bullet.spawn();

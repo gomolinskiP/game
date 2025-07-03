@@ -65,6 +65,8 @@ export class Player extends Entity{
                 
                 this.shootTimeout = true;
                 new scheduledBullet(this)
+                new scheduledBullet(this)
+                new scheduledBullet(this)
 
                 setTimeout(()=>{
                     this.shootTimeout = false

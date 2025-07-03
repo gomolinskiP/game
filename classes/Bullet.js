@@ -18,14 +18,14 @@ export class scheduledBullet{
     }
 
     spawn(){
-        new Bullet(this.parent, this.parent.lastAngle, this.note);
+        new Bullet(this.parent, this.parent.lastAngle);
     }
 }
 
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(parent, angle, note){
+    constructor(parent, angle){
         super(parent.x, parent.y);
         this.id = Math.random();
         this.parent = parent;
@@ -38,7 +38,7 @@ export class Bullet extends Entity{
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
-        this.note = note;
+        this.note = parent.selectedNote;
 
         Bullet.list[this.id] = this;
 
