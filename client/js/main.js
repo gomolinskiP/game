@@ -328,16 +328,16 @@ function playClick(time){
 
 // Tone.Transport.scheduleRepeat(playClick, "4n");
 
-socket.on("tick", (data)=>{
-    let clientNow = Date.now()
+// socket.on("tick", (data)=>{
+//     let clientNow = Date.now()
 
-    if(Tone.Transport.state != 'started') Tone.Transport.start();
-    else{
-        let pitch = data.tick%8==0 ? "C6" : "C5"; 
+//     if(Tone.Transport.state != 'started') Tone.Transport.start();
+//     else{
+//         let pitch = data.tick%8==0 ? "C6" : "C5"; 
 
-        Tone.Transport.scheduleOnce((time)=>{
-            metronome.triggerAttackRelease(pitch, "8n", time)
-        }, Tone.Transport.toSeconds())
-    }
-    // console.log(data.now, data.tick, data.now - clientNow)
-})
+//         Tone.Transport.scheduleOnce((time)=>{
+//             metronome.triggerAttackRelease(pitch, "8n", time)
+//         }, Tone.Transport.toSeconds())
+//     }
+//     // console.log(data.now, data.tick, data.now - clientNow)
+// })

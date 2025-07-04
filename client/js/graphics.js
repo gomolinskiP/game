@@ -21,22 +21,136 @@ function canvasResize() {
 window.addEventListener('resize', canvasResize);
 
 
-const Img = {}
+const Img = {};
+let drawBuffer = [];
 
 Img.player = new Image();
 Img.player.src = "../img/placeholder.png"
 
 Img.map = new Image();
-Img.map.src = "../img/map.jpg"
+Img.map.src = "../img/map.png"
+
+let mapData;
+let tileImages;
+
+fetch("../img/map.json")
+    .then(res=>res.json())
+    .then(async data=>{
+        mapData = data;
+
+        console.log(getUsedGIDs(mapData))
+        console.log(loadUsedTiles(mapData));
+
+        tileImages = await loadUsedTiles(mapData)
+    });
+
+function getUsedGIDs(mapData){
+    const gids = new Set();
+    for(const layer of mapData.layers){
+        if(layer.type !== "tilelayer") continue;
+
+        for(const chunk of layer.chunks){
+
+            for(const tileID of chunk.data){
+                if(tileID !== 0) gids.add(tileID)
+            }
+        }
+    }
+    return gids;
+}
+
+async function loadUsedTiles(mapData){
+    const usedGIDs = getUsedGIDs(mapData);
+
+    const tileset = mapData.tilesets[0];
+    const tileImages = {};
+
+    for(const tile of tileset.tiles){
+        const globalID = tile.id + tileset.firstgid;
+
+        if(!usedGIDs.has(globalID)) continue;
+
+        const img = new Image();
+        img.src = `../img/${tile.image}`;
+
+        await new Promise(res => (img.onload = res));
+        tileImages[globalID] = img;
+    }
+
+    return tileImages;
+}
 
 function drawMap(){
     if(Player.list[selfId]){
-        let x = gameWidth/2 - Player.list[selfId].x;
-        let y = gameHeight/2 - Player.list[selfId].y;
-        ctx.drawImage(Img.map, x, y)
+        let bx = gameWidth/2 - Player.list[selfId].x;
+        let by = gameHeight/2 - Player.list[selfId].y;
+        ctx.drawImage(Img.map, bx - 3124, by - 1280)
+
+        if(mapData && tileImages){
+            for(const layer of mapData.layers){
+                if(layer.type !== "tilelayer" || layer.visible == false) continue;
+
+                for(const chunk of layer.chunks){
+                    if(layer.name == "bottom2") console.log(chunk)
+                    const width = chunk.width;
+                    const height = chunk.height;
+                    const tileW = 64;
+                    const tileH = 32;
+                    const offsetX = layer.offsetx || 0;
+                    const offsetY = layer.offsety || 0;
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            const index = y * width + x;
+                            const gid = chunk.data[index];
+                            if (!gid || !tileImages[gid]) continue;
+
+                            const img = tileImages[gid];
+
+                            // Pozycja kafelka w izometrycznym układzie
+                            const tileX = chunk.x + x;
+                            const tileY = chunk.y + y;
+
+                            const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + 3500 + offsetX - Player.list[selfId].x; //weird shift TO FIX
+                            const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
+
+                            drawBuffer.push({
+                                img: img,
+                                x: screenX,
+                                y: screenY
+                            })
+                            // ctx.drawImage(img, screenX, screenY);
+                        }
+                    }
+                    // const chunkWidth = chunk.width;
+                    // const chunkHeight = chunk.height;
+                    // const chunkX = chunk.x;
+                    // const chunkY = chunk.y;
+
+                    // let iW=0;
+                    // let iH=0;
+                    // for(const tileID of chunk.data){
+                        
+                    //     if(tileID !== 0){
+                    //         ctx.drawImage(tileImages[tileID], chunkX+iW*64, chunkY+iH*32)
+                    //     }
+                    //     iW += 1;
+                    //     if(iW > 15){
+                    //         iW = 0;
+                    //         iH += 0;
+                    //     }
+                    // }
+                }
+            }
+        }
     }
     
 }
+
+//the idea:
+//1 - draw map - floor and below
+//2 - draw things on the floor (pickups)
+//3 - sort players etc. & other game objects by their 'y'
+//4 - draw them in that order 
 
 //game Loop:
 export function gameLoop(){
@@ -87,10 +201,41 @@ export function gameLoop(){
 
             ctx.filter = "none";
             ctx.font = '16px Cascadia Mono';
-        }    
-        ctx.drawImage(Img.player, x-32, y-32);
+        }
+        drawBuffer.push({
+            img: Img.player,
+            x: x-32,
+            y: y-32
+        })
+        // ctx.drawImage(Img.player, x-32, y-32);
         ctx.fillText(Player.list[i].name, x, y-32);
     };
+
+    //sort and draw drawBuffer:
+    drawBuffer.sort((a, b) => {
+        if(a.img != Img.player && b.img != Img.player){
+            return;
+        } else{
+            return a.y - b.y
+        }
+    })
+    //TO DO sorting sucks TO FIX:
+    drawBuffer.sort((a, b) => {
+        // if(a.img != Img.player && b.img != Img.player){
+            return b.y - a.y;
+        // } else{
+            // return a.y - b.y;
+        // }
+    })
+    drawBuffer.sort((a, b) => {
+        if(a.img != Img.player && b.img != Img.player){
+            return b.y - a.y;
+        }
+    })
+    for(let obj of drawBuffer){
+        ctx.drawImage(obj.img, obj.x, obj.y);
+    }
+    drawBuffer = []
 
     for(var i in Bullet.list){
         let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;

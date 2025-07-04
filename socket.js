@@ -173,10 +173,10 @@ export default function webSocketSetUp(serv, ses, db){
     //main loop:
     setInterval(function(){
         //random pickup spawn:
-        if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
-            // console.log("pickup spawned")
-            new Pickup();
-        }
+        // if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
+        //     // console.log("pickup spawned")
+        //     new Pickup();
+        // }
 
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]
