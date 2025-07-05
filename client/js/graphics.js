@@ -90,8 +90,12 @@ function drawMap(){
             for(const layer of mapData.layers){
                 if(layer.type !== "tilelayer" || layer.visible == false) continue;
 
+                //get layer height:
+                //from "wall1" to 0, from "wall2" to 1, etc.
+                let match = layer.name.match(/\d+$/);
+                let layerId = match ? parseInt(match[0], 10)-1 : null;
+
                 for(const chunk of layer.chunks){
-                    if(layer.name == "bottom2") console.log(chunk)
                     const width = chunk.width;
                     const height = chunk.height;
                     const tileW = 64;
@@ -106,7 +110,7 @@ function drawMap(){
 
                             const img = tileImages[gid];
 
-                            // Pozycja kafelka w izometrycznym układzie
+                            // position:
                             const tileX = chunk.x + x;
                             const tileY = chunk.y + y;
 
@@ -116,41 +120,17 @@ function drawMap(){
                             drawBuffer.push({
                                 img: img,
                                 x: screenX,
-                                y: screenY
+                                y: screenY,
+                                layerId: layerId
                             })
-                            // ctx.drawImage(img, screenX, screenY);
                         }
                     }
-                    // const chunkWidth = chunk.width;
-                    // const chunkHeight = chunk.height;
-                    // const chunkX = chunk.x;
-                    // const chunkY = chunk.y;
-
-                    // let iW=0;
-                    // let iH=0;
-                    // for(const tileID of chunk.data){
-                        
-                    //     if(tileID !== 0){
-                    //         ctx.drawImage(tileImages[tileID], chunkX+iW*64, chunkY+iH*32)
-                    //     }
-                    //     iW += 1;
-                    //     if(iW > 15){
-                    //         iW = 0;
-                    //         iH += 0;
-                    //     }
-                    // }
                 }
             }
         }
     }
     
 }
-
-//the idea:
-//1 - draw map - floor and below
-//2 - draw things on the floor (pickups)
-//3 - sort players etc. & other game objects by their 'y'
-//4 - draw them in that order 
 
 //game Loop:
 export function gameLoop(){
@@ -207,35 +187,28 @@ export function gameLoop(){
             x: x-32,
             y: y-32
         })
-        // ctx.drawImage(Img.player, x-32, y-32);
         ctx.fillText(Player.list[i].name, x, y-32);
     };
 
     //sort and draw drawBuffer:
     drawBuffer.sort((a, b) => {
-        if(a.img != Img.player && b.img != Img.player){
-            return;
-        } else{
-            return a.y - b.y
+        let aY = a.y;
+        let bY = b.y;
+
+        if(a.layerId){
+            aY = aY + 32*a.layerId
         }
-    })
-    //TO DO sorting sucks TO FIX:
-    drawBuffer.sort((a, b) => {
-        // if(a.img != Img.player && b.img != Img.player){
-            return b.y - a.y;
-        // } else{
-            // return a.y - b.y;
-        // }
-    })
-    drawBuffer.sort((a, b) => {
-        if(a.img != Img.player && b.img != Img.player){
-            return b.y - a.y;
+        if(b.layerId){
+            bY = bY + 32*b.layerId
         }
+            return aY - bY
     })
+
     for(let obj of drawBuffer){
         ctx.drawImage(obj.img, obj.x, obj.y);
     }
     drawBuffer = []
+
 
     for(var i in Bullet.list){
         let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;
