@@ -28,9 +28,10 @@ Img.player = new Image();
 Img.player.src = "../img/placeholder.png"
 
 Img.map = new Image();
-Img.map.src = "../img/map.png"
+Img.map.src = "../img/map2.png"
 
 let mapData;
+let collisionLayer;
 let tileImages;
 
 fetch("../img/map.json")
@@ -42,6 +43,8 @@ fetch("../img/map.json")
         console.log(loadUsedTiles(mapData));
 
         tileImages = await loadUsedTiles(mapData)
+        collisionLayer = getCollisionLayer(mapData)
+        console.log(collisionLayer)
     });
 
 function getUsedGIDs(mapData){
@@ -57,6 +60,13 @@ function getUsedGIDs(mapData){
         }
     }
     return gids;
+}
+
+function getCollisionLayer(mapData){
+    for(const layer of mapData.layers){
+        if(layer.name == 'collision') return layer;
+    }
+    return null;
 }
 
 async function loadUsedTiles(mapData){
@@ -80,11 +90,51 @@ async function loadUsedTiles(mapData){
     return tileImages;
 }
 
+function isoToScreen(x, y){
+    return{
+        x: (x-y),
+        y: (x+y)/2
+    }
+}
+
+function drawIsometricRect(tileX, tileY, width, height){
+    ctx.save()
+
+    const tileW = 64;
+    const tileH = 32;
+
+    let tilesNWtoSE = width/32;
+    let tilesNEtoSW = height/32;
+
+    let worldCoord = isoToScreen(tileX, tileY)
+
+    let x = worldCoord.x + gameWidth/2  + 3531 - Player.list[selfId].x
+    
+    let y = worldCoord.y + gameHeight/2 + 0 - Player.list[selfId].y
+
+    ctx.strokeStyle = "red";
+
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);                     // top
+
+    ctx.lineTo(x + tilesNWtoSE*tileW/2, y + tilesNWtoSE*tileH/2);     // right
+
+    ctx.lineTo(x + (tilesNWtoSE - tilesNEtoSW)*tileW/2, y + (tilesNWtoSE + tilesNEtoSW)*tileH/2);            // bottom
+
+    ctx.lineTo(x - tilesNEtoSW*tileW/2, y + tilesNEtoSW*tileH/2);     // left
+    
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.restore();
+}
+
 function drawMap(){
     if(Player.list[selfId]){
         let bx = gameWidth/2 - Player.list[selfId].x;
         let by = gameHeight/2 - Player.list[selfId].y;
-        ctx.drawImage(Img.map, bx - 3124, by - 1280)
+        ctx.drawImage(Img.map, bx - 3124, by - 1280) //weird shift TO FIX
 
         if(mapData && tileImages){
             for(const layer of mapData.layers){
@@ -114,6 +164,8 @@ function drawMap(){
                             const tileX = chunk.x + x;
                             const tileY = chunk.y + y;
 
+
+                            //this code above ^^^ should be done once & not for each frame
                             const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + 3500 + offsetX - Player.list[selfId].x; //weird shift TO FIX
                             const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
 
@@ -216,5 +268,13 @@ export function gameLoop(){
 
         ctx.fillRect(x-5, y-5, 10, 10);
     }
+
+    //draw collision rectangles (for debug):
+    // if(collisionLayer){
+    //     for(let obj of collisionLayer.objects){
+    //         drawIsometricRect(obj.x, obj.y, obj.width, obj. height)
+    //     }
+    // }
+
     requestAnimationFrame(gameLoop)
 }

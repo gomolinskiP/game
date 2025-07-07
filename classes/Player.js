@@ -1,6 +1,7 @@
 import { Entity } from './Entity.js';
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
+import { collisionLayer, checkWallCollision } from '../socket.js';
 
 export class Player extends Entity{
     static list = {}
@@ -50,13 +51,23 @@ export class Player extends Entity{
         if(!this.pressingUp && !this.pressingDown && !this.pressingLeft && !this.pressingRight)
             this.needsUpdate = false
         else{
-            this.dirY *= 58/100 //SCALER if map image is in perspective
+            this.dirY *= 50/100 //SCALER if map image is in perspective
             this.lastAngle = Math.atan2(this.dirY, this.dirX) * 180/Math.PI;
             this.spdX = Math.cos(this.lastAngle/180*Math.PI) * this.speed
             this.spdY = Math.sin(this.lastAngle/180*Math.PI) * this.speed
 
-            this.x += this.spdX
-            this.y += this.spdY
+            
+
+            //check collision with collisionLayer:
+            let newX = this.x + this.spdX
+            let newY = this.y + this.spdY
+
+            if(!checkWallCollision(newX, newY, collisionLayer)){
+                this.x = newX
+                this.y = newY 
+            }
+            
+            console.log(this.x, this.y)
         }
 
         if(this.pressingSpace){

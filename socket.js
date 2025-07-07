@@ -2,7 +2,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
+import { readFile } from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -16,10 +17,65 @@ let initPack = {player: [], bullet: [], pickup: []};
 let updatePack = {player: [], bullet: [], pickup: []};
 export let removePack = {player: [], bullet: [], pickup: []};
 
-export default function webSocketSetUp(serv, ses, db){
+
+export let collisionLayer = await loadCollisionLayer();
+
+
+async function loadCollisionLayer(){
+    const filePath = resolve(__dirname, './client/img/map.json');
+    const jsonData = JSON.parse(await readFile(filePath, 'utf-8'));
+
+    for(let layer of jsonData.layers){
+        if(layer.name == 'collision'){
+
+            // const collisionRects = layer.data.objects.map(obj=>{
+            //     x: obj.x,
+            //     y: obj.y,
+
+            // })
+            return layer;
+        }
+    }
+
+    return null;
+}
+
+function isoToScreen(x, y){
+    return{
+        x: (x-y),
+        y: (x+y)/2
+    }
+}
+
+function screenToIso(x, y){
+    return{
+        x: (2*y + x - 3531)/2,
+        y: (2*y - x + 3531)/2
+    }
+}
+
+export function checkWallCollision(x, y, collisionLayer){
+    const {x: isoObjX, y: isoObjY} = screenToIso(x, y)
+
+    for(let isoRect of collisionLayer.objects){
+        if(isoObjX >= isoRect.x - 32 &&
+        isoObjX <= isoRect.x + isoRect.width - 16 &&
+            isoObjY >= isoRect.y - 32 &&
+            isoObjY <= isoRect.y + isoRect.height - 16
+        ){
+            console.log(" wall collision")
+            return true;
+        }
+    }
+    return false;
+}
+
+
+export default async function webSocketSetUp(serv, ses, db){
 
     //socket.io:
     var socketList = {};
+
 
     var io = require('socket.io')(serv, {
     cors: {
@@ -204,6 +260,9 @@ export default function webSocketSetUp(serv, ses, db){
 
         for(var i in Player.list){ 
             var player = Player.list[i];
+
+            if(collisionLayer) checkWallCollision(player.x, player.y, collisionLayer)
+
             
             if(player.needsUpdate){
                 player.updatePosition();
