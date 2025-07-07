@@ -49,7 +49,7 @@ export class Player extends Entity{
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
 
-            if(!this.synthTimeout){
+            if(!this.synthTimeout && Tone.context.state == "running"){
                 this.synthTimeout = true;
                 this.footstepSyn.triggerAttackRelease("128n");
                 setTimeout(()=>{
