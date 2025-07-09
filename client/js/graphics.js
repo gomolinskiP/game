@@ -27,17 +27,25 @@ let drawBuffer = [];
 Img.player = new Image();
 Img.player.src = "../img/placeholder.png"
 
+Img.note = new Image();
+Img.note.src = "../img/note.png"
+
+Img.pickup = new Image();
+Img.pickup.src = "../img/tileset/blocks_101.png"
+
 Img.map = new Image();
-Img.map.src = "../img/map2.png"
+Img.map.src = "../img/map.png"
 
 let mapData;
 let collisionLayer;
 let tileImages;
 
+//get map data:
 fetch("../img/map.json")
     .then(res=>res.json())
     .then(async data=>{
         mapData = data;
+        console.log(data)
 
         console.log(getUsedGIDs(mapData))
         console.log(loadUsedTiles(mapData));
@@ -134,7 +142,7 @@ function drawMap(){
     if(Player.list[selfId]){
         let bx = gameWidth/2 - Player.list[selfId].x;
         let by = gameHeight/2 - Player.list[selfId].y;
-        ctx.drawImage(Img.map, bx - 3124, by - 1280) //weird shift TO FIX
+        ctx.drawImage(Img.map, bx - 564, by -256) //weird shift TO FIX
 
         if(mapData && tileImages){
             for(const layer of mapData.layers){
@@ -173,7 +181,9 @@ function drawMap(){
                                 img: img,
                                 x: screenX,
                                 y: screenY,
-                                layerId: layerId
+                                layerId: layerId,
+                                w: 64,
+                                h: 64
                             })
                         }
                     }
@@ -196,7 +206,14 @@ export function gameLoop(){
         let x = Pickup.list[i].x - Player.list[selfId].x + gameWidth/2;
         let y = Pickup.list[i].y - Player.list[selfId].y + gameHeight/2;
 
-        ctx.fillRect(x-15, y-15, 30, 30);
+        // ctx.drawImage(Img.pickup, x-16, y-16, 32, 32);
+        drawBuffer.push({
+            img: Img.pickup,
+            x: x-8,
+            y: y-8,
+            w: 16,
+            h: 16
+        })
     }
 
 
@@ -237,10 +254,27 @@ export function gameLoop(){
         drawBuffer.push({
             img: Img.player,
             x: x-32,
-            y: y-32
+            y: y-32,
+            w: 64,
+            h: 64,
         })
         ctx.fillText(Player.list[i].name, x, y-32);
     };
+
+    for(var i in Bullet.list){
+        let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;
+        let y = Bullet.list[i].y - Player.list[selfId].y + gameHeight/2;
+
+        drawBuffer.push({
+            img: Img.note,
+            x: x-16,
+            y: y-16,
+            w: 32,
+            h: 32,
+        })
+        // ctx.fillRect(x-5, y-5, 10, 10);
+        // ctx.drawImage(Img.note, x-8, y-8)
+    }
 
     //sort and draw drawBuffer:
     drawBuffer.sort((a, b) => {
@@ -257,17 +291,12 @@ export function gameLoop(){
     })
 
     for(let obj of drawBuffer){
-        ctx.drawImage(obj.img, obj.x, obj.y);
+        ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
     }
     drawBuffer = []
 
 
-    for(var i in Bullet.list){
-        let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;
-        let y = Bullet.list[i].y - Player.list[selfId].y + gameHeight/2;
 
-        ctx.fillRect(x-5, y-5, 10, 10);
-    }
 
     //draw collision rectangles (for debug):
     // if(collisionLayer){
