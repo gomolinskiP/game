@@ -27,14 +27,24 @@ let drawBuffer = [];
 Img.player = new Image();
 Img.player.src = "../img/placeholder.png"
 
-Img.note = new Image();
-Img.note.src = "../img/note.png"
+Img.note = {}
+
+Img.note['1n'] = new Image();
+Img.note['1n'].src = "../img/note.png"
+Img.note['2n'] = new Image();
+Img.note['2n'].src = "../img/halfnote.png"
+Img.note['4n'] = new Image();
+Img.note['4n'].src = "../img/quarternote.png"
+Img.note['8n'] = new Image();
+Img.note['8n'].src = "../img/eightnote.png"
 
 Img.pickup = new Image();
 Img.pickup.src = "../img/tileset/blocks_101.png"
 
 Img.map = new Image();
 Img.map.src = "../img/map.png"
+
+console.log(Img)
 
 let mapData;
 let collisionLayer;
@@ -262,18 +272,17 @@ export function gameLoop(){
     };
 
     for(var i in Bullet.list){
-        let x = Bullet.list[i].x - Player.list[selfId].x + gameWidth/2;
-        let y = Bullet.list[i].y - Player.list[selfId].y + gameHeight/2;
+        let bullet = Bullet.list[i]
+        let x = bullet.x - Player.list[selfId].x + gameWidth/2;
+        let y = bullet.y - Player.list[selfId].y + gameHeight/2;
 
         drawBuffer.push({
-            img: Img.note,
+            img: Img.note[bullet.duration],
             x: x-16,
             y: y-16,
             w: 32,
             h: 32,
         })
-        // ctx.fillRect(x-5, y-5, 10, 10);
-        // ctx.drawImage(Img.note, x-8, y-8)
     }
 
     //sort and draw drawBuffer:

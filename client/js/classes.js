@@ -66,6 +66,7 @@ export class Bullet extends Entity{
     constructor(initPack){
         super(initPack);
         this.note = initPack.note;
+        this.duration = initPack.duration;
 
         // let synthClass = Tone[initPack.sound];
         this.synth = new Tone[initPack.sound];
