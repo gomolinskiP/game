@@ -1,6 +1,8 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
 import {removePack} from '../socket.js'
+import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
+
 
 export class scheduledBullet{
     static list = {};
@@ -57,6 +59,8 @@ export class Bullet extends Entity{
 
         //collision check
         let hitPlayerId = this.collidingPlayerId();
+        let isCollidingWall = checkWallCollision(this.x, this.y-32, bulletCollisionLayer)
+        //player hit:
         if(hitPlayerId != null){
             let targetPlayer = Player.list[hitPlayerId];
             if(this.parent != targetPlayer){
@@ -64,6 +68,11 @@ export class Bullet extends Entity{
                 this.destroy();
                 targetPlayer.takeDmg(1);
             }
+        }
+        //wall hit:
+        if(isCollidingWall){
+            clearTimeout(this.timeout);
+            this.destroy();
         }
 
         // for(let i in Player.list){

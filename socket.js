@@ -17,16 +17,20 @@ let initPack = {player: [], bullet: [], pickup: []};
 let updatePack = {player: [], bullet: [], pickup: []};
 export let removePack = {player: [], bullet: [], pickup: []};
 
+let mapData = await loadMapData();
+export let collisionLayer = await loadCollisionLayer(mapData, 'collision');
+export let bulletCollisionLayer = await loadCollisionLayer(mapData, 'bulletCollision')
 
-export let collisionLayer = await loadCollisionLayer();
-
-
-async function loadCollisionLayer(){
+async function loadMapData() {
     const filePath = resolve(__dirname, './client/img/map.json');
     const jsonData = JSON.parse(await readFile(filePath, 'utf-8'));
 
-    for(let layer of jsonData.layers){
-        if(layer.name == 'collision'){
+    return jsonData;
+}
+
+function loadCollisionLayer(mapData, layerName){
+    for(let layer of mapData.layers){
+        if(layer.name == layerName){
 
             // const collisionRects = layer.data.objects.map(obj=>{
             //     x: obj.x,
@@ -36,8 +40,7 @@ async function loadCollisionLayer(){
             return layer;
         }
     }
-
-    return null;
+    return null; //if layer not found return null;
 }
 
 function isoToScreen(x, y){
@@ -63,7 +66,6 @@ export function checkWallCollision(x, y, collisionLayer){
             isoObjY >= isoRect.y - 32 &&
             isoObjY <= isoRect.y + isoRect.height - 16
         ){
-            console.log(" wall collision")
             return true;
         }
     }
@@ -228,11 +230,11 @@ export default async function webSocketSetUp(serv, ses, db){
 
     //main loop:
     setInterval(function(){
-        //random pickup spawn:
-        // if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
-        //     // console.log("pickup spawned")
-        //     new Pickup();
-        // }
+        // random pickup spawn:
+        if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
+            // console.log("pickup spawned")
+            new Pickup();
+        }
 
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]

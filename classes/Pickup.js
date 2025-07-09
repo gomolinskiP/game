@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
 import {removePack} from '../socket.js'
+import { collisionLayer, checkWallCollision } from '../socket.js';
 
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
@@ -9,8 +10,15 @@ export class Pickup extends Entity{
     static list = {};
 
     constructor(){
-        let x = 2000*(Math.random())
-        let y = 1000*(Math.random())
+        let x;
+        let y;
+
+        let isUnreachable = true;
+        while(isUnreachable){
+            x = 1280 + 2000*(Math.random()-0.5);
+            y = 450 + 1000*(Math.random()-0.5);
+            isUnreachable = checkWallCollision(x, y, collisionLayer);
+        }
         super(x, y)
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
