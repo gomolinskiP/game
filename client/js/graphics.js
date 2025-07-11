@@ -2,8 +2,8 @@ import { Player, Bullet, Pickup } from './classes.js'
 import { selfId } from './main.js'
 
 
-let gameWidth = window.innerWidth;
-let gameHeight = window.innerHeight;
+export let gameWidth = window.innerWidth;
+export let gameHeight = window.innerHeight;
 
 export var canvas = document.getElementById("ctx");
 canvas.tabIndex = 1000; //so I can listen to events on canvas specifically
@@ -21,11 +21,24 @@ function canvasResize() {
 window.addEventListener('resize', canvasResize);
 
 
-const Img = {};
-let drawBuffer = [];
+export const Img = {};
+export let drawBuffer = [];
 
 Img.player = new Image();
-Img.player.src = "../img/placeholder.png"
+Img.player.src = "../img/char/s1.png"
+
+let directions = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+Img.playerAnim = {}
+for(let dir of directions){
+    Img.playerAnim[dir] = {}
+
+    for(let i = 0; i<3; i++){
+        Img.playerAnim[dir][i] = new Image();
+        Img.playerAnim[dir][i].src = `../img/char/${dir}${i+1}.png`
+    }
+}
+
+
 
 Img.note = {}
 
@@ -43,8 +56,6 @@ Img.pickup.src = "../img/tileset/blocks_101.png"
 
 Img.map = new Image();
 Img.map.src = "../img/map.png"
-
-console.log(Img)
 
 let mapData;
 let collisionLayer;
@@ -229,6 +240,7 @@ export function gameLoop(){
 
     
     for(var i in Player.list){
+        Player.list[i].draw(ctx);
         ctx.textAlign = "center";
 
 
@@ -261,14 +273,14 @@ export function gameLoop(){
             ctx.filter = "none";
             ctx.font = '16px Cascadia Mono';
         }
-        drawBuffer.push({
-            img: Img.player,
-            x: x-32,
-            y: y-32,
-            w: 64,
-            h: 64,
-        })
-        ctx.fillText(Player.list[i].name, x, y-32);
+        // drawBuffer.push({
+        //     img: Img.player,
+        //     x: x-32,
+        //     y: y-32,
+        //     w: 64,
+        //     h: 64,
+        // })
+        ctx.fillText(Player.list[i].name, x, y-36);
     };
 
     for(var i in Bullet.list){
@@ -300,6 +312,7 @@ export function gameLoop(){
     })
 
     for(let obj of drawBuffer){
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
     }
     drawBuffer = []

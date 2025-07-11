@@ -145,7 +145,8 @@ export default async function webSocketSetUp(serv, ses, db){
                         y: Player.list[i].y,
                         id: Player.list[i].id,
                         name: Player.list[i].name,
-                        hp: Player.list[i].hp
+                        hp: Player.list[i].hp,
+                        direction: Player.list[i].lastAngle
                     })
                 }
                 initPack.pickup = []
@@ -273,7 +274,8 @@ export default async function webSocketSetUp(serv, ses, db){
                     y: player.y,
                     id: player.id,
                     name: player.name,
-                    hp: player.hp
+                    hp: player.hp,
+                    direction: player.lastAngle,
                 })
             }
         }
