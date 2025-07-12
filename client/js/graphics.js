@@ -21,6 +21,10 @@ function canvasResize() {
 window.addEventListener('resize', canvasResize);
 
 
+//for debug:
+let showCollisionRects = false;
+
+
 export const Img = {};
 export let drawBuffer = [];
 
@@ -199,9 +203,11 @@ function drawMap(){
                             const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
 
                             drawBuffer.push({
+                                type: 'image',
                                 img: img,
                                 x: screenX,
                                 y: screenY,
+                                sortY: screenY,
                                 layerId: layerId,
                                 w: 64,
                                 h: 64
@@ -215,92 +221,41 @@ function drawMap(){
     
 }
 
+function drawHUD(){
+     //hp bar:
+    ctx.fillStyle = "grey";
+    ctx.fillRect(20, 20, 100, 16)
+    ctx.fillStyle = "red";
+    ctx.fillRect(20, 20, (Player.list[selfId].hp/100)*100, 16)
+    ctx.fillStyle = "black";
+    ctx.font = 'bold 18px Cascadia Mono';
+    ctx.fillText(Player.list[selfId].hp, 70, 35);
+}
+
+ctx.textAlign = "center";
 //game Loop:
 export function gameLoop(){
-    // console.log(Player.list)
-    ctx.fillStyle = "white";
+    //draw background & map elements:
+    ctx.fillStyle = "black";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
     drawMap()
-
-    ctx.fillStyle = "black";
-    for(var i in Pickup.list){
-        let x = Pickup.list[i].x - Player.list[selfId].x + gameWidth/2;
-        let y = Pickup.list[i].y - Player.list[selfId].y + gameHeight/2;
-
-        // ctx.drawImage(Img.pickup, x-16, y-16, 32, 32);
-        drawBuffer.push({
-            img: Img.pickup,
-            x: x-8,
-            y: y-8,
-            w: 16,
-            h: 16
-        })
-    }
-
-
     
+    //draw game objects:
+    for(var i in Pickup.list){
+        Pickup.list[i].draw();
+    }
     for(var i in Player.list){
-        Player.list[i].draw(ctx);
-        ctx.textAlign = "center";
-
-
-        let x = Player.list[i].x - Player.list[selfId].x + gameWidth/2;
-        let y = Player.list[i].y - Player.list[selfId].y + gameHeight/2;
-
-        if(Player.list[i].id == selfId){
-            //hp bar:
-            ctx.fillStyle = "grey";
-            ctx.fillRect(20, 20, 100, 16)
-            ctx.fillStyle = "red";
-            ctx.fillRect(20, 20, (Player.list[i].hp/100)*100, 16)
-            ctx.fillStyle = "black";
-            ctx.font = 'bold 18px Cascadia Mono';
-            ctx.fillText(Player.list[i].hp, 70, 35);
-
-            // ctx.filter = "hue-rotate(180deg)"
-            ctx.font = 'bold 20px Cascadia Mono';
-        }
-        else{
-            //hp bar:
-            ctx.fillStyle = "grey";
-            ctx.fillRect(x-25, y-58, 50, 8)
-            ctx.fillStyle = "red";
-            ctx.fillRect(x-25, y-58, (Player.list[i].hp/100)*50, 8)
-            ctx.fillStyle = "black";
-            ctx.font = '12px Cascadia Mono';
-            ctx.fillText(Player.list[i].hp, x, y-50);
-
-            ctx.filter = "none";
-            ctx.font = '16px Cascadia Mono';
-        }
-        // drawBuffer.push({
-        //     img: Img.player,
-        //     x: x-32,
-        //     y: y-32,
-        //     w: 64,
-        //     h: 64,
-        // })
-        ctx.fillText(Player.list[i].name, x, y-36);
+        Player.list[i].draw();
     };
 
     for(var i in Bullet.list){
-        let bullet = Bullet.list[i]
-        let x = bullet.x - Player.list[selfId].x + gameWidth/2;
-        let y = bullet.y - Player.list[selfId].y + gameHeight/2;
-
-        drawBuffer.push({
-            img: Img.note[bullet.duration],
-            x: x-16,
-            y: y-16,
-            w: 32,
-            h: 32,
-        })
+        Bullet.list[i].draw();
     }
 
     //sort and draw drawBuffer:
     drawBuffer.sort((a, b) => {
-        let aY = a.y;
-        let bY = b.y;
+        let aY = a.sortY;
+        let bY = b.sortY;
 
         if(a.layerId){
             aY = aY + 32*a.layerId
@@ -312,20 +267,37 @@ export function gameLoop(){
     })
 
     for(let obj of drawBuffer){
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
+        switch(obj.type){
+            case 'image':
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
+                break;
+            case 'text':
+                ctx.font = obj.font;
+                ctx.fillText(obj.text, obj.x, obj.y);
+                break;
+            case 'hpbar':
+                //hp bar:
+                ctx.fillStyle = "grey";
+                ctx.fillRect(obj.x-25, obj.y-58, 50, 8)
+                ctx.fillStyle = "red";
+                ctx.fillRect(obj.x-25, obj.y-58, (obj.hp/100)*50, 8)
+                ctx.fillStyle = "black";
+                ctx.font = '12px Cascadia Mono';
+                ctx.fillText(obj.hp, obj.x, obj.y-50);
+        }   
     }
     drawBuffer = []
 
-
+    drawHUD();
 
 
     //draw collision rectangles (for debug):
-    // if(collisionLayer){
-    //     for(let obj of collisionLayer.objects){
-    //         drawIsometricRect(obj.x, obj.y, obj.width, obj. height)
-    //     }
-    // }
+    if(collisionLayer && showCollisionRects){
+        for(let obj of collisionLayer.objects){
+            drawIsometricRect(obj.x, obj.y, obj.width, obj. height)
+        }
+    }
 
     requestAnimationFrame(gameLoop)
 }

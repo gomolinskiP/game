@@ -71,19 +71,45 @@ export class Player extends Entity{
         }
     }
 
-    draw(ctx){
+    draw(){
         let x = this.x - Player.list[selfId].x + gameWidth/2;
         let y = this.y - Player.list[selfId].y + gameHeight/2;
 
+        //player image:
         drawBuffer.push({
+                    type: "image",
                     img: this.image,
                     x: x-32,
                     y: y-32,
+                    sortY: y-32,
                     w: 64,
                     h: 64,
         })
-
         this.image = Img.playerAnim[this.direction][parseInt(this.animFrame/2%3)]
+
+        //player nametag:
+        let nameFont = ''
+        if(this.id == selfId) nameFont = 'bold 20px Cascadia Mono'
+        else nameFont = '16px Cascadia Mono'
+        drawBuffer.push({
+            type: 'text',
+            text: this.name,
+            x: x,
+            y: y-36,
+            sortY: y-32,
+            font: nameFont,
+        })
+
+        //player hp bar:
+        if(this.id != selfId){
+            drawBuffer.push({
+                type: 'hpbar',
+                hp: this.hp,
+                x: x,
+                y: y,
+                sortY: y-32,
+            })
+        }
     }
 
     updateDirection(direction){
@@ -150,6 +176,21 @@ export class Bullet extends Entity{
             delete Bullet.list[this.id]
         }, 250);
     }
+
+    draw(){
+        let x = this.x - Player.list[selfId].x + gameWidth/2;
+        let y = this.y - Player.list[selfId].y + gameHeight/2;
+
+        drawBuffer.push({
+            type: 'image',
+            img: Img.note[this.duration],
+            x: x-16,
+            y: y-16,
+            sortY: y-32,
+            w: 32,
+            h: 32,
+        })
+    }
 }
 
 export class Pickup extends Entity{
@@ -163,4 +204,23 @@ export class Pickup extends Entity{
     destroy(){
         delete Pickup.list[this.id];
     }
+
+    draw(){
+        let x = this.x - Player.list[selfId].x + gameWidth/2;
+        let y = this.y - Player.list[selfId].y + gameHeight/2;
+
+        drawBuffer.push({
+            type: 'image',
+            img: Img.pickup,
+            x: x-8,
+            y: y,
+            sortY: y-32,
+            w: 16,
+            h: 16
+        })
+    }
 }
+
+// export class drawBuffer{
+    
+// }
