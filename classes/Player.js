@@ -2,6 +2,7 @@ import { Entity } from './Entity.js';
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
 import { collisionLayer, checkWallCollision } from '../socket.js';
+import { scale } from '../socket.js';
 
 export class Player extends Entity{
     static list = {}
@@ -67,16 +68,14 @@ export class Player extends Entity{
                 this.y = newY 
             }
             
-            console.log(this.x, this.y)
         }
 
         if(this.pressingSpace){
             this.needsUpdate = true;
             if(!this.shootTimeout){
                 
+                this.selectedNote = scale.allowedNotes[Math.floor(Math.random()*scale.allowedNotes.length)]
                 this.shootTimeout = true;
-                new scheduledBullet(this)
-                new scheduledBullet(this)
                 new scheduledBullet(this)
 
                 setTimeout(()=>{
