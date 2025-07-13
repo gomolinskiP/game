@@ -161,13 +161,13 @@ export class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttack(`${this.note}3`);
+        this.synth.triggerAttack(`${this.note}5`);
     }
 
     destroy(){
         clearInterval(this.interval);
         this.synth.triggerRelease();
-        this.synth.triggerAttack(`${this.note}2`);
+        this.synth.triggerAttack(`${this.note}4`);
 
         setTimeout(()=>{
             this.synth.triggerRelease();
@@ -189,6 +189,15 @@ export class Bullet extends Entity{
             sortY: y-32,
             w: 32,
             h: 32,
+        })
+
+        drawBuffer.push({
+            type: 'text',
+            text: this.note,
+            x: x-8,
+            y: y-8,
+            sortY: y-32,
+            font: 'bold 12px Cascadia Mono',
         })
     }
 }
