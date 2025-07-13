@@ -11,6 +11,7 @@ const __dirname = dirname(__filename);
 import { Player } from './classes/Player.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
+import { Scale } from './classes/Scale.js';
 
 
 let initPack = {player: [], bullet: [], pickup: []};
@@ -72,11 +73,14 @@ export function checkWallCollision(x, y, collisionLayer){
     return false;
 }
 
+export let scale = new Scale('G', 'major');
 
 export default async function webSocketSetUp(serv, ses, db){
 
     //socket.io:
     var socketList = {};
+
+    
 
 
     var io = require('socket.io')(serv, {
