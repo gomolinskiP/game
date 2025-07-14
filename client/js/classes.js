@@ -1,4 +1,4 @@
-import { limiter, synOptions, selfId } from './main.js'
+import { limiter, selfId } from './main.js'
 import { Img, gameWidth, gameHeight, drawBuffer } from './graphics.js';
 
 export class Entity{
@@ -32,13 +32,22 @@ export class Entity{
 
 export class Player extends Entity{
     static list = {};
+    static synOptions = {
+    noise:{
+        type: "pink"
+    },
+    envelope:{
+        attack: 0.35,
+        decay: 0.15,
+    }
+}
 
     constructor(initPack){
         super(initPack);
         this.name = initPack.name;
         this.hp = initPack.hp;
         this.synthTimeout = false;
-        this.footstepSyn = new Tone.NoiseSynth(synOptions);
+        this.footstepSyn = new Tone.NoiseSynth(Player.synOptions);
         
         this.footstepSyn.connect(this.pan3d);
 
@@ -195,9 +204,9 @@ export class Bullet extends Entity{
             type: 'text',
             text: this.note,
             x: x-8,
-            y: y-8,
+            y: y-16,
             sortY: y-32,
-            font: 'bold 12px Cascadia Mono',
+            font: '20px Cascadia Mono',
         })
     }
 }

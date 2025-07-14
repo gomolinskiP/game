@@ -1,9 +1,15 @@
+:root{
+    filter: hue-rotate(180deg) saturate(2);
+}
+
 body{
     background-color: #006e56;
     font-family: monospace;
     text-align: center;
     padding-top: 10vh;
+    
 }
+
 
 #ctx{
     border: none;
@@ -15,8 +21,8 @@ body{
     top: 50px;
 
     /* filter: invert(1) hue-rotate(180deg); */
-
 }
+
 
 #header{
     width: 100%;
@@ -142,6 +148,11 @@ form{
     color: black;
 }
 
+.note:disabled{
+    background-color: gray !important;
+    color: darkgray !important;
+    font-weight: lighter !important;
+}
 
 
 .note.blk{

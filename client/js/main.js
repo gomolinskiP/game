@@ -7,16 +7,6 @@ import { gameLoop, canvas } from './graphics.js'
 import { Player, Bullet, Pickup } from './classes.js'
 
 
-export let synOptions = {
-    noise:{
-        type: "pink"
-    },
-    envelope:{
-        attack: 0.35,
-        decay: 0.15,
-    }
-}
-
 export const limiter = new Tone.Compressor(
     -0.1,
     20
@@ -34,6 +24,7 @@ export let selfId = null;
 socket.on('init', function(data){
     selfId = data.selfId;
     setActiveNote(data.selectedNote)
+    setScale(data.scale.name, data.scale.allowedNotes)
 
     console.log("InitPack:", data)
     
@@ -73,7 +64,10 @@ socket.on('update', function(data){
         if(b){
             b.update(pack);
         } else{
-            let b = new Bullet(data.bullet[i]);
+            let b = new Bullet(pack);
+            if(pack.parentId == selfId){
+                highlightPlayedNote(pack.note, pack.duration)
+            }
             
         }
     }
@@ -273,6 +267,37 @@ function setActiveNote(note){
     activeNote = note;
 }
 
+function setScale(name, allowedNotes){
+    let scaleLabel = document.querySelector("#scaleLabel")
+
+    scaleLabel.innerText = name;
+
+    noteBTNs.forEach((btn)=>{
+            btn.disabled = true;
+    })
+
+    for(let note of allowedNotes){
+        document.querySelector(`[data-note="${note}"]`).disabled = false;
+    }
+
+    console.log(scaleLabel, name, allowedNotes)
+}
+
+function highlightPlayedNote(note, duration){
+    let playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
+    let durationMs = toneDurationToMs(duration, BPM)
+    playedNoteBTN.classList.add('active');
+    setTimeout(()=>{
+        playedNoteBTN.classList.remove('active')
+    }, durationMs-100);
+}
+
+function toneDurationToMs(duration, bpm){
+    //Tone.js duration to miliseconds
+    let timeMs = 60000/bpm * (4/parseInt(duration.replace("n", "")));
+    return timeMs;
+}
+
 function previousNote(){
     i = notes.findIndex((n)=>{
         return n==activeNote;
@@ -307,12 +332,13 @@ noteBTNs.forEach((item)=>{
 
 
 let timeSig = 4;
+let BPM = 120;
 Tone.Transport.bpm.value = 120;
 Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
 Tone.Transport.start();
 const metronome = new Tone.PluckSynth();
-let metrVol = new Tone.Volume(0);
+let metrVol = new Tone.Volume(-20);
 metronome.chain(metrVol, Tone.Master);
 
 function playClick(time){
@@ -328,16 +354,17 @@ function playClick(time){
 
 // Tone.Transport.scheduleRepeat(playClick, "4n");
 
-// socket.on("tick", (data)=>{
-//     let clientNow = Date.now()
+socket.on("tick", (data)=>{
+    if(Tone.context.state !== "running") return;
+    let clientNow = Date.now()
 
-//     if(Tone.Transport.state != 'started') Tone.Transport.start();
-//     else{
-//         let pitch = data.tick%8==0 ? "C6" : "C5"; 
+    if(Tone.Transport.state != 'started') Tone.Transport.start();
+    else{
+        let pitch = data.tick%8==0 ? "C6" : "C5"; 
 
-//         Tone.Transport.scheduleOnce((time)=>{
-//             metronome.triggerAttackRelease(pitch, "8n", time)
-//         }, Tone.Transport.toSeconds())
-//     }
-//     // console.log(data.now, data.tick, data.now - clientNow)
-// })
+        Tone.Transport.scheduleOnce((time)=>{
+            metronome.triggerAttackRelease(pitch, "8n", time)
+        }, Tone.Transport.toSeconds())
+    }
+    // console.log(data.now, data.tick, data.now - clientNow)
+})

@@ -73,6 +73,7 @@ export function checkWallCollision(x, y, collisionLayer){
     return false;
 }
 
+
 export let scale = new Scale('G', 'major');
 
 export default async function webSocketSetUp(serv, ses, db){
@@ -165,6 +166,7 @@ export default async function webSocketSetUp(serv, ses, db){
                 //TODO: fix code duplication here and lines above:
                 initPack.selfId = player.id;
                 initPack.selectedNote = player.selectedNote;
+                initPack.scale = {name: `${scale.base} ${scale.type}`, allowedNotes: scale.allowedNotes}
                 socket.emit('init', initPack)
                 player.needsUpdate = true
             }) 
@@ -293,6 +295,7 @@ export default async function webSocketSetUp(serv, ses, db){
                     x: bullet.x,
                     y: bullet.y,
                     id: bullet.id,
+                    parentId: bullet.parent.id,
 
                     sound: bullet.sound,
                     duration: bullet.duration,
