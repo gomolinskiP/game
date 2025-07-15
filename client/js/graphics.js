@@ -232,7 +232,6 @@ function drawHUD(){
     ctx.fillText(Player.list[selfId].hp, 70, 35);
 }
 
-ctx.textAlign = "center";
 //game Loop:
 export function gameLoop(){
     //draw background & map elements:
@@ -273,10 +272,12 @@ export function gameLoop(){
                 ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
                 break;
             case 'text':
+                ctx.textAlign = "center";
                 ctx.font = obj.font;
                 ctx.fillText(obj.text, obj.x, obj.y);
                 break;
             case 'hpbar':
+                ctx.textAlign = "center";
                 //hp bar:
                 ctx.fillStyle = "grey";
                 ctx.fillRect(obj.x-25, obj.y-58, 50, 8)

@@ -1,5 +1,5 @@
 :root{
-    filter: hue-rotate(180deg) saturate(2);
+    filter: hue-rotate(90deg) saturate(0.4);
 }
 
 body{
@@ -130,6 +130,14 @@ form{
     width: 40px;
 }
 
+#scaleLabel{
+    color: #00daaa;
+    background: #a68700;
+    padding: 2px;
+    border-radius: 4px;
+    border:#00daaa 1px solid;
+}
+
 #notes{
     position: absolute;
     bottom: 10px;
@@ -152,6 +160,11 @@ form{
     background-color: gray !important;
     color: darkgray !important;
     font-weight: lighter !important;
+}
+
+.note.played{
+    border: 5px inset #00000088;
+    font-weight: bold;
 }
 
 
