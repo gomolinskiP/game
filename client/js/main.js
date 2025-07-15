@@ -5,6 +5,7 @@ var socket = io();
 import { gameLoop, canvas } from './graphics.js'
 
 import { Player, Bullet, Pickup } from './classes.js'
+import { addKeyboardListeners } from './keyboard.js';
 
 
 export const limiter = new Tone.Compressor(
@@ -19,6 +20,7 @@ limiter.toDestination();
 
 export let selfId = null;
 
+let scale = {};
 
 
 socket.on('init', function(data){
@@ -41,6 +43,7 @@ socket.on('init', function(data){
     }
 
     requestAnimationFrame(gameLoop);
+    addKeyboardListeners(isInChat, socket);
 })
 
 socket.on('update', function(data){
@@ -112,103 +115,6 @@ canvas.onblur = ()=>{
     // alert("xd")
 }
 
-//key handling:
-document.onkeydown = function(event){
-    if(isInChat) {
-        if(event.key == "Enter"){
-            if(chatSend()) {
-                chatInput.focus();
-            } else{
-                isInChat = false;
-                chatInput.placeholder = "press T to start typing"
-
-                chatInput.blur();
-            }
-        }
-        else return
-    }
-
-    switch(event.key){
-        case "d":
-            socket.emit('keyPress', {
-                inputId: 'right',
-                state: true
-            });
-            break;
-        case "s":
-            socket.emit('keyPress', {
-            inputId: 'down',
-            state: true
-            });
-            break;
-        case "a":
-            socket.emit('keyPress', {
-            inputId: 'left',
-            state: true
-            });
-            break;
-        case "w":
-            socket.emit('keyPress', {
-            inputId: 'up',
-            state: true
-            });
-            break;
-        case " ":
-            socket.emit('keyPress', {
-                inputId: 'space',
-                state: true
-            });
-            break;
-        case "q":
-            previousNote();
-            break;
-        case "e":
-            nextNote();
-            break;
-        case "t":
-        case "T":
-            isInChat = true;
-            chatInput.focus();
-            chatInput.placeholder = "press ENTER to leave chat"
-            event.preventDefault();
-            break;
-    }
-}
-
-document.onkeyup = function(event){
-    switch(event.key){
-        case "d":
-            socket.emit('keyPress', {
-            inputId: 'right',
-            state: false
-            });
-            break;
-        case "s":
-            socket.emit('keyPress', {
-            inputId: 'down',
-            state: false
-            });
-            break;
-        case "a":
-            socket.emit('keyPress', {
-            inputId: 'left',
-            state: false
-            });
-            break;
-        case "w":
-            socket.emit('keyPress', {
-            inputId: 'up',
-            state: false
-            });
-            break;
-        case " ":
-            socket.emit('keyPress', {
-            inputId: 'space',
-            state: false
-            });
-            break;
-    }
-}
 
 
 
@@ -268,6 +174,8 @@ function setActiveNote(note){
 }
 
 function setScale(name, allowedNotes){
+    scale.base = name[0];
+
     let scaleLabel = document.querySelector("#scaleLabel")
 
     scaleLabel.innerText = name;
@@ -286,9 +194,9 @@ function setScale(name, allowedNotes){
 function highlightPlayedNote(note, duration){
     let playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
     let durationMs = toneDurationToMs(duration, BPM)
-    playedNoteBTN.classList.add('active');
+    playedNoteBTN.classList.add('played');
     setTimeout(()=>{
-        playedNoteBTN.classList.remove('active')
+        playedNoteBTN.classList.remove('played')
     }, durationMs-100);
 }
 
@@ -337,8 +245,8 @@ Tone.Transport.bpm.value = 120;
 Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
 Tone.Transport.start();
-const metronome = new Tone.PluckSynth();
-let metrVol = new Tone.Volume(-20);
+const metronome = new Tone.Synth();
+let metrVol = new Tone.Volume(-18);
 metronome.chain(metrVol, Tone.Master);
 
 function playClick(time){
@@ -360,8 +268,8 @@ socket.on("tick", (data)=>{
 
     if(Tone.Transport.state != 'started') Tone.Transport.start();
     else{
-        let pitch = data.tick%8==0 ? "C6" : "C5"; 
-
+        let pitch = data.tick%8==0 ? `${scale.base}6` : `${scale.base}5`; 
+        console.log(pitch, data.tick)
         Tone.Transport.scheduleOnce((time)=>{
             metronome.triggerAttackRelease(pitch, "8n", time)
         }, Tone.Transport.toSeconds())
