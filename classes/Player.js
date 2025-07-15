@@ -70,13 +70,13 @@ export class Player extends Entity{
             
         }
 
+        //shooting:
         if(this.pressingSpace){
             this.needsUpdate = true;
             if(!this.shootTimeout){
                 
-                this.selectedNote = scale.allowedNotes[Math.floor(Math.random()*scale.allowedNotes.length)]
                 this.shootTimeout = true;
-                new scheduledBullet(this)
+                this.weapon.shoot(this.selectedNote);
 
                 setTimeout(()=>{
                     this.shootTimeout = false
@@ -85,11 +85,15 @@ export class Player extends Entity{
         }
     }
 
-    giveWeapon(sound, duration){
-        this.weapon = new Weapon(sound, duration)
+    giveWeapon(sound, duration, type){
+        this.weapon = new Weapon(sound, duration, type, this)
         let durationInt = parseInt(duration.replace("n", ""))
         this.shootTimeoutTime = 60000/120 * (4/durationInt)
-        console.log(this.weapon)
+        // console.log(this.weapon)
+    }
+
+    changeSelectedNote(note){
+        this.selectedNote = note;
     }
 
     takeDmg(damage){

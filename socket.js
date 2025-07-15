@@ -223,7 +223,7 @@ export default async function webSocketSetUp(serv, ses, db){
         })
 
         socket.on('noteChange', (note)=>{
-            player.selectedNote = note;
+            player.changeSelectedNote(note);
         })
 
         socket.on('chat', function(msg){
@@ -248,7 +248,7 @@ export default async function webSocketSetUp(serv, ses, db){
 
             if(pickup.collidingPlayerId() != null){
                 console.log(pickup.collidingPlayerId())
-                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration)
+                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration, pickup.type)
 
                 pickup.destroy();
             }

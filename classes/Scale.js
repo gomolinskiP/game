@@ -40,4 +40,19 @@ export class Scale{
 
         return scaleNotes;
     }
+
+    getTransposed(note, transposition){
+        let isNote = (n)=>n==note;
+
+        let noteIndex = Scale.notes.findIndex(isNote)
+        let newIndex = noteIndex;
+
+        for(let i = 0; i<transposition; i++){
+            newIndex++;
+            if(newIndex > 11) newIndex = newIndex-12;
+        }
+
+        console.log(Scale.notes[newIndex], transposition, noteIndex)
+        return Scale.notes[newIndex];
+    }
 }

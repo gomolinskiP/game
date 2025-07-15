@@ -5,6 +5,7 @@ import { collisionLayer, checkWallCollision } from '../socket.js';
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
 let durationList = ["1n", "2n", "4n", "8n"] //TODO: add triplets "8t", add dotted notes "4n."
+let typeList = ["normal", "random", "chord"]
 
 export class Pickup extends Entity{
     static list = {};
@@ -23,6 +24,8 @@ export class Pickup extends Entity{
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
         this.duration = durationList[Math.floor(Math.random() * durationList.length)]
+        this.type = typeList[Math.floor(Math.random() * typeList.length)]
+
 
         this.id = Math.random();
 

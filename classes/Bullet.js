@@ -1,33 +1,33 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
-import {removePack} from '../socket.js'
+import {scale, removePack} from '../socket.js'
 import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
 
 
 export class scheduledBullet{
     static list = {};
 
-    constructor(parent){
+    constructor(parent, note = 'onSpawn'){
         this.id = Math.random();
         this.parent = parent;
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
-        this.note = parent.selectedNote;
+        this.note = note;
 
         scheduledBullet.list[this.id] = this;
         return this;
     }
 
     spawn(){
-        new Bullet(this.parent, this.parent.lastAngle);
+        new Bullet(this.parent, this.parent.lastAngle, this.note);
     }
 }
 
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(parent, angle){
+    constructor(parent, angle, note){
         super(parent.x, parent.y);
         this.id = Math.random();
         this.parent = parent;
@@ -40,7 +40,25 @@ export class Bullet extends Entity{
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
-        this.note = parent.selectedNote;
+
+        // switch(note){
+        //     case "onSpawn":
+        //         this.note = parent.selectedNote;
+        //         break;
+        //     case //first character is "+":
+        //         //do something
+        //         break;
+        //     default:
+        //         this.note = note;
+        //         break;
+        // }
+        if(note == 'onSpawn') this.note = parent.selectedNote;
+        else if(note.startsWith("+")){
+            let transposedNote = scale.getTransposed(parent.selectedNote, parseInt(note[1]));
+            if(scale.allowedNotes.includes(transposedNote)) this.note = transposedNote; //major third
+            else this.note = scale.getTransposed(parent.selectedNote, parseInt(note[1] - 1)) //minor third
+        }
+        else this.note = note;
 
         Bullet.list[this.id] = this;
 
