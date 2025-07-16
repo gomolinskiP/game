@@ -12,6 +12,7 @@ import { Player } from './classes/Player.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
 import { Scale } from './classes/Scale.js';
+import { Socket } from 'socket.io';
 
 
 let initPack = {player: [], bullet: [], pickup: []};
@@ -247,9 +248,8 @@ export default async function webSocketSetUp(serv, ses, db){
             let pickup = Pickup.list[i]
 
             if(pickup.collidingPlayerId() != null){
-                console.log(pickup.collidingPlayerId())
                 Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration, pickup.type)
-
+                socketList[pickup.collidingPlayerId()].emit('new weapon', {type: pickup.type, duration: pickup.duration});
                 pickup.destroy();
             }
                 
