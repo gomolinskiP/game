@@ -191,6 +191,18 @@ function setScale(name, allowedNotes){
     console.log(scaleLabel, name, allowedNotes)
 }
 
+function setWeaponType(type){
+    let weaponTypeLabel = document.querySelector("#weaponTypeLabel")
+
+    weaponTypeLabel.innerText = type;
+}
+
+function setDurationLabel(duration){
+    let durationLabel = document.querySelector("#durationLabel");
+
+    durationLabel.innerText = duration;
+}
+
 function highlightPlayedNote(note, duration){
     let playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
     let durationMs = toneDurationToMs(duration, BPM)
@@ -275,4 +287,10 @@ socket.on("tick", (data)=>{
         }, Tone.Transport.toSeconds())
     }
     // console.log(data.now, data.tick, data.now - clientNow)
+})
+
+socket.on("new weapon", (data)=>{
+    setWeaponType(data.type);
+    setDurationLabel(data.duration)
+    console.log("new weapon", data)
 })

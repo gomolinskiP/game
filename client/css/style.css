@@ -130,7 +130,7 @@ form{
     width: 40px;
 }
 
-#scaleLabel{
+#scaleLabel, #weaponTypeLabel, #durationLabel{
     color: #00daaa;
     background: #a68700;
     padding: 2px;
