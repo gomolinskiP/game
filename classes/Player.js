@@ -23,9 +23,9 @@ export class Player extends Entity{
         this.lastAngle = 90;
         this.shootTimeout = false;
 
-        this.selectedNote = "F"
+        this.selectedNote = scale.base;
 
-        this.giveWeapon(weapon.sound, weapon.duration);
+        this.giveWeapon(weapon.sound, weapon.duration, "normal");
         return this;
     }
 
