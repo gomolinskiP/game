@@ -55,6 +55,15 @@ Img.note['4n'].src = "../img/quarternote.png"
 Img.note['8n'] = new Image();
 Img.note['8n'].src = "../img/eightnote.png"
 
+Img.note['1n.'] = new Image();
+Img.note['1n.'].src = "../img/note.png"
+Img.note['2n.'] = new Image();
+Img.note['2n.'].src = "../img/halfnote.png"
+Img.note['4n.'] = new Image();
+Img.note['4n.'].src = "../img/quarternote.png"
+Img.note['8n.'] = new Image();
+Img.note['8n.'].src = "../img/eightnote.png"
+
 Img.pickup = new Image();
 Img.pickup.src = "../img/tileset/blocks_101.png"
 

@@ -7,12 +7,14 @@ import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
 export class scheduledBullet{
     static list = {};
 
-    constructor(parent, note = 'onSpawn'){
+    constructor(parent, note = 'onSpawn', durationType){
         this.id = Math.random();
         this.parent = parent;
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
+        this.durationType = durationType;
+        
         this.note = note;
 
         scheduledBullet.list[this.id] = this;
@@ -20,14 +22,14 @@ export class scheduledBullet{
     }
 
     spawn(){
-        new Bullet(this.parent, this.parent.lastAngle, this.note);
+        new Bullet(this.parent, this.parent.lastAngle, this.note, this.durationType);
     }
 }
 
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(parent, angle, note){
+    constructor(parent, angle, note, durationType){
         super(parent.x, parent.y);
         this.id = Math.random();
         this.parent = parent;
@@ -40,6 +42,7 @@ export class Bullet extends Entity{
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
+        this.durationType = durationType;
 
         // switch(note){
         //     case "onSpawn":
@@ -62,7 +65,17 @@ export class Bullet extends Entity{
 
         Bullet.list[this.id] = this;
 
-        let durationTimeout = 60000/120 * (4/parseInt(this.duration.replace("n", "")))
+        let durationTimeout;
+        switch(durationType){
+            case "normal":
+                durationTimeout = 60000/120 * (4/parseInt(this.duration.replace("n", "")));
+                break;
+            case "dotted":
+                durationTimeout = 60000/120 * (4/parseInt(this.duration.replace("n", "").replace(".", ""))) * 3/2;
+                break;
+        }
+        console.log(durationTimeout);
+        
 
         this.timeout = setTimeout(()=>{
             // delete itself after timeout??

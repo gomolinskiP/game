@@ -4,7 +4,7 @@ import { collisionLayer, checkWallCollision } from '../socket.js';
 
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
-let durationList = ["1n", "2n", "4n", "8n"] //TODO: add triplets "8t", add dotted notes "4n."
+let durationList = ["1n", "2n", "4n", "8n", "1n.", "2n.", "4n."] //TODO: add triplets "8t", add dotted notes "4n."
 let typeList = ["normal", "random", "chord", "arp-up", "arp-down", "arp-alt"]
 // let typeList = ["arp-alt"]
 
@@ -26,6 +26,10 @@ export class Pickup extends Entity{
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
         this.duration = durationList[Math.floor(Math.random() * durationList.length)]
+        // determine note duration type: normal, dotted or triplet?
+        if(this.duration.includes(".")) this.durationType = "dotted";
+        else this.durationType = "normal";
+
         this.type = typeList[Math.floor(Math.random() * typeList.length)]
 
 

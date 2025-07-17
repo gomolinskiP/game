@@ -25,7 +25,7 @@ export class Player extends Entity{
 
         this.selectedNote = scale.base;
 
-        this.giveWeapon(weapon.sound, weapon.duration, "normal");
+        this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
         return this;
     }
 
@@ -85,10 +85,19 @@ export class Player extends Entity{
         }
     }
 
-    giveWeapon(sound, duration, type){
-        this.weapon = new Weapon(sound, duration, type, this)
-        let durationInt = parseInt(duration.replace("n", ""))
-        this.shootTimeoutTime = 60000/120 * (4/durationInt)
+    giveWeapon(sound, duration, type, durationType){
+        this.weapon = new Weapon(sound, duration, type, this, durationType)
+        let durationInt = parseInt(duration.replace("n", "").replace(".", ""))
+        switch(durationType){
+            case "normal":
+                this.shootTimeoutTime = 60000/120 * (4/durationInt)
+                break;
+            case "dotted":
+                this.shootTimeoutTime = 60000/120 * (4/durationInt) * 3/2
+                break;
+        }
+
+        
         // console.log(this.weapon)
     }
 

@@ -248,7 +248,7 @@ export default async function webSocketSetUp(serv, ses, db){
             let pickup = Pickup.list[i]
 
             if(pickup.collidingPlayerId() != null){
-                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration, pickup.type)
+                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration, pickup.type, pickup.durationType)
                 socketList[pickup.collidingPlayerId()].emit('new weapon', {type: pickup.type, duration: pickup.duration});
                 pickup.destroy();
             }
@@ -350,6 +350,7 @@ export default async function webSocketSetUp(serv, ses, db){
                 let durationInt = parseInt(bullet.duration.replace("n", ""));
                 let eightsNum = 8/durationInt;
 
+                if(bullet.durationType == "dotted") eightsNum /= 2;
 
                 if(tick%eightsNum == 0){
                     bullet.spawn();
