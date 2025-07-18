@@ -52,4 +52,33 @@ export class Pickup extends Entity{
         removePack.pickup.push(this.id)
         delete Pickup.list[this.id]
     }
+
+    checkPicked(playerList, socketList){
+        let playerId = this.collidingPlayerId()
+
+        if(playerId != null){
+            playerList[playerId].giveWeapon(this.sound, this.duration, this.type, this.durationType)
+            socketList[playerId].emit('new weapon', {type: this.type, duration: this.duration});
+            this.destroy();
+        }
+    }
+
+    static handleAll(playerList, socketList, updatePack){
+        for(let i in Pickup.list){
+            let pickup = Pickup.list[i]
+
+            pickup.checkPicked(playerList, socketList);
+                
+
+            if(pickup.needsUpdate){
+                updatePack.pickup.push({
+                    x: pickup.x,
+                    y: pickup.y,
+                    id: pickup.id
+                })
+
+                pickup.needsUpdate = false;
+            }
+        }
+    }
 }

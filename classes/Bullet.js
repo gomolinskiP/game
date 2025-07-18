@@ -73,9 +73,7 @@ export class Bullet extends Entity{
             case "dotted":
                 durationTimeout = 60000/120 * (4/parseInt(this.duration.replace("n", "").replace(".", ""))) * 3/2;
                 break;
-        }
-        console.log(durationTimeout);
-        
+        }        
 
         this.timeout = setTimeout(()=>{
             // delete itself after timeout??
@@ -105,21 +103,29 @@ export class Bullet extends Entity{
             clearTimeout(this.timeout);
             this.destroy();
         }
-
-        // for(let i in Player.list){
-        //     let targetPlayer = Player.list[i];
-        //     if(this.parent != targetPlayer && this.isColliding(targetPlayer)){
-        //         clearTimeout(this.timeout);
-        //         this.destroy();
-        //         targetPlayer.takeDmg(1);
-        //     }
-        // }
     }
     
-
-
     destroy(){
         removePack.bullet.push(this.id)
         delete Bullet.list[this.id]
+    }
+
+    static updateAll(updatePack){
+        for(var i in Bullet.list){ 
+            var bullet = Bullet.list[i];
+            
+            bullet.update();
+            
+            updatePack.bullet.push({
+                x: bullet.x,
+                y: bullet.y,
+                id: bullet.id,
+                parentId: bullet.parent.id,
+
+                sound: bullet.sound,
+                duration: bullet.duration,
+                note: bullet.note
+            })
+        }
     }
 }

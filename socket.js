@@ -12,7 +12,6 @@ import { Player } from './classes/Player.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
 import { Scale } from './classes/Scale.js';
-import { Socket } from 'socket.io';
 
 
 let initPack = {player: [], bullet: [], pickup: []};
@@ -77,13 +76,18 @@ export function checkWallCollision(x, y, collisionLayer){
 
 export let scale = new Scale('G', 'major');
 
-export default async function webSocketSetUp(serv, ses, db){
+function findProgressByUsername(db, username){
+    return new Promise((resolve, reject) => {
+        db.progress.findOne({username: username}, function(err, res){
+            if(err) return reject(err);
+            resolve(res);
+        })
+    })
+}
 
+export default async function webSocketSetUp(serv, ses, db){
     //socket.io:
     var socketList = {};
-
-    
-
 
     var io = require('socket.io')(serv, {
     cors: {
@@ -99,18 +103,19 @@ export default async function webSocketSetUp(serv, ses, db){
         ses(socket.request, {}, next)
     })
 
-    //user connects to the app:
-    io.sockets.on('connection', function(socket){
+    //user connects to the game subpage:
+    io.sockets.on('connection', async function(socket){
+        //save new socket in socket list:
         socket.id = Math.random();
         socketList[socket.id] = socket;
+        console.log("Socket connection: id=" + socket.id);
 
         let player = null;
-
-        console.log("Socket connection: id=" + socket.id);
 
         //get username from logged session:
         let username = socket.request.session?.user?.username;
         if(username == undefined){
+            console.log("ERROR: username is undefined")
             return;
         }
 
@@ -119,60 +124,23 @@ export default async function webSocketSetUp(serv, ses, db){
         if(loggedPlayer != undefined){
             player = Player.list[loggedPlayer.id]
             player.socketIDs.push(socket.id)
-
-
-            initPack.selfId = player.id;
-            initPack.selectedNote = player.selectedNote;
-            socket.emit('init', initPack)
-            player.needsUpdate = true
-            // console.log(Player.list[loggedPlayer.id])
         }
         else{
             //retrieve player progress:
-            db.progress.find({username: username}, function(err, res){
-                if(res.length > 0){
+            let res = await findProgressByUsername(db, username);
+                if(res){
                     //progress already in DB
-                    player = new Player(socket.id, res[0].x, res[0].y, username, res[0].weapon)
-                                    
+                    player = new Player(socket.id, res.x, res.y, username, res.weapon)   
                 }
                 else{
                     //no progress, set starting values
                     player = new Player(socket.id, 250, 250, username);
                     db.progress.insert({username: username, x: 250, y: 250})
                 }
-
-                Player.list[socket.id] = player;
-
-                // console.log(Player.list)
-                initPack.player = []
-                for(var i in Player.list){
-                    initPack.player.push({
-                        x: Player.list[i].x,
-                        y: Player.list[i].y,
-                        id: Player.list[i].id,
-                        name: Player.list[i].name,
-                        hp: Player.list[i].hp,
-                        direction: Player.list[i].lastAngle
-                    })
-                }
-                initPack.pickup = []
-                for(var i in Pickup.list){
-                    initPack.pickup.push({
-                        x: Pickup.list[i].x,
-                        y: Pickup.list[i].y,
-                        id: Pickup.list[i].id,
-                    })
-                }
-
-                //TODO: fix code duplication here and lines above:
-                initPack.selfId = player.id;
-                initPack.selectedNote = player.selectedNote;
-                initPack.scale = {name: `${scale.base} ${scale.type}`, allowedNotes: scale.allowedNotes}
-                socket.emit('init', initPack)
-                player.needsUpdate = true
-            }) 
         }
- 
+        
+        socket.emit('init', player.getInitPack(Pickup.list))
+        
         socket.on('disconnect', function(){
             //socket disconnected
 
@@ -216,7 +184,6 @@ export default async function webSocketSetUp(serv, ses, db){
                         player.pressingRight = data.state;
                         break;
                     case "space":
-                        if(!player.shootTimeout) socket.emit('playNote');
                         player.pressingSpace = data.state;
                         break;
                 }
@@ -244,64 +211,11 @@ export default async function webSocketSetUp(serv, ses, db){
             new Pickup();
         }
 
-        for(let i in Pickup.list){
-            let pickup = Pickup.list[i]
+        Pickup.handleAll(Player.list, socketList, updatePack);
 
-            if(pickup.collidingPlayerId() != null){
-                Player.list[pickup.collidingPlayerId()].giveWeapon(pickup.sound, pickup.duration, pickup.type, pickup.durationType)
-                socketList[pickup.collidingPlayerId()].emit('new weapon', {type: pickup.type, duration: pickup.duration});
-                pickup.destroy();
-            }
-                
+        Player.updateAll(updatePack);
 
-            if(pickup.needsUpdate){
-                updatePack.pickup.push({
-                    x: pickup.x,
-                    y: pickup.y,
-                    id: pickup.id
-                })
-
-                pickup.needsUpdate = false;
-            }
-        }
-
-        var pack = [];
-
-        for(var i in Player.list){ 
-            var player = Player.list[i];
-
-            if(collisionLayer) checkWallCollision(player.x, player.y, collisionLayer)
-
-            
-            if(player.needsUpdate){
-                player.updatePosition();
-                updatePack.player.push({
-                    x: player.x,
-                    y: player.y,
-                    id: player.id,
-                    name: player.name,
-                    hp: player.hp,
-                    direction: player.lastAngle,
-                })
-            }
-        }
-
-        for(var i in Bullet.list){ 
-            var bullet = Bullet.list[i];
-            
-                bullet.update();
-                
-                updatePack.bullet.push({
-                    x: bullet.x,
-                    y: bullet.y,
-                    id: bullet.id,
-                    parentId: bullet.parent.id,
-
-                    sound: bullet.sound,
-                    duration: bullet.duration,
-                    note: bullet.note
-                })
-        }
+        Bullet.updateAll(updatePack);
 
         //emit to all sockets:
         for(var i in socketList){
@@ -333,32 +247,27 @@ export default async function webSocketSetUp(serv, ses, db){
     setInterval(()=>{
         const now = Date.now();
 
+        //emit metronome signal:
         if(tick%2 == 0){
             for(var i in socketList){
-                    var socket = socketList[i];
-                    socket.emit("tick", {now, tick});
+                var socket = socketList[i];
+                socket.emit("tick", {now, tick});
             }
         }
 
-        // for(var i in Bullet.list){ 
-        //     var bullet = Bullet.list[i];
-        //     bullet.destroy();
-        // }
-
         for(var i in scheduledBullet.list){ 
-                var bullet = scheduledBullet.list[i];
-                let durationInt = parseInt(bullet.duration.replace("n", ""));
-                let eightsNum = 8/durationInt;
+            var bullet = scheduledBullet.list[i];
+            let durationInt = parseInt(bullet.duration.replace("n", ""));
+            let eightsNum = 8/durationInt;
 
-                if(bullet.durationType == "dotted") eightsNum /= 2;
+            if(bullet.durationType == "dotted") eightsNum /= 2;
 
-                if(tick%eightsNum == 0){
-                    bullet.spawn();
-                    delete scheduledBullet.list[i];
-                }
+            if(tick%eightsNum == 0){
+                bullet.spawn();
+                delete scheduledBullet.list[i];
             }
+        }
 
-        // console.log(`Now: ${now}, tick: ${tick}`);
         tick++;
     }, beatInterval/2)
 }

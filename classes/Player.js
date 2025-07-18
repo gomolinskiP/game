@@ -26,6 +26,8 @@ export class Player extends Entity{
         this.selectedNote = scale.base;
 
         this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
+
+        Player.list[this.id] = this;
         return this;
     }
 
@@ -118,4 +120,54 @@ export class Player extends Entity{
         this.needsUpdate = true;
     }
     
+    getInitPack(pickupList){
+        let initPack = {};
+
+        initPack.player = []
+        for(var i in Player.list){
+            initPack.player.push({
+                x: Player.list[i].x,
+                y: Player.list[i].y,
+                id: Player.list[i].id,
+                name: Player.list[i].name,
+                hp: Player.list[i].hp,
+                direction: Player.list[i].lastAngle
+            })
+        }
+
+        initPack.bullet = []
+
+        initPack.pickup = []
+        for(var i in pickupList){
+            initPack.pickup.push({
+                x: pickupList[i].x,
+                y: pickupList[i].y,
+                id: pickupList[i].id,
+            })
+        }
+
+        initPack.selfId = this.id;
+        initPack.selectedNote = this.selectedNote;
+        initPack.scale = {name: `${scale.base} ${scale.type}`, allowedNotes: scale.allowedNotes}
+
+        return initPack;
+    }
+
+    static updateAll(updatePack){
+        for(var i in Player.list){ 
+            var player = Player.list[i];
+
+            if(player.needsUpdate){
+                player.updatePosition();
+                updatePack.player.push({
+                    x: player.x,
+                    y: player.y,
+                    id: player.id,
+                    name: player.name,
+                    hp: player.hp,
+                    direction: player.lastAngle,
+                })
+            }
+        }
+    }
 }
