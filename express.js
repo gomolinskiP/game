@@ -6,6 +6,8 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const argon2 = require('argon2')
+
 export default function expressSetUp(db){
     var express = require('express');
     var app = express();
@@ -31,10 +33,11 @@ export default function expressSetUp(db){
 
     app.post('/login', function(req, postRes){
         console.log(req.body)
-        db.account.findOne({username: req.body.username}, (err, res)=>{
+        db.account.findOne({username: req.body.username}, async (err, res)=>{
             if(res){
                 //account exists
-                    if(res.password == req.body.password){
+                    const isPasswordHashMaching = await argon2.verify(res.password, req.body.password);
+                    if(isPasswordHashMaching){
                         //password correct - sign in success
                         console.log("//password correct - sign in success")
 
@@ -45,8 +48,8 @@ export default function expressSetUp(db){
                     }
                     else{
                         //pasword incorrect
-                            console.log("incorrect password")
-                            postRes.redirect('/?err=wrongPass');
+                        console.log("incorrect password")
+                        postRes.redirect('/?err=wrongPass');
                     }
                 }
                 else{
@@ -59,14 +62,17 @@ export default function expressSetUp(db){
 
     app.post('/register', function(req, postRes){
         //HAVE TO ADD VALIDATION
-        db.account.findOne({username: req.body.username}, function(err, res){
+        db.account.findOne({username: req.body.username}, async function(err, res){
             console.log(res)
             if(res){
                 //acount already exists
                 postRes.redirect('/?err=usernameTaken');
             }
             else{
-                db.account.insertOne({username: req.body.username, password: req.body.password});
+                //TODO: check if username correct (allowed) here
+                const passwordHash = await argon2.hash(req.body.password, {type: argon2.argon2id});
+
+                db.account.insertOne({username: req.body.username, password: passwordHash});
                 postRes.redirect('/?err=registerSuccess');
             }
         })
