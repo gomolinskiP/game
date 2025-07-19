@@ -7,7 +7,7 @@ import { scale } from '../socket.js';
 export class Player extends Entity{
     static list = {}
 
-    constructor(id, x, y, username, weapon){
+    constructor(id, x, y, username, weapon = null){
         super(x, y);
         this.id = id;
         this.name = username;
@@ -25,6 +25,7 @@ export class Player extends Entity{
 
         this.selectedNote = scale.base;
 
+        if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this, "normal")
         this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
 
         Player.list[this.id] = this;
