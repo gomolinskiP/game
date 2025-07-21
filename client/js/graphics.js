@@ -68,14 +68,14 @@ Img.pickup = new Image();
 Img.pickup.src = "../img/tileset/blocks_101.png"
 
 Img.map = new Image();
-Img.map.src = "../img/map.png"
+Img.map.src = "../img/map2.png"
 
 let mapData;
 let collisionLayer;
 let tileImages;
 
 //get map data:
-fetch("../img/map.json")
+fetch("../img/map2.json")
     .then(res=>res.json())
     .then(async data=>{
         mapData = data;
@@ -150,7 +150,7 @@ function drawIsometricRect(tileX, tileY, width, height){
 
     let worldCoord = isoToScreen(tileX, tileY)
 
-    let x = worldCoord.x + gameWidth/2  + 3531 - Player.list[selfId].x
+    let x = worldCoord.x + gameWidth/2 + tileW/2  - Player.list[selfId].x
     
     let y = worldCoord.y + gameHeight/2 + 0 - Player.list[selfId].y
 
@@ -176,7 +176,7 @@ function drawMap(){
     if(Player.list[selfId]){
         let bx = gameWidth/2 - Player.list[selfId].x;
         let by = gameHeight/2 - Player.list[selfId].y;
-        ctx.drawImage(Img.map, bx - 564, by -256) //weird shift TO FIX
+        ctx.drawImage(Img.map, bx - 7138, by - 2559) //weird shift TO FIX
 
         if(mapData && tileImages){
             for(const layer of mapData.layers){
@@ -208,7 +208,7 @@ function drawMap(){
 
 
                             //this code above ^^^ should be done once & not for each frame
-                            const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + 3500 + offsetX - Player.list[selfId].x; //weird shift TO FIX
+                            const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + offsetX - Player.list[selfId].x; //weird shift TO FIX
                             const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
 
                             drawBuffer.push({
@@ -244,7 +244,7 @@ function drawHUD(){
 //game Loop:
 export function gameLoop(){
     //draw background & map elements:
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "#363636ff";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
     drawMap()
     
@@ -266,10 +266,10 @@ export function gameLoop(){
         let bY = b.sortY;
 
         if(a.layerId){
-            aY = aY + 32*a.layerId
+            aY = aY + (32+1)*a.layerId
         }
         if(b.layerId){
-            bY = bY + 32*b.layerId
+            bY = bY + (32+1)*b.layerId
         }
             return aY - bY
     })
@@ -282,6 +282,7 @@ export function gameLoop(){
                 break;
             case 'text':
                 ctx.textAlign = "center";
+                ctx.fillStyle = "black";
                 ctx.font = obj.font;
                 ctx.fillText(obj.text, obj.x, obj.y);
                 break;

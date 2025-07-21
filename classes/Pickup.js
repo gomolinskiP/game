@@ -18,8 +18,8 @@ export class Pickup extends Entity{
 
         let isUnreachable = true;
         while(isUnreachable){
-            x = 1280 + 2000*(Math.random()-0.5);
-            y = 450 + 1000*(Math.random()-0.5);
+            x = 0 + 2000*(Math.random()-0.5);
+            y = 0 + 1000*(Math.random()-0.5);
             isUnreachable = checkWallCollision(x, y, collisionLayer);
         }
         super(x, y)

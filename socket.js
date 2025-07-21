@@ -23,7 +23,7 @@ export let collisionLayer = await loadCollisionLayer(mapData, 'collision');
 export let bulletCollisionLayer = await loadCollisionLayer(mapData, 'bulletCollision')
 
 async function loadMapData() {
-    const filePath = resolve(__dirname, './client/img/map.json');
+    const filePath = resolve(__dirname, './client/img/map2.json');
     const jsonData = JSON.parse(await readFile(filePath, 'utf-8'));
 
     return jsonData;
@@ -53,8 +53,8 @@ function isoToScreen(x, y){
 
 function screenToIso(x, y){
     return{
-        x: (2*y + x - 3531)/2,
-        y: (2*y - x + 3531)/2
+        x: (2*y + x)/2,
+        y: (2*y - x)/2
     }
 }
 
@@ -62,10 +62,10 @@ export function checkWallCollision(x, y, collisionLayer){
     const {x: isoObjX, y: isoObjY} = screenToIso(x, y)
 
     for(let isoRect of collisionLayer.objects){
-        if(isoObjX >= isoRect.x - 32 &&
-        isoObjX <= isoRect.x + isoRect.width - 16 &&
-            isoObjY >= isoRect.y - 32 &&
-            isoObjY <= isoRect.y + isoRect.height - 16
+        if(isoObjX >= isoRect.x - 20 &&
+        isoObjX <= isoRect.x + isoRect.width - 0 &&
+            isoObjY >= isoRect.y - 50 &&
+            isoObjY <= isoRect.y + isoRect.height - 32
         ){
             return true;
         }
@@ -130,12 +130,16 @@ export default async function webSocketSetUp(serv, ses, db){
             let res = await findProgressByUsername(db, username);
                 if(res){
                     //progress already in DB
-                    player = new Player(socket.id, res.x, res.y, username, res.weapon)   
+                    player = new Player(socket.id, res.x, res.y, username, res.weapon)
+                    if(checkWallCollision(player.x, player.y, collisionLayer)){
+                        player.x = 0;
+                        player.y = 0;
+                    }
                 }
                 else{
                     //no progress, set starting values
-                    player = new Player(socket.id, 250, 250, username);
-                    db.progress.insert({username: username, x: 250, y: 250})
+                    player = new Player(socket.id, 0, 0, username);
+                    db.progress.insert({username: username, x: 0, y: 0})
                 }
         }
         
