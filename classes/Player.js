@@ -1,8 +1,10 @@
 import { Entity } from './Entity.js';
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
+import { Pickup } from './Pickup.js';
 import { collisionLayer, checkWallCollision } from '../socket.js';
 import { scale } from '../socket.js';
+import { Socket } from './Socket.js';
 
 export class Player extends Entity{
     static list = {}
@@ -29,6 +31,12 @@ export class Player extends Entity{
         this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
 
         Player.list[this.id] = this;
+
+        this.initPack = this.getInitPack(Pickup.list); //TODO
+        this.emitInitPack();
+        this.updatePack = {player: [], bullet: [], pickup: []}; //TODO
+        this.removePack = null; //TODO
+
         return this;
     }
 
@@ -53,7 +61,8 @@ export class Player extends Entity{
         }
 
         if(!this.pressingUp && !this.pressingDown && !this.pressingLeft && !this.pressingRight)
-            this.needsUpdate = false
+            // console.log("---") //TO FIX -- animation does not stop when player stops walking because he stops getting updated!!
+            this.needsUpdate = false;
         else{
             this.dirY *= 50/100 //SCALER if map image is in perspective
             this.lastAngle = Math.atan2(this.dirY, this.dirX) * 180/Math.PI;
@@ -116,8 +125,8 @@ export class Player extends Entity{
 
     die(){
         this.hp = 100;
-        this.x = 1000 + 250*(Math.random());
-        this.y = 500 + 120*(Math.random());
+        this.x = 0 + 250*(Math.random());
+        this.y = 0 + 120*(Math.random());
         this.needsUpdate = true;
     }
     
@@ -158,17 +167,102 @@ export class Player extends Entity{
         for(var i in Player.list){ 
             var player = Player.list[i];
 
+            player.getUpdatePack();
+            player.emitUpdatePack();
+
             if(player.needsUpdate){
                 player.updatePosition();
-                updatePack.player.push({
-                    x: player.x,
-                    y: player.y,
-                    id: player.id,
-                    name: player.name,
-                    hp: player.hp,
-                    direction: player.lastAngle,
+                player.addToUpdatePack();
+                // updatePack.player.push({
+                //     x: player.x,
+                //     y: player.y,
+                //     id: player.id,
+                //     name: player.name,
+                //     hp: player.hp,
+                //     direction: player.lastAngle,
+                // })
+            }
+
+            
+        }
+    }
+
+    emitInitPack(){
+        let socket = Socket.list[this.id]
+        socket.emit('init', this.initPack)
+        return;
+    }
+
+    getUpdatePack(){
+        //based on proximity to player:
+        // for(let i in Player.list){
+        //     let player = Player.list[i]
+        //     if(player.needsUpdate){
+        //         this.updatePack.player.push({
+        //             x: player.x,
+        //             y: player.y,
+        //             id: player.id,
+        //             name: player.name,
+        //             hp: player.hp,
+        //             direction: player.lastAngle,
+        //         })
+        //     }
+        //     // player.needsUpdate = false;
+        // }
+        // ^^ commented out above - changed to adding itself to others update packs instead of getting all updatePack from all others
+
+        for(let i in Bullet.list){
+            let bullet = Bullet.list[i]
+            this.updatePack.bullet.push({
+                x: bullet.x,
+                y: bullet.y,
+                id: bullet.id,
+                parentId: bullet.parent.id,
+
+                sound: bullet.sound,
+                duration: bullet.duration,
+                note: bullet.note
+            })
+        }
+
+        for(let i in Pickup.list){
+            let pickup = Pickup.list[i]
+            if(pickup.needsUpdate){
+                this.updatePack.pickup.push({
+                    x: pickup.x,
+                    y: pickup.y,
+                    id: pickup.id
                 })
+
+                pickup.needsUpdate = false;
             }
         }
+
+    }
+
+    addToUpdatePack(){
+        //player adds themself to other players updatePacks:
+        for(let i in Player.list){
+            let player = Player.list[i]
+
+            player.updatePack.player.push({
+                x: this.x,
+                y: this.y,
+                id: this.id,
+                name: this.name,
+                hp: this.hp,
+                direction: this.lastAngle,
+            })
+        }
+    }
+
+    emitUpdatePack(){
+        if(this.updatePack.player.length || this.updatePack.bullet.length || this.updatePack.pickup.length){
+            let socket = Socket.list[this.id]
+            socket.emit('update', this.updatePack)
+            this.updatePack = {player: [], bullet: [], pickup: []};
+        }
+        
+        return;
     }
 }

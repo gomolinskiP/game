@@ -8,13 +8,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // import {Entity, Player, Bullet, Weapon} from './classes.js'
+import { Socket } from './classes/Socket.js';
 import { Player } from './classes/Player.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
 import { Scale } from './classes/Scale.js';
 
 
-let initPack = {player: [], bullet: [], pickup: []};
+// let initPack = {player: [], bullet: [], pickup: []};
 let updatePack = {player: [], bullet: [], pickup: []};
 export let removePack = {player: [], bullet: [], pickup: []};
 
@@ -87,7 +88,6 @@ function findProgressByUsername(db, username){
 
 export default async function webSocketSetUp(serv, ses, db){
     //socket.io:
-    var socketList = {};
 
     var io = require('socket.io')(serv, {
     cors: {
@@ -106,8 +106,7 @@ export default async function webSocketSetUp(serv, ses, db){
     //user connects to the game subpage:
     io.sockets.on('connection', async function(socket){
         //save new socket in socket list:
-        socket.id = Math.random();
-        socketList[socket.id] = socket;
+        socket.id = new Socket(socket).id;
         console.log("Socket connection: id=" + socket.id);
 
         let player = null;
@@ -143,7 +142,7 @@ export default async function webSocketSetUp(serv, ses, db){
                 }
         }
         
-        socket.emit('init', player.getInitPack(Pickup.list))
+        // socket.emit('init', player.getInitPack(Pickup.list))
         
         socket.on('disconnect', function(){
             //socket disconnected
@@ -167,7 +166,7 @@ export default async function webSocketSetUp(serv, ses, db){
                 db.progress.update({username: username}, {$set: {x: player.x, y: player.y, weapon: player.weapon}});
                 username = null;
              
-            delete socketList[socket.id];
+            delete Socket.list[socket.id];
         })
 
         socket.on('keyPress', function(data){
@@ -200,8 +199,8 @@ export default async function webSocketSetUp(serv, ses, db){
 
         socket.on('chat', function(msg){
             let signedMsg = `<b>${player.name}:</b> ${msg}`;
-            for(var i in socketList){
-                var socket = socketList[i];
+            for(var i in Socket.list){
+                var socket = Socket.list[i];
                 socket.emit('chatBroadcast', signedMsg);
             }
         })
@@ -215,19 +214,17 @@ export default async function webSocketSetUp(serv, ses, db){
             new Pickup();
         }
 
-        Pickup.handleAll(Player.list, socketList, updatePack);
-
+        Pickup.handleAll(Player.list, Socket.list, updatePack);
+        Bullet.updateAll(updatePack);
         Player.updateAll(updatePack);
 
-        Bullet.updateAll(updatePack);
-
         //emit to all sockets:
-        for(var i in socketList){
-            var socket = socketList[i];
+        for(var i in Socket.list){
+            var socket = Socket.list[i];
 
-            if(updatePack.player.length || updatePack.bullet.length || updatePack.pickup.length){
-                socket.emit('update', updatePack)
-            }
+            // if(updatePack.player.length || updatePack.bullet.length || updatePack.pickup.length){
+            //     socket.emit('update', updatePack)
+            // }
             
             if(removePack.player.length || removePack.bullet.length || removePack.pickup.length){
                 socket.emit('remove', removePack)
@@ -253,8 +250,8 @@ export default async function webSocketSetUp(serv, ses, db){
 
         //emit metronome signal:
         if(tick%2 == 0){
-            for(var i in socketList){
-                var socket = socketList[i];
+            for(var i in Socket.list){
+                var socket = Socket.list[i];
                 socket.emit("tick", {now, tick});
             }
         }

@@ -63,6 +63,9 @@ export class Player extends Entity{
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
+
+            this.isMoving = true;
+
             
             this.animFrame += 1;
 
@@ -76,13 +79,15 @@ export class Player extends Entity{
             }
         }
         else{
-            this.animFrame = 1 * 2;
+            this.isMoving = false;
         }
     }
 
     draw(){
         let x = this.x - Player.list[selfId].x + gameWidth/2;
         let y = this.y - Player.list[selfId].y + gameHeight/2;
+
+        if(!this.isMoving) this.animFrame = 1 * 2;
 
         //player image:
         drawBuffer.push({

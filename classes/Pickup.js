@@ -70,15 +70,15 @@ export class Pickup extends Entity{
             pickup.checkPicked(playerList, socketList);
                 
 
-            if(pickup.needsUpdate){
-                updatePack.pickup.push({
-                    x: pickup.x,
-                    y: pickup.y,
-                    id: pickup.id
-                })
+            // if(pickup.needsUpdate){
+            //     updatePack.pickup.push({
+            //         x: pickup.x,
+            //         y: pickup.y,
+            //         id: pickup.id
+            //     })
 
-                pickup.needsUpdate = false;
-            }
+            //     pickup.needsUpdate = false;
+            // }
         }
     }
 }

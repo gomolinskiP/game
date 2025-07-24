@@ -116,16 +116,16 @@ export class Bullet extends Entity{
             
             bullet.update();
             
-            updatePack.bullet.push({
-                x: bullet.x,
-                y: bullet.y,
-                id: bullet.id,
-                parentId: bullet.parent.id,
+            // updatePack.bullet.push({
+            //     x: bullet.x,
+            //     y: bullet.y,
+            //     id: bullet.id,
+            //     parentId: bullet.parent.id,
 
-                sound: bullet.sound,
-                duration: bullet.duration,
-                note: bullet.note
-            })
+            //     sound: bullet.sound,
+            //     duration: bullet.duration,
+            //     note: bullet.note
+            // })
         }
     }
 }
