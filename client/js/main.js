@@ -188,6 +188,10 @@ socket.on('chatBroadcast', (signedMsg)=>{
     chatContent.scrollTop = chatContent.scrollHeight;
 })
 
+socket.on('redirect', (destination)=>{
+    window.location.href = destination;
+})
+
 
 
 const noteBTNs = document.querySelectorAll(".note")

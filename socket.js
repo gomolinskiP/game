@@ -76,6 +76,17 @@ function findProgressByUsername(db, username){
     })
 }
 
+function updatePlayerProgress(db, playerId){
+    let player = Player.list[playerId];
+    return new Promise((resolve, reject)=>{
+        db.progress.update({username: player.name}, {$set: {x: player.x, y: player.y}}, function(err, res){
+            if(err) return reject(err);
+            resolve(res);
+        });
+
+    })
+}
+
 export default async function webSocketSetUp(serv, ses, db){
     //socket.io:
 
@@ -113,26 +124,29 @@ export default async function webSocketSetUp(serv, ses, db){
         if(loggedPlayer != undefined){
             console.log(`>>>>MULTISOCKET DETECTED<<<<`)
             //TODO maybe redirect previous socket to homepage and force disconnect?
-            player = Player.list[loggedPlayer.id]
-            player.socketIDs.push(socket.id)
+            // player = Player.list[loggedPlayer.id]
+            // db.progress.update({username: username}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
+            await updatePlayerProgress(db, loggedPlayer.id);
+            Socket.list[loggedPlayer.id].emit('redirect', "/logout");
+            // player.socketIDs.push(socket.id)
         }
-        else{
-            //retrieve player progress:
-            let res = await findProgressByUsername(db, username);
-                if(res){
-                    //progress already in DB
-                    player = new Player(socket.id, res.x, res.y, username, res.weapon)
-                    if(checkWallCollision(player.x, player.y, collisionLayer)){
-                        player.x = 0;
-                        player.y = 0;
-                    }
+        // else{
+        //retrieve player progress:
+        let res = await findProgressByUsername(db, username);
+            if(res){
+                //progress already in DB
+                player = new Player(socket.id, res.x, res.y, username, res.weapon)
+                if(checkWallCollision(player.x, player.y, collisionLayer)){
+                    player.x = 0;
+                    player.y = 0;
                 }
-                else{
-                    //no progress, set starting values
-                    player = new Player(socket.id, 0, 0, username);
-                    db.progress.insert({username: username, x: 0, y: 0})
-                }
-        }
+            }
+            else{
+                //no progress, set starting values
+                player = new Player(socket.id, 0, 0, username);
+                db.progress.insert({username: username, x: 0, y: 0})
+            }
+        // }
                 
         socket.on('disconnect', function(){
             //socket disconnected
