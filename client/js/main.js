@@ -24,22 +24,31 @@ let scale = {};
 
 
 socket.on('init', function(data){
+    console.log("InitPack:", data)
+
     selfId = data.selfId;
     setActiveNote(data.selectedNote)
     setScale(data.scale.name, data.scale.allowedNotes)
 
-    console.log("InitPack:", data)
-    
-    for(var i=0; i<data.player.length; i++){
-        new Player(data.player[i]);
-    }
+    //new:
+    for(let i = 0; i<data.entities.length; i++){
+        let entity = data.entities[i];
+        console.log(i);
 
-    for(var i=0; i<data.bullet.length; i++){
-        new Bullet(data.bullet[i]);
-    }
-
-    for(var i=0; i<data.pickup.length; i++){
-        new Pickup(data.pickup[i]);
+        switch(entity.type){
+            case "player":
+                console.log("CREATE NEW PLAYER")
+                new Player(entity);
+                break;
+            case "bullet":
+                new Bullet(entity);
+                break;
+            case "pickup":
+                new Pickup(entity);
+                break;
+            default:
+                console.log(`Unknown entity type: ${entity.pickup}`)
+        }
     }
 
     requestAnimationFrame(gameLoop);
@@ -47,58 +56,75 @@ socket.on('init', function(data){
 })
 
 socket.on('update', function(data){
-    // console.log("updatePack:", data)
+    //gets an array of objects to update and updates or creates them:
+    console.log("updatePack:", data)
 
-    for(var i=0; i<data.player.length; i++){
-        let pack = data.player[i]
-        let p = Player.list[pack.id]
+    for(let i = 0; i<data.length; i++){
+        let pack = data[i];
+        let id = pack.id;
 
-        if(p){
-            p.update(pack);   
-        } else{
-            new Player(data.player[i]);
-        }
-    }
-
-    for(var i=0; i<data.bullet.length; i++){
-        let pack = data.bullet[i]
-        let b = Bullet.list[pack.id]
-
-        if(b){
-            b.update(pack);
-        } else{
-            let b = new Bullet(pack);
-            if(pack.parentId == selfId){
-                highlightPlayedNote(pack.note, pack.duration)
-            }
-            
-        }
-    }
-
-    for(var i=0; i<data.pickup.length; i++){
-        let pack = data.pickup[i]
-        let b = Pickup.list[pack.id]
-
-        if(b){
-            // b.update(pack);
-        } else{
-            let b = new Pickup(data.pickup[i]);
+        switch(pack.type){
+            case "player":
+                let p = Player.list[id];
+                if(p){
+                    p.update(pack);
+                }
+                else{
+                    new Player(pack);
+                }
+                break;
+            case "bullet":
+                let b = Bullet.list[id]
+                if(b){
+                    b.update(pack);
+                }
+                else{
+                    new Bullet(pack);
+                    if(pack.parentId == selfId){
+                        highlightPlayedNote(pack.note, pack.duration)
+                    }
+                }
+                break;
+            case "pickup":
+                let pU = Pickup.list[id]
+                if(!pU){
+                    new Pickup(pack)
+                }
         }
     }
 })
 
 socket.on('remove', function(data){
-    for(var i=0; i<data.player.length; i++){
-        delete Player.list[data.player[i]]
-    }
-    for(var i=0; i<data.bullet.length; i++){
-        Bullet.list[data.bullet[i]].destroy();
-    }
-    for(var i=0; i<data.pickup.length; i++){
-        Pickup.list[data.pickup[i]].destroy();
-    }
+    console.log("removePack:", data)
 
-    // console.log("removePack:", data)
+    for(let i = 0; i<data.length; i++){
+        let entity = data[i]
+        let id = entity.id;
+
+        switch(entity.type){
+            case "player":
+                if(!Player.list[id]){
+                    console.log(`ERROR NO PLAYER WITH ID=${id}`);
+                    return;
+                }
+                delete Player.list[id];
+                break;
+            case "bullet":
+                if(!Bullet.list[id]){
+                    console.log(`ERROR NO BULLET WITH ID=${id}`);
+                    return;
+                }
+                Bullet.list[id].destroy();
+                break;
+            case "pickup":
+                if(!Pickup.list[id]){
+                    console.log(`ERROR NO PICKUP WITH ID=${id}`);
+                    return;
+                }
+                Pickup.list[id].destroy();
+                break;
+        }
+    }
 })
 
 
@@ -261,16 +287,16 @@ const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-18);
 metronome.chain(metrVol, Tone.Master);
 
-function playClick(time){
-    console.log(Tone.Transport.position)
+// function playClick(time){
+//     console.log(Tone.Transport.position)
 
-    if(beatCounter%timeSig === 0){
-        metronome.triggerAttackRelease("C5", "16n", time)
-    } else{
-        metronome.triggerAttackRelease("C6", "16n", time)
-    }
-    beatCounter++;
-}
+//     if(beatCounter%timeSig === 0){
+//         metronome.triggerAttackRelease("C5", "16n", time)
+//     } else{
+//         metronome.triggerAttackRelease("C6", "16n", time)
+//     }
+//     beatCounter++;
+// }
 
 // Tone.Transport.scheduleRepeat(playClick, "4n");
 
@@ -281,7 +307,6 @@ socket.on("tick", (data)=>{
     if(Tone.Transport.state != 'started') Tone.Transport.start();
     else{
         let pitch = data.tick%8==0 ? `${scale.base}6` : `${scale.base}5`; 
-        console.log(pitch, data.tick)
         Tone.Transport.scheduleOnce((time)=>{
             metronome.triggerAttackRelease(pitch, "8n", time)
         }, Tone.Transport.toSeconds())
@@ -292,5 +317,5 @@ socket.on("tick", (data)=>{
 socket.on("new weapon", (data)=>{
     setWeaponType(data.type);
     setDurationLabel(data.duration)
-    console.log("new weapon", data)
+    // console.log("new weapon", data)
 })

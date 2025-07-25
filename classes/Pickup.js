@@ -1,5 +1,5 @@
 import { Entity } from './Entity.js';
-import {removePack} from '../socket.js'
+import { Player } from './Player.js';
 import { collisionLayer, checkWallCollision } from '../socket.js';
 
 
@@ -23,6 +23,8 @@ export class Pickup extends Entity{
             isUnreachable = checkWallCollision(x, y, collisionLayer);
         }
         super(x, y)
+
+        this.entityType = "pickup";
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
         this.duration = durationList[Math.floor(Math.random() * durationList.length)]
@@ -49,7 +51,14 @@ export class Pickup extends Entity{
 
     destroy(){
         clearTimeout(this.timeout)
-        removePack.pickup.push(this.id)
+        //add to remove pack for all players:
+        for(let i in Player.list){
+            let player = Player.list[i]
+            player.removePack.push({
+                id: this.id,
+                type: "pickup"
+            })
+        }
         delete Pickup.list[this.id]
     }
 
@@ -63,22 +72,11 @@ export class Pickup extends Entity{
         }
     }
 
-    static handleAll(playerList, socketList, updatePack){
+    static handleAll(playerList, socketList){
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]
 
             pickup.checkPicked(playerList, socketList);
-                
-
-            // if(pickup.needsUpdate){
-            //     updatePack.pickup.push({
-            //         x: pickup.x,
-            //         y: pickup.y,
-            //         id: pickup.id
-            //     })
-
-            //     pickup.needsUpdate = false;
-            // }
         }
     }
 }

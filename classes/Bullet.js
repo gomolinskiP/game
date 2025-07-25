@@ -1,6 +1,6 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
-import {scale, removePack} from '../socket.js'
+import {scale} from '../socket.js'
 import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
 
 
@@ -34,6 +34,8 @@ export class Bullet extends Entity{
         this.id = Math.random();
         this.parent = parent;
         this.speed = 20;
+
+        this.entityType = "bullet";
 
         angle = angle + 10*(Math.random()-0.5);
 
@@ -106,26 +108,22 @@ export class Bullet extends Entity{
     }
     
     destroy(){
-        removePack.bullet.push(this.id)
+        for(let i in Player.list){
+            let player = Player.list[i]
+            player.removePack.push({
+                id: this.id,
+                type: "bullet"
+            })
+        }
+        // removePack.bullet.push(this.id)
         delete Bullet.list[this.id]
     }
 
-    static updateAll(updatePack){
+    static updateAll(){
         for(var i in Bullet.list){ 
             var bullet = Bullet.list[i];
             
             bullet.update();
-            
-            // updatePack.bullet.push({
-            //     x: bullet.x,
-            //     y: bullet.y,
-            //     id: bullet.id,
-            //     parentId: bullet.parent.id,
-
-            //     sound: bullet.sound,
-            //     duration: bullet.duration,
-            //     note: bullet.note
-            // })
         }
     }
 }

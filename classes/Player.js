@@ -15,6 +15,9 @@ export class Player extends Entity{
         this.name = username;
         this.hp = 100;
         this.socketIDs = [id];
+
+        this.entityType = "player";
+
         this.needsUpdate = true;
         this.pressingUp = false;
         this.pressingDown = false;
@@ -32,10 +35,14 @@ export class Player extends Entity{
 
         Player.list[this.id] = this;
 
+        this.knownObjIDs = [] //all objects known to this player
+
         this.initPack = this.getInitPack(Pickup.list); //TODO
         this.emitInitPack();
-        this.updatePack = {player: [], bullet: [], pickup: []}; //TODO
-        this.removePack = null; //TODO
+        this.updatePack = []; //TODO
+        this.removePack = []; //TODO
+
+
 
         return this;
     }
@@ -108,9 +115,6 @@ export class Player extends Entity{
                 this.shootTimeoutTime = 60000/120 * (4/durationInt) * 3/2
                 break;
         }
-
-        
-        // console.log(this.weapon)
     }
 
     changeSelectedNote(note){
@@ -132,28 +136,31 @@ export class Player extends Entity{
     
     getInitPack(pickupList){
         let initPack = {};
-
-        initPack.player = []
+        initPack.entities = []
         for(var i in Player.list){
-            initPack.player.push({
-                x: Player.list[i].x,
-                y: Player.list[i].y,
-                id: Player.list[i].id,
-                name: Player.list[i].name,
-                hp: Player.list[i].hp,
-                direction: Player.list[i].lastAngle
+            let player = Player.list[i]
+            initPack.entities.push({
+                x: player.x,
+                y: player.y,
+                type: "player",
+                id: player.id,
+                name: player.name,
+                hp: player.hp,
+                direction: player.lastAngle
             })
+
+            this.knownObjIDs.push(player.id)
         }
-
-        initPack.bullet = []
-
-        initPack.pickup = []
         for(var i in pickupList){
-            initPack.pickup.push({
-                x: pickupList[i].x,
-                y: pickupList[i].y,
-                id: pickupList[i].id,
+            let pickup = pickupList[i];
+            initPack.entities.push({
+                x: pickup.x,
+                y: pickup.y,
+                type: "pickup",
+                id: pickup.id,
             })
+
+            this.knownObjIDs.push(pickup.id)
         }
 
         initPack.selfId = this.id;
@@ -163,27 +170,18 @@ export class Player extends Entity{
         return initPack;
     }
 
-    static updateAll(updatePack){
+    static updateAll(){
         for(var i in Player.list){ 
             var player = Player.list[i];
 
             player.getUpdatePack();
             player.emitUpdatePack();
+            player.emitRemovePack();
 
             if(player.needsUpdate){
                 player.updatePosition();
                 player.addToUpdatePack();
-                // updatePack.player.push({
-                //     x: player.x,
-                //     y: player.y,
-                //     id: player.id,
-                //     name: player.name,
-                //     hp: player.hp,
-                //     direction: player.lastAngle,
-                // })
-            }
-
-            
+            }  
         }
     }
 
@@ -194,47 +192,38 @@ export class Player extends Entity{
     }
 
     getUpdatePack(){
-        //based on proximity to player:
-        // for(let i in Player.list){
-        //     let player = Player.list[i]
-        //     if(player.needsUpdate){
-        //         this.updatePack.player.push({
-        //             x: player.x,
-        //             y: player.y,
-        //             id: player.id,
-        //             name: player.name,
-        //             hp: player.hp,
-        //             direction: player.lastAngle,
-        //         })
-        //     }
-        //     // player.needsUpdate = false;
-        // }
-        // ^^ commented out above - changed to adding itself to others update packs instead of getting all updatePack from all others
+        //TODO: based on proximity to player:
 
         for(let i in Bullet.list){
             let bullet = Bullet.list[i]
-            this.updatePack.bullet.push({
-                x: bullet.x,
-                y: bullet.y,
-                id: bullet.id,
-                parentId: bullet.parent.id,
+            if((Math.abs(this.x - bullet.x) < 100 && Math.abs(this.y - bullet.y) < 100) || 1==1){
+                this.updatePack.push({
+                    x: bullet.x,
+                    y: bullet.y,
+                    id: bullet.id,
+                    type: "bullet",
+                    parentId: bullet.parent.id,
 
-                sound: bullet.sound,
-                duration: bullet.duration,
-                note: bullet.note
-            })
+                    sound: bullet.sound,
+                    duration: bullet.duration,
+                    note: bullet.note
+                })
+                if(!this.knownObjIDs.includes(bullet.id)) this.knownObjIDs.push(bullet.id);
+            }
         }
 
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]
-            if(pickup.needsUpdate){
-                this.updatePack.pickup.push({
+            if(!this.knownObjIDs.includes(pickup.id)){
+                this.updatePack.push({
                     x: pickup.x,
                     y: pickup.y,
-                    id: pickup.id
+                    id: pickup.id,
+                    type: "pickup"
                 })
 
-                pickup.needsUpdate = false;
+                // pickup.needsUpdate = false;
+                this.knownObjIDs.push(pickup.id);
             }
         }
 
@@ -245,24 +234,61 @@ export class Player extends Entity{
         for(let i in Player.list){
             let player = Player.list[i]
 
-            player.updatePack.player.push({
+            player.updatePack.push({
                 x: this.x,
                 y: this.y,
+                type: "player",
                 id: this.id,
                 name: this.name,
                 hp: this.hp,
                 direction: this.lastAngle,
             })
+
+            if(!player.knownObjIDs.includes(this.id)) player.knownObjIDs.push(this.id);
         }
     }
 
     emitUpdatePack(){
-        if(this.updatePack.player.length || this.updatePack.bullet.length || this.updatePack.pickup.length){
-            let socket = Socket.list[this.id]
+        let socket = Socket.list[this.id]
+        if(!socket){
+            console.log(`ERROR NO SOCKET WHILE EMITTING UPDATE PACK`)
+            this.updatePack = [];
+            return;
+        }
+
+        if(this.updatePack.length){
             socket.emit('update', this.updatePack)
-            this.updatePack = {player: [], bullet: [], pickup: []};
+            this.updatePack = [];
         }
         
         return;
+    }
+
+    addToRemovePack(id){
+
+    }
+
+    emitRemovePack(){
+        let socket = Socket.list[this.id]
+        if(!socket){
+            console.log(`ERROR NO SOCKET WHILE EMITTING REMOVE PACK`)
+            this.removePack = [];
+            return;
+        }
+
+        for(let entity of this.removePack){
+            if(this.knownObjIDs.includes(entity.id)){
+                this.knownObjIDs = this.knownObjIDs.filter(id => id !== entity.id)
+            }
+            else{
+                console.log("Trying to remove something player is not aware of!!!")
+            }
+        }
+
+        if(this.removePack.length){
+            let socket = Socket.list[this.id]
+            socket.emit('remove', this.removePack);
+            this.removePack = [];
+        }
     }
 }

@@ -7,17 +7,12 @@ import { readFile } from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// import {Entity, Player, Bullet, Weapon} from './classes.js'
 import { Socket } from './classes/Socket.js';
 import { Player } from './classes/Player.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
 import { Scale } from './classes/Scale.js';
 
-
-// let initPack = {player: [], bullet: [], pickup: []};
-let updatePack = {player: [], bullet: [], pickup: []};
-export let removePack = {player: [], bullet: [], pickup: []};
 
 let mapData = await loadMapData();
 export let collisionLayer = await loadCollisionLayer(mapData, 'collision');
@@ -34,11 +29,6 @@ function loadCollisionLayer(mapData, layerName){
     for(let layer of mapData.layers){
         if(layer.name == layerName){
 
-            // const collisionRects = layer.data.objects.map(obj=>{
-            //     x: obj.x,
-            //     y: obj.y,
-
-            // })
             return layer;
         }
     }
@@ -107,7 +97,7 @@ export default async function webSocketSetUp(serv, ses, db){
     io.sockets.on('connection', async function(socket){
         //save new socket in socket list:
         socket.id = new Socket(socket).id;
-        console.log("Socket connection: id=" + socket.id);
+        console.log(`Socket connection: id=${socket.id}...`);
 
         let player = null;
 
@@ -121,6 +111,8 @@ export default async function webSocketSetUp(serv, ses, db){
         //check if user is already in game on another socket:
         let loggedPlayer = Object.values(Player.list).find(player => player.name === username)
         if(loggedPlayer != undefined){
+            console.log(`>>>>MULTISOCKET DETECTED<<<<`)
+            //TODO maybe redirect previous socket to homepage and force disconnect?
             player = Player.list[loggedPlayer.id]
             player.socketIDs.push(socket.id)
         }
@@ -141,11 +133,10 @@ export default async function webSocketSetUp(serv, ses, db){
                     db.progress.insert({username: username, x: 0, y: 0})
                 }
         }
-        
-        // socket.emit('init', player.getInitPack(Pickup.list))
-        
+                
         socket.on('disconnect', function(){
             //socket disconnected
+            console.log(`socket disconnected (id=${socket.id})...`)
 
             //check if player is logged from multiple sockets:
             if(player.socketIDs.length > 1){
@@ -155,15 +146,28 @@ export default async function webSocketSetUp(serv, ses, db){
                         player.socketIDs.splice(index, 1)
                         Player.list[player.socketIDs[0]] = player;
                         delete Player.list[socket.id]
-                        removePack.player.push(socket.id)
+                        for(let i in Player.list){
+                            let player = Player.list[i]
+                            player.removePack.push({
+                                id: socket.id,
+                                type: "player"
+                            })
+                        }
                     }
                 } else{
                     delete Player.list[socket.id];
-                    removePack.player.push(socket.id)
+                    for(let i in Player.list){
+                            let player = Player.list[i]
+                            player.removePack.push({
+                                id: socket.id,
+                                type: "player"
+                            })
+                    }
                 }
                 
                 // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
-                db.progress.update({username: username}, {$set: {x: player.x, y: player.y, weapon: player.weapon}});
+                db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
+                console.log("PROGRESS SAVED!")
                 username = null;
              
             delete Socket.list[socket.id];
@@ -214,30 +218,9 @@ export default async function webSocketSetUp(serv, ses, db){
             new Pickup();
         }
 
-        Pickup.handleAll(Player.list, Socket.list, updatePack);
-        Bullet.updateAll(updatePack);
-        Player.updateAll(updatePack);
-
-        //emit to all sockets:
-        for(var i in Socket.list){
-            var socket = Socket.list[i];
-
-            // if(updatePack.player.length || updatePack.bullet.length || updatePack.pickup.length){
-            //     socket.emit('update', updatePack)
-            // }
-            
-            if(removePack.player.length || removePack.bullet.length || removePack.pickup.length){
-                socket.emit('remove', removePack)
-            }
-        }
-        
-        updatePack.player = []
-        removePack.player = []
-        updatePack.bullet = []
-        removePack.bullet = []
-
-        updatePack.pickup = []
-        removePack.pickup = []
+        Pickup.handleAll(Player.list, Socket.list);
+        Bullet.updateAll();
+        Player.updateAll();
     }, 1000/25);
 
     const BPM = 120;
