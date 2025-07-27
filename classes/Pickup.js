@@ -54,10 +54,7 @@ export class Pickup extends Entity{
         //add to remove pack for all players:
         for(let i in Player.list){
             let player = Player.list[i]
-            player.removePack.push({
-                id: this.id,
-                type: "pickup"
-            })
+            player.addToRemovePack(this.id, "pickup");
         }
         delete Pickup.list[this.id]
     }

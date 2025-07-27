@@ -6,6 +6,10 @@ import { collisionLayer, checkWallCollision } from '../socket.js';
 import { scale } from '../socket.js';
 import { Socket } from './Socket.js';
 
+const loadDistance = 100; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadUnloadMargin = 50;
+const unloadDistance = loadDistance + loadUnloadMargin;
+
 export class Player extends Entity{
     static list = {}
 
@@ -35,12 +39,12 @@ export class Player extends Entity{
 
         Player.list[this.id] = this;
 
-        this.knownObjIDs = [] //all objects known to this player
+        this.knownObjIDs = [] //all objects' IDs known to this player
 
-        this.initPack = this.getInitPack(Pickup.list); //TODO
+        this.initPack = this.getInitPack(Pickup.list);
         this.emitInitPack();
-        this.updatePack = []; //TODO
-        this.removePack = []; //TODO
+        this.updatePack = [];
+        this.removePack = [];
 
 
 
@@ -139,6 +143,10 @@ export class Player extends Entity{
         initPack.entities = []
         for(var i in Player.list){
             let player = Player.list[i]
+            //check distance:
+            if(Math.abs(player.x - this.x) > loadDistance ||
+               Math.abs(player.y - this.y) > loadDistance) continue;
+            
             initPack.entities.push({
                 x: player.x,
                 y: player.y,
@@ -153,6 +161,9 @@ export class Player extends Entity{
         }
         for(var i in pickupList){
             let pickup = pickupList[i];
+            //check distance:
+            if(Math.abs(pickup.x - this.x) > loadDistance ||
+               Math.abs(pickup.y - this.y) > loadDistance) continue;
             initPack.entities.push({
                 x: pickup.x,
                 y: pickup.y,
@@ -188,6 +199,7 @@ export class Player extends Entity{
     emitInitPack(){
         let socket = Socket.list[this.id]
         socket.emit('init', this.initPack)
+        this.initPack = {};
         return;
     }
 
@@ -196,24 +208,36 @@ export class Player extends Entity{
 
         for(let i in Bullet.list){
             let bullet = Bullet.list[i]
-            if((Math.abs(this.x - bullet.x) < 100 && Math.abs(this.y - bullet.y) < 100) || 1==1){
-                this.updatePack.push({
-                    x: bullet.x,
-                    y: bullet.y,
-                    id: bullet.id,
-                    type: "bullet",
-                    parentId: bullet.parent.id,
+            //check distance:
+            if(Math.abs(bullet.x - this.x) > loadDistance ||
+               Math.abs(bullet.y - this.y) > loadDistance){
+                this.addToRemovePack(bullet.id, "bullet");
+                continue;
+            };
+            
+            this.updatePack.push({
+                x: bullet.x,
+                y: bullet.y,
+                id: bullet.id,
+                type: "bullet",
+                parentId: bullet.parent.id,
 
-                    sound: bullet.sound,
-                    duration: bullet.duration,
-                    note: bullet.note
-                })
-                if(!this.knownObjIDs.includes(bullet.id)) this.knownObjIDs.push(bullet.id);
-            }
+                sound: bullet.sound,
+                duration: bullet.duration,
+                note: bullet.note
+            })
+            if(!this.knownObjIDs.includes(bullet.id)) this.knownObjIDs.push(bullet.id);
         }
 
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]
+            //check distance:
+            if(Math.abs(pickup.x - this.x) > unloadDistance ||
+               Math.abs(pickup.y - this.y) > unloadDistance){
+                this.addToRemovePack(pickup.id, "pickup")
+                continue;
+            };
+
             if(!this.knownObjIDs.includes(pickup.id)){
                 this.updatePack.push({
                     x: pickup.x,
@@ -233,6 +257,12 @@ export class Player extends Entity{
         //player adds themself to other players updatePacks:
         for(let i in Player.list){
             let player = Player.list[i]
+            //check distance:
+            if(Math.abs(player.x - this.x) > unloadDistance ||
+               Math.abs(player.y - this.y) > unloadDistance){
+                player.addToRemovePack(this.id, "player")
+                continue;
+            };
 
             player.updatePack.push({
                 x: this.x,
@@ -264,8 +294,13 @@ export class Player extends Entity{
         return;
     }
 
-    addToRemovePack(id){
+    addToRemovePack(id, type){
+        if(!this.knownObjIDs.includes(id))  return;
 
+        this.removePack.push({
+            id: id,
+            type: type
+        })
     }
 
     emitRemovePack(){

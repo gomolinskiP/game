@@ -110,12 +110,8 @@ export class Bullet extends Entity{
     destroy(){
         for(let i in Player.list){
             let player = Player.list[i]
-            player.removePack.push({
-                id: this.id,
-                type: "bullet"
-            })
+            player.addToRemovePack(this.id, "bullet");
         }
-        // removePack.bullet.push(this.id)
         delete Bullet.list[this.id]
     }
 

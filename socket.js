@@ -162,20 +162,14 @@ export default async function webSocketSetUp(serv, ses, db){
                         delete Player.list[socket.id]
                         for(let i in Player.list){
                             let player = Player.list[i]
-                            player.removePack.push({
-                                id: socket.id,
-                                type: "player"
-                            })
+                            player.addToRemovePack(socket.id, "player");
                         }
                     }
                 } else{
                     delete Player.list[socket.id];
                     for(let i in Player.list){
                             let player = Player.list[i]
-                            player.removePack.push({
-                                id: socket.id,
-                                type: "player"
-                            })
+                            player.addToRemovePack(socket.id, "player");
                     }
                 }
                 
