@@ -6,11 +6,15 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+import { errorMessages } from './errorMessages.js';
+
 const argon2 = require('argon2')
 
 export default function expressSetUp(db){
     var express = require('express');
     var app = express();
+    app.set('views', 'views')
+    app.set('view engine', 'ejs')
     var favicon = require('serve-favicon')
     const session = require('express-session')
     const { checkLoggedIn, bypassLogin } = require('./middlewares')
@@ -28,11 +32,28 @@ export default function expressSetUp(db){
     app.use(ses);
     //express for file communication:
     app.get('/', bypassLogin, function(req, res){
-        res.sendFile(__dirname + '/client/index.html');
+        // res.sendFile(__dirname + '/client/index.html');
+        if(req.query.err){
+            req.session.err = req.query.err;
+            return res.redirect('/')
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        let errorMsg = errorMessages[err]
+
+        if(req.session?.user?.username){
+            isLogged = true;
+            username = req.session.user.username;
+        }
+
+        res.render("index", {isLogged: isLogged, username: username, error: errorMsg});
     });
 
     app.post('/login', function(req, postRes){
-        console.log(req.body)
         db.account.findOne({username: req.body.username}, async (err, res)=>{
             if(res){
                 //account exists
@@ -44,7 +65,7 @@ export default function expressSetUp(db){
                         //create session:
                         req.session.user = {username: req.body.username}
 
-                        postRes.redirect('/game');
+                        postRes.redirect('/');
                     }
                     else{
                         //pasword incorrect
@@ -79,13 +100,32 @@ export default function expressSetUp(db){
     })
 
     app.get('/game', checkLoggedIn, function(req, res){
-        res.sendFile(__dirname + '/client/game.html')
+        let isLogged = false;
+        let username = undefined;
+        if(req.session?.user?.username){
+            isLogged = true;
+            username = req.session.user.username;
+        }
+
+        res.render("game", {isLogged: isLogged, username: username});
+        // res.sendFile(__dirname + '/client/game.html')
     })
 
     app.get('/logout', function(req, res){
         req.session.destroy();
         res.clearCookie('cookieName');
         res.redirect('/');
+    })
+
+    app.get('/test', function(req, res){
+        let isLogged = false;
+        let username = undefined;
+        if(req.session?.user?.username){
+            isLogged = true;
+            username = req.session.user.username;
+        }
+
+        res.render("index", {isLogged: isLogged, username: username});
     })
 
     app.use('/client', express.static(__dirname + '/client'));

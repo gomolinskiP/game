@@ -5,16 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
     <link href="css/style.css" rel="stylesheet">
-    <script src="js/errorMsg.js" defer></script>
+    <script src="js/pageUI.js" defer></script>
 </head>
 <body>
-    <div id="header">
-        <a href="./game">Play the game</a>
+    <header id="header">
+        <div id="header-left">
+            <a href="/">Home</a> | 
+            <a href="/">About</a> | 
+            <a href="/">Contact</a>
+        </div>
+        <div id="header-right">
+            <% if(isLogged){ %>
+            Welcome, <strong><%= username %></strong> | 
+            <a href="./game">Play the game</a> | 
+            <a href="/logout">Logout</a>
+            <% }else{ %>
+            <a id="showLoginBtn">
+                Login
+            </a> | 
+            <a id="showRegisterBtn">
+                Register
+            </a>
+        </div>
+        <% if(error){ %>
+        <div id="errorMsg"><%= error %></div>
+        <% } %>
+    </header>
 
-        <div id="errorMsg" style="display: none;"></div>
-    </div>
-
-    <div>
+    <div id="loginForm" style="display: none;">
          <form action="/login" method="post">
             <label>Sign in:</label>
             <input id="loginInput" type="text" placeholder="username" name="username"></input>
@@ -23,7 +41,7 @@
         </form>       
     </div>
 
-    <div>
+    <div id="registerForm" style="display: none;">
         <form action="/register" method="post" autocomplete="off">
             <label>Register:</label>
             <input id="registerInput" type="text" placeholder="username" name="username" autocomplete="off"></input>
@@ -31,7 +49,7 @@
             <button id="signUpBtn">Register</button>
         </form>
     </div>
-
+    <% } %>
 </body>
 </html>
 

@@ -12,21 +12,18 @@
     </script>
 </head>
 <body>
-    <div id="header">
-        <a href="./">Home</a>
-        <!-- <div id="signInDiv">
-            <form>
-                <label>Sign in:</label>
-                <input id="loginInput" type="text" placeholder="username"></input>
-                <input id="passwordInput" type="password" placeholder="password"></input>
-                <button id="signBtn" type="submit">Sign in</button>
-                <button id="signUpBtn">Sign up</button>
-            </form>
+    <header id="header">
+        <div id="header-left">
+            <a href="/">Home</a> | 
+            <a href="/">About</a> | 
+            <a href="/">Contact</a>
         </div>
-        <button id="signOutBtn" style="display: none;">Sign out</button> -->
-        <button id="sound-btn">📢</button>
-        <a href="/logout">Logout</a>
-    </div>
+        <div id="header-right">
+            <% if(isLogged){ %>
+            Playing as <strong><%= username %></strong> | 
+            <a href="/logout">Logout</a>
+            <% } %>
+    </header>
     <div id="game">
         <canvas id="ctx" width="1000" height="1000"></canvas>
     </div>

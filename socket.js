@@ -116,6 +116,7 @@ export default async function webSocketSetUp(serv, ses, db){
         let username = socket.request.session?.user?.username;
         if(username == undefined){
             console.log("ERROR: username is undefined")
+            socket.emit('redirect', "/")
             return;
         }
 
@@ -127,7 +128,7 @@ export default async function webSocketSetUp(serv, ses, db){
             // player = Player.list[loggedPlayer.id]
             // db.progress.update({username: username}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
             await updatePlayerProgress(db, loggedPlayer.id);
-            Socket.list[loggedPlayer.id].emit('redirect', "/logout");
+            Socket.list[loggedPlayer.id].emit('redirect', "/");
             // player.socketIDs.push(socket.id)
         }
         // else{

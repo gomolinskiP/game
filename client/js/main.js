@@ -144,15 +144,15 @@ canvas.onblur = ()=>{
 
 
 
-const playBTN = document.getElementById("sound-btn");
+// const playBTN = document.getElementById("sound-btn");
 
-playBTN.addEventListener("click", ()=>{
-    if(Tone.context.state != "running")
-        Tone.start();
+// playBTN.addEventListener("click", ()=>{
+//     if(Tone.context.state != "running")
+//         Tone.start();
 
-    console.log(Bullet.list)
-    // synth.triggerAttackRelease("C3", "8n");
-})
+//     console.log(Bullet.list)
+//     // synth.triggerAttackRelease("C3", "8n");
+// })
 
 const chatSendBTN = document.getElementById("chat-send-btn");
 const chatInput = document.getElementById("chat-input");
