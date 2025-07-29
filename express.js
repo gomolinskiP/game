@@ -120,6 +120,7 @@ export default function expressSetUp(db){
     app.post('/register', function(req, postRes){
         const chosenUsername = req.body.username;
         const chosenPassword = req.body.password;
+        const repeatedPassword = req.body.repPassword;
 
         //username validation:
         const validUsername = /^[0-9A-Za-z]{2,16}$/;
@@ -131,6 +132,11 @@ export default function expressSetUp(db){
         const validPassword = /^(?=.*?[0-9])(?=.*?[A-Za-z]).{8,32}$/;
         if(!validPassword.test(chosenPassword)){
             return postRes.redirect('/register?err=passwordInvalid')
+        }
+
+        //check if repeated password is the same as the first one:
+        if(chosenPassword !== repeatedPassword){
+            return postRes.redirect('/register?err=passwordMismatch')
         }
 
         //check if username is already taken:
