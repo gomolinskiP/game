@@ -29,6 +29,9 @@ if(errorMsg){
         case 'passwordInvalid':
             message = "Invalid password - please choose a password that is at least 8 and not more than 32 characters long. It has to contain letters and numbers."
             break;
+        case 'passwordMismatch':
+            message = "The repeated password is different than the first one.";
+            break;
         default:
             message = `SITE ERROR: no message set for messageCode='${errorCode}'`
     }
