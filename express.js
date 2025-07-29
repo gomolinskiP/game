@@ -6,8 +6,6 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { errorMessages } from './errorMessages.js';
-
 const argon2 = require('argon2')
 
 export default function expressSetUp(db){
@@ -43,8 +41,6 @@ export default function expressSetUp(db){
         let err = req.session.err;
         delete req.session.err;
 
-        let errorMsg = errorMessages[err]
-
         if(req.session?.user?.username){
             isLogged = true;
             username = req.session.user.username;
@@ -63,8 +59,6 @@ export default function expressSetUp(db){
         let username = undefined;
         let err = req.session.err;
         delete req.session.err;
-
-        let errorMsg = errorMessages[err]
 
         if(req.session?.user?.username){
             isLogged = true;
@@ -114,8 +108,6 @@ export default function expressSetUp(db){
         let err = req.session.err;
         delete req.session.err;
 
-        let errorMsg = errorMessages[err]
-
         if(req.session?.user?.username){
             isLogged = true;
             username = req.session.user.username;
@@ -126,17 +118,32 @@ export default function expressSetUp(db){
     })
 
     app.post('/register', function(req, postRes){
-        //HAVE TO ADD VALIDATION
-        db.account.findOne({username: req.body.username}, async function(err, res){
+        const chosenUsername = req.body.username;
+        const chosenPassword = req.body.password;
+
+        //username validation:
+        const validUsername = /^[0-9A-Za-z]{2,16}$/;
+        if(!validUsername.test(chosenUsername)){
+            return postRes.redirect('/register?err=usernameInvalid')
+        }
+
+        //password validation:
+        const validPassword = /^(?=.*?[0-9])(?=.*?[A-Za-z]).{8,32}$/;
+        if(!validPassword.test(chosenPassword)){
+            return postRes.redirect('/register?err=passwordInvalid')
+        }
+
+        //check if username is already taken:
+        db.account.findOne({username: chosenUsername}, async function(err, res){
             if(res){
                 //acount already exists
                 postRes.redirect('/register?err=usernameTaken');
             }
             else{
                 //TODO: check if username correct (allowed) here
-                const passwordHash = await argon2.hash(req.body.password, {type: argon2.argon2id});
+                const passwordHash = await argon2.hash(chosenPassword, {type: argon2.argon2id});
 
-                db.account.insertOne({username: req.body.username, password: passwordHash});
+                db.account.insertOne({username: chosenUsername, password: passwordHash});
                 postRes.redirect('/register?err=registerSuccess');
             }
         })

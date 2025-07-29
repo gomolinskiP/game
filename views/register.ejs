@@ -21,14 +21,14 @@
                     <label for="password-input">Password</label>
                     <input id="password-input" type="password" name="password" autocomplete="new-password"></input>
                     <button id="signUpBtn">Register</button>
+                    <% if(error){ %>
+                    <div id="errorMsg" data-msg=<%= error %>><%= error %></div>
+                    <% } %>
                     <p>
                         Already have an account?
                         <a href="/login">Log in</a>
                     </p>
                 </form>
-                <% if(error){ %>
-                <div id="errorMsg" data-msg=<%= error %>><%= error %></div>
-                <% } %>
             </div>
         </div>
     </div>
