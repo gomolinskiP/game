@@ -12,18 +12,8 @@
     </script>
 </head>
 <body>
-    <header id="header">
-        <div id="header-left">
-            <a href="/">Home</a> | 
-            <a href="/">About</a> | 
-            <a href="/">Contact</a>
-        </div>
-        <div id="header-right">
-            <% if(isLogged){ %>
-            Playing as <strong><%= username %></strong> | 
-            <a href="/logout">Logout</a>
-            <% } %>
-    </header>
+    <%- include('./partials/gameHeader.ejs') %>
+
     <div id="game">
         <canvas id="ctx" width="1000" height="1000"></canvas>
     </div>

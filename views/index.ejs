@@ -8,48 +8,26 @@
     <script src="js/pageUI.js" defer></script>
 </head>
 <body>
-    <header id="header">
-        <div id="header-left">
-            <a href="/">Home</a> | 
-            <a href="/">About</a> | 
-            <a href="/">Contact</a>
-        </div>
-        <div id="header-right">
-            <% if(isLogged){ %>
-            Welcome, <strong><%= username %></strong> | 
-            <a href="./game">Play the game</a> | 
-            <a href="/logout">Logout</a>
-            <% }else{ %>
-            <a id="showLoginBtn">
-                Login
-            </a> | 
-            <a id="showRegisterBtn">
-                Register
-            </a>
-        </div>
-        <% if(error){ %>
-        <div id="errorMsg"><%= error %></div>
-        <% } %>
-    </header>
+    <%- include('./partials/header.ejs') %>
 
-    <div id="loginForm" style="display: none;">
-         <form action="/login" method="post">
-            <label>Sign in:</label>
-            <input id="loginInput" type="text" placeholder="username" name="username"></input>
-            <input id="passwordInput" type="password" placeholder="password" name="password"></input>
-            <button id="signBtn" type="submit">Sign in</button>
-        </form>       
+    <div id="main">
+        <div id="pageContent">
+            <h1>Welcome</h1>
+            <div class="text">
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin at justo aliquam, porttitor dolor posuere, sodales lorem. Aliquam dictum nunc sed tempor aliquet. Integer suscipit mi dui, non vulputate nibh placerat sit amet. Proin sit amet rutrum sapien. Suspendisse sed convallis mauris, et imperdiet risus. Nulla sed cursus elit, non elementum nisi. Duis ac magna ut velit interdum auctor.
+
+Maecenas in interdum velit, nec tristique ex. Nulla at lacus mollis, porttitor ante ac, viverra dolor. Pellentesque vitae ornare urna. Sed fermentum ullamcorper augue quis aliquam. Praesent malesuada blandit nisl at porttitor. Phasellus cursus urna non orci viverra, eu suscipit erat venenatis. Aenean in lectus sollicitudin, molestie dui eget, pulvinar orci.
+
+Nulla efficitur iaculis iaculis. Nam sapien nisl, facilisis vel tellus id, feugiat blandit dolor. Ut dictum neque non felis congue, quis feugiat dui convallis. Fusce lorem purus, semper id fermentum eu, fermentum id nisl. Sed feugiat non ex id dictum. Ut ullamcorper pulvinar laoreet. Integer tempor nunc quis purus sodales commodo. Sed dolor enim, finibus at tellus vel, pharetra tincidunt mauris. Ut ultrices orci eget eros ultrices dignissim. Vivamus tempor eu neque quis aliquet. Donec id maximus lorem, vitae euismod purus. Fusce sit amet lorem et justo sagittis commodo et nec lorem. Maecenas commodo, est vitae pulvinar tincidunt, ipsum mauris aliquet velit, id malesuada arcu odio in ante. Nam nec mollis dolor.
+
+Vestibulum interdum, enim a porta placerat, sapien sapien lobortis orci, in euismod nunc felis non risus. Pellentesque maximus justo ut augue egestas luctus. Praesent auctor nulla vitae risus ornare lacinia. Mauris auctor commodo dui in tempus. Maecenas sit amet eros ac metus molestie dignissim. Mauris at malesuada elit. Donec vitae lacinia ante. Etiam eget felis quis urna ultricies vehicula sit amet in mi. Donec a sapien nec leo fermentum pretium non a velit. In non augue nec leo commodo sodales. Etiam quis cursus risus. Vivamus pharetra varius tellus, et sagittis velit pellentesque ut. Morbi vehicula efficitur elit. Donec tempor id nisi sed tincidunt. In ultrices odio vel mattis fringilla.
+
+Nullam feugiat orci vitae nisl maximus fringilla. Integer dignissim diam ut enim ultricies pulvinar. Cras at mi in ligula fermentum condimentum. Aenean id bibendum leo, eu ultricies enim. Nam placerat dignissim nisi non pharetra. Suspendisse luctus pulvinar ex, tristique pharetra eros rhoncus eget. Nunc eu viverra risus. Donec lobortis tellus ut sollicitudin commodo. In vel mauris felis. Quisque varius, ligula eget pretium viverra, turpis nisi fermentum nisi, vel sagittis neque tortor at urna. Sed elementum quis elit quis commodo. Cras ullamcorper tellus egestas, efficitur sapien sit amet, pulvinar ipsum. 
+            </div>
+        </div>
     </div>
 
-    <div id="registerForm" style="display: none;">
-        <form action="/register" method="post" autocomplete="off">
-            <label>Register:</label>
-            <input id="registerInput" type="text" placeholder="username" name="username" autocomplete="off"></input>
-            <input id="registerInput" type="password" placeholder="password" name="password" autocomplete="new-password"></input>
-            <button id="signUpBtn">Register</button>
-        </form>
-    </div>
-    <% } %>
+    <%- include('./partials/footer.ejs') %>
 </body>
 </html>
 

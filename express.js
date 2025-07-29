@@ -50,8 +50,30 @@ export default function expressSetUp(db){
             username = req.session.user.username;
         }
 
-        res.render("index", {isLogged: isLogged, username: username, error: errorMsg});
+        res.render("index", {isLogged: isLogged, username: username, error: err});
     });
+
+    app.get('/login', function(req, res){
+        if(req.query.err){
+            req.session.err = req.query.err;
+            return res.redirect('/login')
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        let errorMsg = errorMessages[err]
+
+        if(req.session?.user?.username){
+            isLogged = true;
+            username = req.session.user.username;
+            return res.redirect('/')
+        }
+
+        res.render("login", {isLogged: isLogged, username: username, error: err});
+    })
 
     app.post('/login', function(req, postRes){
         db.account.findOne({username: req.body.username}, async (err, res)=>{
@@ -70,31 +92,52 @@ export default function expressSetUp(db){
                     else{
                         //pasword incorrect
                         console.log("incorrect password")
-                        postRes.redirect('/?err=wrongPass');
+                        postRes.redirect('/login?err=wrongPass');
                     }
                 }
                 else{
                     //incorrect username
                     console.log("no such username")
-                    postRes.redirect('/?err=noUser');
+                    postRes.redirect('/login?err=noUser');
                 }
             })
+    })
+
+    app.get('/register', function(req, res){
+        if(req.query.err){
+            req.session.err = req.query.err;
+            return res.redirect('/register')
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        let errorMsg = errorMessages[err]
+
+        if(req.session?.user?.username){
+            isLogged = true;
+            username = req.session.user.username;
+            return res.redirect('/')
+        }
+
+        res.render("register", {isLogged: isLogged, username: username, error: err});
     })
 
     app.post('/register', function(req, postRes){
         //HAVE TO ADD VALIDATION
         db.account.findOne({username: req.body.username}, async function(err, res){
-            console.log(res)
             if(res){
                 //acount already exists
-                postRes.redirect('/?err=usernameTaken');
+                postRes.redirect('/register?err=usernameTaken');
             }
             else{
                 //TODO: check if username correct (allowed) here
                 const passwordHash = await argon2.hash(req.body.password, {type: argon2.argon2id});
 
                 db.account.insertOne({username: req.body.username, password: passwordHash});
-                postRes.redirect('/?err=registerSuccess');
+                postRes.redirect('/register?err=registerSuccess');
             }
         })
     })

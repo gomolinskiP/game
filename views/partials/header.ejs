@@ -1,0 +1,17 @@
+<header id="header">
+    <div id="header-left">
+        <a href="/">Home</a> | 
+        <a href="/">About</a> | 
+        <a href="/">Contact</a>
+    </div>
+    <div id="header-right">
+        <% if(isLogged){ %>
+        Welcome, <strong><%= username %></strong> | 
+        <a href="./game">Play the game</a> | 
+        <a href="/logout">Logout</a>
+        <% }else{ %>
+        <a href="./login">Log in</a> | 
+        <a href="./register">Register</a>
+        <% } %>
+    </div>
+</header>

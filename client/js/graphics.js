@@ -13,7 +13,7 @@ canvasResize()
 
 function canvasResize() {
     gameWidth = window.innerWidth;
-    gameHeight = window.innerHeight - 50;
+    gameHeight = window.innerHeight;
     canvas.width = gameWidth;
     canvas.height = gameHeight;
 };
@@ -233,12 +233,12 @@ function drawMap(){
 function drawHUD(){
      //hp bar:
     ctx.fillStyle = "grey";
-    ctx.fillRect(20, 20, 100, 16)
+    ctx.fillRect(20, 70, 100, 16)
     ctx.fillStyle = "red";
-    ctx.fillRect(20, 20, (Player.list[selfId].hp/100)*100, 16)
+    ctx.fillRect(20, 70, (Player.list[selfId].hp/100)*100, 16)
     ctx.fillStyle = "black";
     ctx.font = 'bold 18px Cascadia Mono';
-    ctx.fillText(Player.list[selfId].hp, 70, 35);
+    ctx.fillText(Player.list[selfId].hp, 70, 85);
 }
 
 //game Loop:

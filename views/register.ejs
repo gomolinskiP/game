@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/pageUI.js" defer></script>
+</head>
+<body>
+    <%- include('./partials/header.ejs') %>
+
+    <div id="main">
+        <div id="pageContent">
+            <h1>Join us</h1>
+            Choose a username and a password to create a new account.
+            <div id="registerForm">
+                <form action="/register" method="post" autocomplete="off">
+                    <label for="usernameInput">Username</label>
+                    <input id="usernameInput" type="text" name="username" autocomplete="off"></input>
+                    <label for="password-input">Password</label>
+                    <input id="password-input" type="password" name="password" autocomplete="new-password"></input>
+                    <button id="signUpBtn">Register</button>
+                    <p>
+                        Already have an account?
+                        <a href="/login">Log in</a>
+                    </p>
+                </form>
+                <% if(error){ %>
+                <div id="errorMsg" data-msg=<%= error %>><%= error %></div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('./partials/footer.ejs') %>
+</body>
+</html>
+
+
+

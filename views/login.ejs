@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/pageUI.js" defer></script>
+</head>
+<body>
+    <%- include('./partials/header.ejs') %>
+
+    <div id="main">
+        <div id="pageContent">
+            <h1>Welcome back</h1>
+            Please enter your account's credentials to access your account.
+            <div id="loginForm">
+                <form action="/login" method="post">
+                    <label for="loginInput">Username</label>
+                    <input id="loginInput" type="text" name="username" required></input>
+                    <label for="passwordInput">Password</label>
+                    <input id="passwordInput" type="password" name="password" required></input>
+                    <button id="signBtn" type="submit">Log in</button>
+                    <p>
+                        Don't have an account yet?
+                        <a href="/register">Register</a>
+                    </p>
+                </form>
+                <% if(error){ %>
+                <div id="errorMsg" data-msg=<%= error %>><%= error %></div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('./partials/footer.ejs') %>
+</body>
+</html>
+
+
+
