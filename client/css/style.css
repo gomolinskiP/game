@@ -13,8 +13,8 @@ body{
     border: 1px solid transparent;
 
     /* background-color: black; */
-    background-image: url("https://i.pinimg.com/originals/04/1c/1c/041c1cb4a1f6cdc644f3aa8ea302eda1.gif");
-    background-size: 100% 2000%;
+    background-image: url("https://i.pinimg.com/originals/72/19/e8/7219e89f474db55702ed3bd52e2c647b.gif");
+    background-size: 100% 100%;
     font-family: monospace;
     text-align: center;
 
@@ -22,16 +22,25 @@ body{
     margin: 0;
 }
 
+::selection{
+    background-color: #1100ff;
+    color: white;
+}
+
 h1{
     background-color: #00daaa;
     color: black;
     font-weight: bold;
     letter-spacing: 0.5ch;
+    width: 100%;
+    padding: 0;
+    margin-top: 0;
 }
 
 .text{
     white-space: pre-wrap;
     text-align: justify;
+    color: #00daaa;
 }
 
 #ctx{
@@ -42,7 +51,6 @@ h1{
     position: absolute;
     left: 0;
     top: 0;
-
     /* filter: invert(1) hue-rotate(180deg); */
 }
 
@@ -85,6 +93,10 @@ h1{
     z-index: 9;
 }
 
+#header, #footer{
+    box-shadow: 0 0 10px black;
+}
+
 input{
     text-align: center;
     background-color: #fffcc8;
@@ -106,6 +118,11 @@ input, button{
 
     width: 100%;
     font-family: monospace;
+    z-index: 9;
+}
+
+input:disabled{
+    background-color: #333;
 }
 
 button{
@@ -121,6 +138,8 @@ label{
     font-size: small;
     font-weight: bold;
     cursor: pointer;
+
+    border-bottom: 1px solid #00daaa;
 }
 
 label{
@@ -138,12 +157,16 @@ button:hover{
 }
 
 #errorMsg{
+    font-size: larger;
     font-weight: bold;
     background-color: red;
+    color: black;
     display: inline-block;
     padding: 10px;
-    margin: 20px;
+    width: 100%;
     border-radius: 0;
+
+    z-index: 1;
 }
 
 #errorMsg.success{
@@ -194,7 +217,7 @@ a:hover{
 #pageContent{
     background-color: black;
     color: #00daaa;
-    border: 1px solid #00daaa;
+
 
     margin: 0 auto;
     width: 80%;
@@ -229,13 +252,13 @@ a:hover{
     flex-wrap: wrap; */
 
 
-    padding: 10px;
+    padding: 0 10px;
 
     position: absolute;
     right: 10px;
     bottom: 10px;
 
-    width:200px;
+    width:240px;
     height: fit-content;
     max-height: 300px;
     background-color: #ffd90088;
@@ -249,16 +272,51 @@ a:hover{
     padding: 10px;
     overflow-y: scroll;
     max-height: 230px;
+    width: 100%;
+    max-width: 100%;
+
 }
 
 #chat-input{
-    min-width: 140px;
-    max-width: 140px;
+    height: 1rem;
+    padding: 0 3px;
+    margin: 0;
     font-size: smaller;
+    flex: 1;
+    border: 1px solid black;
+    border-right: none;
+    width: unset;
+    outline: none;
 }
 
 #chat-send-btn{
-    width: 40px;
+    background-color: transparent;
+    color: black;
+    padding: 0 3px;
+    margin:0;
+    border: 1px solid black;
+    height: 1rem;
+     width: 40px;
+
+    font-size: smaller;
+}
+
+#chat-send-btn:hover{
+    background-color: #00daaa;
+}
+
+#chat-input-wrapper{
+    padding: 0;
+    display: flex;
+}
+
+#chat-label{
+    text-align: left;
+    width: 100%;
+    float: left;
+    border: none;
+    border-top: 1px solid black;
+    margin: 4px 0;
 }
 
 #scaleLabel, #weaponTypeLabel, #durationLabel{
@@ -285,6 +343,9 @@ a:hover{
     margin: 1px;
     background-color: white;
     color: black;
+    border: none;
+
+    border-radius: 6px;
 }
 
 .note:disabled{

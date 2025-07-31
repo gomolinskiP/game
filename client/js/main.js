@@ -1,4 +1,13 @@
 var socket = io();
+let isInChat = false;
+export function setIsInChat(state){
+    isInChat = state;
+    console.log(isInChat)
+}
+export function getIsInChat(){
+    return isInChat;
+}
+
 
 // game:
 
@@ -6,6 +15,7 @@ import { gameLoop, canvas } from './graphics.js'
 
 import { Player, Bullet, Pickup } from './classes.js'
 import { addKeyboardListeners } from './keyboard.js';
+import { chatInit } from './textChat.js';
 
 
 export const limiter = new Tone.Compressor(
@@ -53,6 +63,7 @@ socket.on('init', function(data){
 
     requestAnimationFrame(gameLoop);
     addKeyboardListeners(isInChat, socket);
+    chatInit(socket, canvas, isInChat);
 })
 
 socket.on('update', function(data){
@@ -128,14 +139,6 @@ socket.on('remove', function(data){
 })
 
 
-export let isInChat = false;
-
-canvas.onmousemove = ()=>{
-    canvas.focus();
-    isInChat = false;
-    chatInput.placeholder = "press T to start typing"
-
-}
 
 canvas.onblur = ()=>{
     // alert("xd")
@@ -153,40 +156,6 @@ canvas.onblur = ()=>{
 //     console.log(Bullet.list)
 //     // synth.triggerAttackRelease("C3", "8n");
 // })
-
-const chatSendBTN = document.getElementById("chat-send-btn");
-const chatInput = document.getElementById("chat-input");
-chatInput.value = '';
-chatInput.onclick = function(event){
-    isInChat = true;
-    chatInput.placeholder = "press ENTER to leave chat"
-
-}
-const chatContent = document.getElementById("chat-content");
-
-function chatSend(){
-    if(chatInput.value.length>0){
-        socket.emit("chat", chatInput.value)
-        chatInput.value = '';
-
-        return true;
-    } else return false;
-}
-
-chatSendBTN.addEventListener("click", ()=>{
-    if(chatSend()){
-        return;
-    } else{
-        chatInput.focus();
-    }
-})
-
-
-//TODO sanitize chat messages, it`s really not secure haha
-socket.on('chatBroadcast', (signedMsg)=>{
-    chatContent.innerHTML += signedMsg + "<br>";
-    chatContent.scrollTop = chatContent.scrollHeight;
-})
 
 socket.on('redirect', (destination)=>{
     window.location.href = destination;

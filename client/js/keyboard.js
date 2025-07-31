@@ -1,13 +1,16 @@
-//TODO move key handling here
+import { setIsInChat, getIsInChat } from "./main.js";
+
 export function addKeyboardListeners(isInChat, socket){
+    const chatInput = document.getElementById("chat-input")
+    const chatSendBTN = document.getElementById("chat-send-btn");
     //key handling:
     document.onkeydown = function(event){
-        if(isInChat) {
+        if(getIsInChat()) {
             if(event.key == "Enter"){
                 if(chatSend()) {
                     chatInput.focus();
                 } else{
-                    isInChat = false;
+                    setIsInChat(false);
                     chatInput.placeholder = "press T to start typing"
 
                     chatInput.blur();
@@ -55,7 +58,7 @@ export function addKeyboardListeners(isInChat, socket){
                 break;
             case "t":
             case "T":
-                isInChat = true;
+                setIsInChat(true);
                 chatInput.focus();
                 chatInput.placeholder = "press ENTER to leave chat"
                 event.preventDefault();
@@ -98,5 +101,13 @@ export function addKeyboardListeners(isInChat, socket){
         }
     }
 
+    function chatSend(){
+        if(chatInput.value.length>0){
+            socket.emit("chat", chatInput.value)
+            chatInput.value = '';
+
+            return true;
+        } else return false;
+    }       
 }
 
