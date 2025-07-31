@@ -67,19 +67,19 @@ export function checkWallCollision(x, y, collisionLayer){
 
 export let scale = new Scale('G', 'major');
 
-function findProgressByUsername(db, username){
+function findProgressByUsername(Progress, username){
     return new Promise((resolve, reject) => {
-        db.progress.findOne({username: username}, function(err, res){
+        Progress.findOne({username: username}, function(err, res){
             if(err) return reject(err);
             resolve(res);
         })
     })
 }
 
-function updatePlayerProgress(db, playerId){
+function updatePlayerProgress(Progress, playerId){
     let player = Player.list[playerId];
     return new Promise((resolve, reject)=>{
-        db.progress.update({username: player.name}, {$set: {x: player.x, y: player.y}}, function(err, res){
+        Progress.update({username: player.name}, {$set: {x: player.x, y: player.y}}, function(err, res){
             if(err) return reject(err);
             resolve(res);
         });
@@ -87,7 +87,7 @@ function updatePlayerProgress(db, playerId){
     })
 }
 
-export default async function webSocketSetUp(serv, ses, db){
+export default async function webSocketSetUp(serv, ses, Progress){
     //socket.io:
 
     var io = require('socket.io')(serv, {
@@ -123,20 +123,17 @@ export default async function webSocketSetUp(serv, ses, db){
         //check if user is already in game on another socket:
         let loggedPlayer = Object.values(Player.list).find(player => player.name === username)
         if(loggedPlayer != undefined){
+            //
             console.log(`>>>>MULTISOCKET DETECTED<<<<`)
-            //TODO maybe redirect previous socket to homepage and force disconnect?
-            // player = Player.list[loggedPlayer.id]
-            // db.progress.update({username: username}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
-            await updatePlayerProgress(db, loggedPlayer.id);
+            await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
             Socket.list[loggedPlayer.id].emit('redirect', "/");
-            // player.socketIDs.push(socket.id)
         }
-        // else{
         //retrieve player progress:
-        let res = await findProgressByUsername(db, username);
+        let res = await Progress.findOne({username: username});
             if(res){
                 //progress already in DB
                 player = new Player(socket.id, res.x, res.y, username, res.weapon)
+                //teleport player if they're stuck in collision area:
                 if(checkWallCollision(player.x, player.y, collisionLayer)){
                     player.x = 0;
                     player.y = 0;
@@ -145,39 +142,31 @@ export default async function webSocketSetUp(serv, ses, db){
             else{
                 //no progress, set starting values
                 player = new Player(socket.id, 0, 0, username);
-                db.progress.insert({username: username, x: 0, y: 0})
+                Progress.insert({username: username, x: 0, y: 0})
             }
         // }
                 
-        socket.on('disconnect', function(){
+        socket.on('disconnect', async function(){
             //socket disconnected
             console.log(`socket disconnected (id=${socket.id})...`)
 
-            //check if player is logged from multiple sockets:
-            if(player.socketIDs.length > 1){
-                    //if yes remove this socket from the player object
-                    let index = player.socketIDs.indexOf(socket.id)
-                    if(index > -1){
-                        player.socketIDs.splice(index, 1)
-                        Player.list[player.socketIDs[0]] = player;
-                        delete Player.list[socket.id]
-                        for(let i in Player.list){
-                            let player = Player.list[i]
-                            player.addToRemovePack(socket.id, "player");
-                        }
-                    }
-                } else{
-                    delete Player.list[socket.id];
-                    for(let i in Player.list){
-                            let player = Player.list[i]
-                            player.addToRemovePack(socket.id, "player");
-                    }
-                }
+            for(let i in Player.list){
+                    let player = Player.list[i]
+                    player.addToRemovePack(socket.id, "player");
+            }
+            delete Player.list[socket.id];
                 
-                // TODO: if player is logged from more than one socket and the first one disconnects it deletes player for other sockets as well - have to fix this - (edit: I THINK I MANAGED TO DO IT)
-                db.progress.update({username: username}, {$set: {x: player.x, y: player.y}});
-                console.log("PROGRESS SAVED!")
-                username = null;
+
+            try{
+                await Progress.updateOne({username: username}, {$set: {x: player.x, y: player.y}});
+
+                console.log("progress saved");
+            }
+            catch(err){
+                console.error(`Error with saving progress to database: ${err}`);
+            }
+            
+            username = null;
              
             delete Socket.list[socket.id];
         })

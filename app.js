@@ -10,10 +10,30 @@ import webSocketSetUp from './socket.js'
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
 //mongoDB:
-var mongojs = require('mongojs');
-var db = mongojs('localhost:27017/mgrGame', ['account', 'progress']);
+const mongoose = require('mongoose');
 
-var {serv, ses} = expressSetUp(db);
+// Połączenie z bazą
+mongoose.connect('mongodb://localhost:27017/mgrGame')
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.error("❌ MongoDB connection error:", err));
 
-webSocketSetUp(serv, ses, db);
+
+// Definicje modeli
+const AccountSchema = new mongoose.Schema({
+    username: String,
+    password: String
+}, { collection: 'account' });
+
+const ProgressSchema = new mongoose.Schema({
+    username: String,
+    x: Number,
+    y: Number
+}, { collection: 'progress' });
+
+const Account = mongoose.model('account', AccountSchema);
+const Progress = mongoose.model('progress', ProgressSchema);
+
+var {serv, ses} = expressSetUp(Account);
+
+webSocketSetUp(serv, ses, Progress);
 
