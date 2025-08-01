@@ -2,6 +2,7 @@ import { Entity } from './Entity.js';
 import { Player } from './Player.js';
 import {scale} from '../socket.js'
 import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
+import { Character } from './Character.js';
 
 
 export class scheduledBullet{
@@ -89,11 +90,11 @@ export class Bullet extends Entity{
         this.y += this.spdY;
 
         //collision check
-        let hitPlayerId = this.collidingPlayerId();
+        let hitPlayerId = this.collidingPlayerId(Character.list);
         let isCollidingWall = checkWallCollision(this.x, this.y-32, bulletCollisionLayer)
         //player hit:
         if(hitPlayerId != null){
-            let targetPlayer = Player.list[hitPlayerId];
+            let targetPlayer = Character.list[hitPlayerId];
             if(this.parent != targetPlayer){
                 clearTimeout(this.timeout);
                 this.destroy();

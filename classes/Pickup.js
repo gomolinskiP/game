@@ -1,4 +1,5 @@
 import { Entity } from './Entity.js';
+import { Character } from './Character.js';
 import { Player } from './Player.js';
 import { collisionLayer, checkWallCollision } from '../socket.js';
 
@@ -60,11 +61,11 @@ export class Pickup extends Entity{
     }
 
     checkPicked(playerList, socketList){
-        let playerId = this.collidingPlayerId()
+        let playerId = this.collidingPlayerId(Character.list)
 
         if(playerId != null){
             playerList[playerId].giveWeapon(this.sound, this.duration, this.type, this.durationType)
-            socketList[playerId].emit('new weapon', {type: this.type, duration: this.duration});
+            
             this.destroy();
         }
     }

@@ -2,7 +2,6 @@ var socket = io();
 let isInChat = false;
 export function setIsInChat(state){
     isInChat = state;
-    console.log(isInChat)
 }
 export function getIsInChat(){
     return isInChat;
@@ -43,7 +42,6 @@ socket.on('init', function(data){
     //new:
     for(let i = 0; i<data.entities.length; i++){
         let entity = data.entities[i];
-        console.log(i);
 
         switch(entity.type){
             case "player":
@@ -62,7 +60,7 @@ socket.on('init', function(data){
     }
 
     requestAnimationFrame(gameLoop);
-    addKeyboardListeners(isInChat, socket);
+    addKeyboardListeners(socket);
     chatInit(socket, canvas, isInChat);
 })
 
@@ -101,6 +99,10 @@ socket.on('update', function(data){
                 if(!pU){
                     new Pickup(pack)
                 }
+                break;
+            case "weapon":
+                setWeaponType(pack.weaponType);
+                setDurationLabel(pack.duration)
         }
     }
 })
@@ -257,7 +259,7 @@ Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
 Tone.Transport.start();
 const metronome = new Tone.Synth();
-let metrVol = new Tone.Volume(-18);
+let metrVol = new Tone.Volume(-26);
 metronome.chain(metrVol, Tone.Master);
 
 // function playClick(time){
@@ -287,8 +289,8 @@ socket.on("tick", (data)=>{
     // console.log(data.now, data.tick, data.now - clientNow)
 })
 
-socket.on("new weapon", (data)=>{
-    setWeaponType(data.type);
-    setDurationLabel(data.duration)
-    // console.log("new weapon", data)
-})
+// socket.on("new weapon", (data)=>{
+//     setWeaponType(data.type);
+//     setDurationLabel(data.duration)
+//     console.log("new weapon", data)
+// })

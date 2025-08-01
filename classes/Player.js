@@ -1,20 +1,20 @@
-import { Entity } from './Entity.js';
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
 import { collisionLayer, checkWallCollision } from '../socket.js';
 import { scale } from '../socket.js';
 import { Socket } from './Socket.js';
+import { Character } from './Character.js';
 
-const loadDistance = 100; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
-const loadUnloadMargin = 50;
+const loadDistance = 500; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadUnloadMargin = 100;
 const unloadDistance = loadDistance + loadUnloadMargin;
 
-export class Player extends Entity{
+export class Player extends Character{
     static list = {}
 
     constructor(id, x, y, username, weapon = null){
-        super(x, y);
+        super(id, x, y);
         this.id = id;
         this.name = username;
         this.hp = 100;
@@ -34,9 +34,6 @@ export class Player extends Entity{
 
         this.selectedNote = scale.base;
 
-        if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this, "normal")
-        this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
-
         Player.list[this.id] = this;
 
         this.knownObjIDs = [] //all objects' IDs known to this player
@@ -46,7 +43,8 @@ export class Player extends Entity{
         this.updatePack = [];
         this.removePack = [];
 
-
+        if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this, "normal")
+        this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
 
         return this;
     }
@@ -109,16 +107,14 @@ export class Player extends Entity{
     }
 
     giveWeapon(sound, duration, type, durationType){
-        this.weapon = new Weapon(sound, duration, type, this, durationType)
-        let durationInt = parseInt(duration.replace("n", "").replace(".", ""))
-        switch(durationType){
-            case "normal":
-                this.shootTimeoutTime = 60000/120 * (4/durationInt)
-                break;
-            case "dotted":
-                this.shootTimeoutTime = 60000/120 * (4/durationInt) * 3/2
-                break;
-        }
+        super.giveWeapon(sound, duration, type, durationType);
+
+        if(!this.updatePack) return;
+        this.updatePack.push({
+            weaponType: type,
+            duration: duration,
+            type: "weapon",
+        })
     }
 
     changeSelectedNote(note){
@@ -141,8 +137,8 @@ export class Player extends Entity{
     getInitPack(pickupList){
         let initPack = {};
         initPack.entities = []
-        for(var i in Player.list){
-            let player = Player.list[i]
+        for(var i in Character.list){
+            let player = Character.list[i]
             //check distance:
             if(Math.abs(player.x - this.x) > loadDistance ||
                Math.abs(player.y - this.y) > loadDistance) continue;
@@ -188,10 +184,19 @@ export class Player extends Entity{
             player.getUpdatePack();
             player.emitUpdatePack();
             player.emitRemovePack();
+            // player.addToUpdatePack();
+
+
+            // if(player.needsUpdate){
+            //     player.updatePosition();
+            // }  
+        }
+
+        for(var i in Character.list){ 
+            var player = Character.list[i];
 
             if(player.needsUpdate){
                 player.updatePosition();
-                player.addToUpdatePack();
             }  
         }
     }
@@ -206,11 +211,40 @@ export class Player extends Entity{
     getUpdatePack(){
         //TODO: based on proximity to player:
 
+        for(let i in Character.list){
+            let player = Character.list[i]
+            //check distance:
+            if(Math.abs(player.x - this.x) > unloadDistance ||
+            Math.abs(player.y - this.y) > unloadDistance){
+                if(this.knownObjIDs.includes(player.id)){
+                    this.addToRemovePack(player.id, "player");
+                }
+                // console.log(`added ${this.name} to ${player.name}'s remove pack (unloadDistance)`)
+            }
+            else{
+                if(player.needsUpdate || !this.knownObjIDs.includes(player.id)){
+                    this.updatePack.push({
+                        x: player.x,
+                        y: player.y,
+                        type: "player",
+                        id: player.id,
+                        name: player.name,
+                        hp: player.hp,
+                        direction: player.lastAngle,
+                    })
+
+                    if(!this.knownObjIDs.includes(player.id)){
+                        this.knownObjIDs.push(player.id);
+                    }
+                }
+            }
+        }
+
         for(let i in Bullet.list){
             let bullet = Bullet.list[i]
             //check distance:
-            if(Math.abs(bullet.x - this.x) > loadDistance ||
-               Math.abs(bullet.y - this.y) > loadDistance){
+            if(Math.abs(bullet.x - this.x) > unloadDistance ||
+               Math.abs(bullet.y - this.y) > unloadDistance){
                 this.addToRemovePack(bullet.id, "bullet");
                 continue;
             };
@@ -253,31 +287,6 @@ export class Player extends Entity{
 
     }
 
-    addToUpdatePack(){
-        //player adds themself to other players updatePacks:
-        for(let i in Player.list){
-            let player = Player.list[i]
-            //check distance:
-            if(Math.abs(player.x - this.x) > unloadDistance ||
-               Math.abs(player.y - this.y) > unloadDistance){
-                player.addToRemovePack(this.id, "player")
-                continue;
-            };
-
-            player.updatePack.push({
-                x: this.x,
-                y: this.y,
-                type: "player",
-                id: this.id,
-                name: this.name,
-                hp: this.hp,
-                direction: this.lastAngle,
-            })
-
-            if(!player.knownObjIDs.includes(this.id)) player.knownObjIDs.push(this.id);
-        }
-    }
-
     emitUpdatePack(){
         let socket = Socket.list[this.id]
         if(!socket){
@@ -295,8 +304,10 @@ export class Player extends Entity{
     }
 
     addToRemovePack(id, type){
-        if(!this.knownObjIDs.includes(id))  return;
-
+        if(!this.knownObjIDs.includes(id)){
+            // console.log(`${id} (${type}) is not known to ${this.name}`)
+            return;
+        }
         this.removePack.push({
             id: id,
             type: type

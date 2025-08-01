@@ -1,6 +1,6 @@
-import { Player } from './Player.js';
-
 export class Entity{
+    static list = {};
+
     constructor(x, y){
         this.x = x;
         this.y = y;
@@ -15,9 +15,9 @@ export class Entity{
         else return false;
     }
 
-    collidingPlayerId(){
-        for(let i in Player.list){
-            let targetPlayer = Player.list[i];
+    collidingPlayerId(playerList){
+        for(let i in playerList){
+            let targetPlayer = playerList[i];
             if(this.isColliding(targetPlayer)){
                 return targetPlayer.id;
             }

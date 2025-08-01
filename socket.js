@@ -9,9 +9,11 @@ const __dirname = dirname(__filename);
 
 import { Socket } from './classes/Socket.js';
 import { Player } from './classes/Player.js';
+import { Bot } from './classes/Bot.js';
 import { Bullet, scheduledBullet } from './classes/Bullet.js';
 import { Pickup } from './classes/Pickup.js';
 import { Scale } from './classes/Scale.js';
+import { Character } from './classes/Character.js';
 
 
 let mapData = await loadMapData();
@@ -127,6 +129,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
             console.log(`>>>>MULTISOCKET DETECTED<<<<`)
             await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
             Socket.list[loggedPlayer.id].emit('redirect', "/");
+            delete Player.list[loggedPlayer.id];
         }
         //retrieve player progress:
         let res = await Progress.findOne({username: username});
@@ -216,7 +219,13 @@ export default async function webSocketSetUp(serv, ses, Progress){
             new Pickup();
         }
 
-        Pickup.handleAll(Player.list, Socket.list);
+        // random bot spawn:
+        if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
+            console.log("bot spawned")
+            new Bot();
+        }
+
+        Pickup.handleAll(Character.list, Socket.list);
         Bullet.updateAll();
         Player.updateAll();
     }, 1000/25);
