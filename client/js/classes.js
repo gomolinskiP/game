@@ -48,8 +48,10 @@ export class Player extends Entity{
         this.hp = initPack.hp;
         this.synthTimeout = false;
         this.footstepSyn = new Tone.NoiseSynth(Player.synOptions);
-        
-        this.footstepSyn.connect(this.pan3d);
+        this.pan3d.distanceModel = "linear";
+        this.footstepVolume = new Tone.Volume(-9);
+        this.footstepSyn.connect(this.footstepVolume);
+        this.footstepVolume.connect(this.pan3d);
 
         this.direction = this.updateDirection(initPack.direction);
         this.image = Img.player;
@@ -64,8 +66,7 @@ export class Player extends Entity{
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
 
-            this.isMoving = true;
-
+            this.lastMovedTime = Date.now();
             
             this.animFrame += 1;
 
@@ -78,16 +79,16 @@ export class Player extends Entity{
                 }, 250);
             }
         }
-        else{
-            this.isMoving = false;
-        }
     }
 
     draw(){
         let x = this.x - Player.list[selfId].x + gameWidth/2;
         let y = this.y - Player.list[selfId].y + gameHeight/2;
 
-        if(!this.isMoving) this.animFrame = 1 * 2;
+        //set a static frame if player has not moved in some short time:
+        if(Date.now() - this.lastMovedTime > 50){
+            this.animFrame = 1 * 2;
+        }
 
         //player image:
         drawBuffer.push({
@@ -175,14 +176,18 @@ export class Bullet extends Entity{
             // this.synth.triggerAttackRelease("C5", "64n");
         }, 200);
 
-        this.synth.triggerAttack(`${this.note}5`);
+        if(Tone.context.state == "running"){
+            this.synth.triggerAttack(`${this.note}5`);
+        }
     }
 
     destroy(){
         clearInterval(this.interval);
         this.synth.triggerRelease();
-        this.synth.triggerAttack(`${this.note}4`);
-
+        if(Tone.context.state == "running"){
+            this.synth.triggerAttack(`${this.note}4`);
+        }
+        
         setTimeout(()=>{
             this.synth.triggerRelease();
             this.synth.dispose();
@@ -243,7 +248,3 @@ export class Pickup extends Entity{
         })
     }
 }
-
-// export class drawBuffer{
-    
-// }
