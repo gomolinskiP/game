@@ -67,7 +67,7 @@ export function checkWallCollision(x, y, collisionLayer){
 }
 
 
-export let scale = new Scale('G', 'major');
+export let scale = new Scale('D', 'minor');
 
 function findProgressByUsername(Progress, username){
     return new Promise((resolve, reject) => {
@@ -130,6 +130,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
             await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
             Socket.list[loggedPlayer.id].emit('redirect', "/");
             delete Player.list[loggedPlayer.id];
+            delete Character.list[loggedPlayer.id];
         }
         //retrieve player progress:
         let res = await Progress.findOne({username: username});
@@ -158,6 +159,8 @@ export default async function webSocketSetUp(serv, ses, Progress){
                     player.addToRemovePack(socket.id, "player");
             }
             delete Player.list[socket.id];
+            delete Character.list[socket.id];
+
                 
 
             try{
