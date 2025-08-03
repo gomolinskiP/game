@@ -238,7 +238,11 @@ function drawHUD(){
     ctx.fillRect(20, 70, (Player.list[selfId].hp/100)*100, 16)
     ctx.fillStyle = "black";
     ctx.font = 'bold 18px Cascadia Mono';
-    ctx.fillText(Player.list[selfId].hp, 70, 85);
+    ctx.fillText(`HP: ${Player.list[selfId].hp}`, 70, 85);
+
+    //score:
+    ctx.font = 'bold 18px Cascadia Mono';
+    ctx.fillText(`Score: ${Player.list[selfId].score}`, 180, 85);
 }
 
 //game Loop:

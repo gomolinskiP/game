@@ -27,7 +27,8 @@ const AccountSchema = new mongoose.Schema({
 const ProgressSchema = new mongoose.Schema({
     username: String,
     x: Number,
-    y: Number
+    y: Number,
+    score: Number
 }, { collection: 'progress' });
 
 const Account = mongoose.model('account', AccountSchema);

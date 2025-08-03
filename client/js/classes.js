@@ -46,6 +46,7 @@ export class Player extends Entity{
         super(initPack);
         this.name = initPack.name;
         this.hp = initPack.hp;
+        this.score = initPack.score;
         this.synthTimeout = false;
         this.footstepSyn = new Tone.NoiseSynth(Player.synOptions);
         this.pan3d.distanceModel = "linear";
@@ -62,6 +63,7 @@ export class Player extends Entity{
 
     update(pack){
         this.hp = pack.hp;
+        this.score = pack.score;
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);

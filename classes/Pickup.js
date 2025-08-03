@@ -65,7 +65,7 @@ export class Pickup extends Entity{
 
         if(playerId != null){
             playerList[playerId].giveWeapon(this.sound, this.duration, this.type, this.durationType)
-            
+            playerList[playerId].addScore(1);
             this.destroy();
         }
     }

@@ -69,26 +69,6 @@ export function checkWallCollision(x, y, collisionLayer){
 
 export let scale = new Scale('D', 'minor');
 
-function findProgressByUsername(Progress, username){
-    return new Promise((resolve, reject) => {
-        Progress.findOne({username: username}, function(err, res){
-            if(err) return reject(err);
-            resolve(res);
-        })
-    })
-}
-
-function updatePlayerProgress(Progress, playerId){
-    let player = Player.list[playerId];
-    return new Promise((resolve, reject)=>{
-        Progress.update({username: player.name}, {$set: {x: player.x, y: player.y}}, function(err, res){
-            if(err) return reject(err);
-            resolve(res);
-        });
-
-    })
-}
-
 export default async function webSocketSetUp(serv, ses, Progress){
     //socket.io:
 
@@ -127,7 +107,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
         if(loggedPlayer != undefined){
             //
             console.log(`>>>>MULTISOCKET DETECTED<<<<`)
-            await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y}});
+            await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y, score: loggedPlayer.score}});
             Socket.list[loggedPlayer.id].emit('redirect', "/");
             delete Player.list[loggedPlayer.id];
             delete Character.list[loggedPlayer.id];
@@ -136,7 +116,8 @@ export default async function webSocketSetUp(serv, ses, Progress){
         let res = await Progress.findOne({username: username});
             if(res){
                 //progress already in DB
-                player = new Player(socket.id, res.x, res.y, username, res.weapon)
+                console.log(res)
+                player = new Player(socket.id, res.x, res.y, username, res.weapon, res.score)
                 //teleport player if they're stuck in collision area:
                 if(checkWallCollision(player.x, player.y, collisionLayer)){
                     player.x = 0;
@@ -146,7 +127,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
             else{
                 //no progress, set starting values
                 player = new Player(socket.id, 0, 0, username);
-                Progress.insert({username: username, x: 0, y: 0})
+                Progress.insertOne({username: username, x: 0, y: 0, score: 0})
             }
         // }
                 
@@ -164,7 +145,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
                 
 
             try{
-                await Progress.updateOne({username: username}, {$set: {x: player.x, y: player.y}});
+                await Progress.updateOne({username: username}, {$set: {x: player.x, y: player.y, score: player.score}});
 
                 console.log("progress saved");
             }

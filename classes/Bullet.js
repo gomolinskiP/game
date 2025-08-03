@@ -98,7 +98,7 @@ export class Bullet extends Entity{
             if(this.parent != targetPlayer){
                 clearTimeout(this.timeout);
                 this.destroy();
-                targetPlayer.takeDmg(1);
+                targetPlayer.takeDmg(10, this.parent);
             }
         }
         //wall hit:
