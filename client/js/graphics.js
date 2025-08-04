@@ -235,10 +235,10 @@ function drawHUD(){
     ctx.fillStyle = "grey";
     ctx.fillRect(20, 70, 100, 16)
     ctx.fillStyle = "red";
-    ctx.fillRect(20, 70, (Player.list[selfId].hp/100)*100, 16)
+    ctx.fillRect(20, 70, (Player.list[selfId].hp/1000)*100, 16)
     ctx.fillStyle = "black";
     ctx.font = 'bold 18px Cascadia Mono';
-    ctx.fillText(`HP: ${Player.list[selfId].hp}`, 70, 85);
+    ctx.fillText(`HP: ${Math.ceil(Player.list[selfId].hp)}`, 70, 85);
 
     //score:
     ctx.font = 'bold 18px Cascadia Mono';
@@ -296,10 +296,10 @@ export function gameLoop(){
                 ctx.fillStyle = "grey";
                 ctx.fillRect(obj.x-25, obj.y-58, 50, 8)
                 ctx.fillStyle = "red";
-                ctx.fillRect(obj.x-25, obj.y-58, (obj.hp/100)*50, 8)
+                ctx.fillRect(obj.x-25, obj.y-58, (obj.hp/1000)*50, 8)
                 ctx.fillStyle = "black";
                 ctx.font = '12px Cascadia Mono';
-                ctx.fillText(obj.hp, obj.x, obj.y-50);
+                ctx.fillText(Math.ceil(obj.hp), obj.x, obj.y-50);
         }   
     }
     drawBuffer = []

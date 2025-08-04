@@ -8,13 +8,14 @@ import { Character } from './Character.js';
 export class scheduledBullet{
     static list = {};
 
-    constructor(parent, note = 'onSpawn', durationType){
+    constructor(parent, note = 'onSpawn', durationType, damage){
         this.id = Math.random();
         this.parent = parent;
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
         this.durationType = durationType;
+        this.damage = damage;
         
         this.note = note;
 
@@ -23,14 +24,14 @@ export class scheduledBullet{
     }
 
     spawn(){
-        new Bullet(this.parent, this.parent.lastAngle, this.note, this.durationType);
+        new Bullet(this.parent, this.parent.lastAngle, this.note, this.durationType, this.damage);
     }
 }
 
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(parent, angle, note, durationType){
+    constructor(parent, angle, note, durationType, damage){
         super(parent.x, parent.y);
         this.id = Math.random();
         this.parent = parent;
@@ -46,6 +47,7 @@ export class Bullet extends Entity{
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
         this.durationType = durationType;
+        this.damage = damage;
 
         // switch(note){
         //     case "onSpawn":
@@ -96,19 +98,78 @@ export class Bullet extends Entity{
         if(hitPlayerId != null){
             let targetPlayer = Character.list[hitPlayerId];
             if(this.parent != targetPlayer){
-                clearTimeout(this.timeout);
                 this.destroy();
-                targetPlayer.takeDmg(10, this.parent);
+                targetPlayer.takeDmg(this.damage, this.parent);
             }
         }
+
+        //bullet self-guiding
+        this.selfGuide();
+
         //wall hit:
         if(isCollidingWall){
-            clearTimeout(this.timeout);
             this.destroy();
         }
     }
+
+    findNearestSameNote(objList, maxDistance){
+        //TODO: room for optimization
+        let nearest = null;
+        let minDistSq = maxDistance * maxDistance;
+
+        for(let i in objList){
+            let other = objList[i];
+
+            if(other === this) continue;
+            if(other.parent === this.parent) continue;
+            if(other.note !== this.note) continue;
+
+            const dx = this.x - other.x;
+            const dy = this.y - other.y;
+            const distSq = dx*dx + dy*dy;
+
+            if(distSq < minDistSq){
+                minDistSq = distSq;
+                nearest = other;
+            }
+
+            // if(minDistSq < 500){
+            //     this.destroy();
+            // }
+        }
+
+        return nearest;
+    }
+
+    selfGuide(){
+        //self-guide to the nearest bullet with same note/tone:
+        let nearestSameBullet = this.findNearestSameNote(Bullet.list, 200); //have to check 1) type 2) parent
+        if(nearestSameBullet){
+            this.guideTo(nearestSameBullet);
+            return;
+        }
+
+        //self-guide to the nearest player/bot in set range:
+        let nearestPlayer = this.findNearest(Character.list, 150);
+
+        if(nearestPlayer === this.parent) return;
+        if(nearestPlayer){
+            this.guideTo(nearestPlayer);
+            return;
+        }
+    }
+
+    guideTo(obj){
+        const dx = obj.x - this.x;
+        const dy = obj.y - this.y;
+        const dist = Math.hypot(dx, dy)
+
+        this.spdX = (dx/dist) * this.speed;
+        this.spdY = (dy/dist) * this.speed;
+    }
     
     destroy(){
+        clearTimeout(this.timeout);
         for(let i in Player.list){
             let player = Player.list[i]
             player.addToRemovePack(this.id, "bullet");

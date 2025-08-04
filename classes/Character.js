@@ -13,12 +13,13 @@ const unloadDistance = loadDistance + loadUnloadMargin;
 
 export class Character extends Entity{
     static list = {}
+    static fullHP = 1000;
     
     constructor(id, x, y, username, weapon = null, score = 0){
         super(x, y);
         this.id = id;
         this.name = username;
-        this.hp = 100;
+        this.hp = Character.fullHP;
         this.score = score;
         // this.socketIDs = [id]; //bots won't have socket ids
 
@@ -134,7 +135,7 @@ export class Character extends Entity{
             var socket = Socket.list[i];
             socket.emit('chatBroadcast', killMsg);
         }
-        this.hp = 100;
+        this.hp = Character.fullHP;
         this.x = 0 + 250*(Math.random());
         this.y = 0 + 120*(Math.random());
         this.needsUpdate = true;
