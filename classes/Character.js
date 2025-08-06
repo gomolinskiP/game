@@ -2,7 +2,7 @@ import { Entity } from "./Entity.js";
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
-import { collisionLayer, checkWallCollision } from '../socket.js';
+import { collisionLayer, checkWallCollision, checkTilesCollision, floorTiles, wallTiles } from '../socket.js';
 import { Player } from "./Player.js";
 import { scale } from '../socket.js';
 import { Socket } from './Socket.js';
@@ -77,10 +77,15 @@ export class Character extends Entity{
             let newX = this.x + this.spdX
             let newY = this.y + this.spdY
 
-            if(!checkWallCollision(newX, newY, collisionLayer)){
+            if(checkTilesCollision(newX, newY, floorTiles) &&
+                !checkTilesCollision(newX, newY, wallTiles)){
                 this.x = newX
                 this.y = newY 
             }
+            // if(!checkWallCollision(newX, newY, collisionLayer)){
+            //     this.x = newX
+            //     this.y = newY 
+            // }
             
         }
 
