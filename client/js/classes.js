@@ -98,7 +98,7 @@ export class Player extends Entity{
                     img: this.image,
                     x: x-32,
                     y: y-32,
-                    sortY: y-32,
+                    sortY: y+32,
                     w: 64,
                     h: 64,
         })
@@ -113,7 +113,7 @@ export class Player extends Entity{
             text: this.name,
             x: x,
             y: y-36,
-            sortY: y-32,
+            sortY: y+32,
             font: nameFont,
         })
 
@@ -207,7 +207,7 @@ export class Bullet extends Entity{
             img: Img.note[this.duration],
             x: x-16,
             y: y-16,
-            sortY: y-32,
+            sortY: y+16,
             w: 32,
             h: 32,
         })
@@ -217,7 +217,7 @@ export class Bullet extends Entity{
             text: this.note,
             x: x-8,
             y: y-16,
-            sortY: y-32,
+            sortY: y+16,
             font: '20px Cascadia Mono',
         })
     }
@@ -244,7 +244,7 @@ export class Pickup extends Entity{
             img: Img.pickup,
             x: x-8,
             y: y,
-            sortY: y-32,
+            sortY: y+8,
             w: 16,
             h: 16
         })
