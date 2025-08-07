@@ -18,13 +18,17 @@ import { Tile } from './classes/Tile.js';
 
 import Quadtree from '@timohausmann/quadtree-js';
 
+let mapXmin = 0;
+let mapXmax = 0;
+let mapYmin = 0;
+let mapYmax = 0;
 
 let mapData = await loadMapData();
 export let collisionLayer = await loadCollisionLayer(mapData, 'collision');
 export let bulletCollisionLayer = await loadCollisionLayer(mapData, 'bulletCollision')
 
 async function loadMapData() {
-    const filePath = resolve(__dirname, './client/img/map2.json');
+    const filePath = resolve(__dirname, './client/img/map3.json');
     const jsonData = JSON.parse(await readFile(filePath, 'utf-8'));
 
     return jsonData;
@@ -112,6 +116,12 @@ function loadLayerTiles(layer){
                 const ortX = (tileX - tileY) * tileW / 2 + offsetX; //weird shift TO FIX
                 const ortY = (tileX + tileY) * tileH / 2 + offsetY - tileH + wallOffset;
 
+                //update global map bounds:
+                if(ortX < mapXmin) mapXmin = ortX;
+                if(ortX > mapXmax) mapXmax = ortX + 64;
+                if(ortY < mapYmin) mapYmin = ortY;
+                if(ortY > mapYmax) mapYmax = ortY + 64;
+
                 let scr = screenToIso(ortX, ortY)
 
                 tileArr.push({
@@ -119,9 +129,10 @@ function loadLayerTiles(layer){
                     x: scr.x,
                     y: scr.y,
                     width: 32,
-                    height: 32
+                    height: 32,
+                    ortX: ortX,
+                    ortY: ortY
                 })
-                // new Tile(gid, tileX, tileY, ortX, ortY);
             }
         }
     }
@@ -133,9 +144,10 @@ export function checkTileLayerCollision(x, y, layer){
 
 }
 
-export function checkTilesCollision(x, y, tileArr){
+export function checkTilesCollision(x, y, tileArr, quadtree){
     let {x: isoObjX, y: isoObjY} = screenToIso(x, y)
 
+    //TODO this is ok for floor collision, but x, y, w & h should be different for wall collision
     let objRect = {
         x: isoObjX + 12,
         y: isoObjY + 44,
@@ -143,18 +155,42 @@ export function checkTilesCollision(x, y, tileArr){
         h: 0
     }
 
-    for(let tile of tileArr){
+    const collCandidates = quadtree.retrieve({
+        x: x - 32,
+        y: y - 32,
+        width: 64,
+        height: 64
+    });
+    // console.log(`${tileArr.length} ${collCandidates.length}`);
+
+    if(collCandidates.length < 1) return false;
+    for(let candidate of collCandidates){
         let tileRect = {
-            x: tile.x,
-            y: tile.y,
-            w: tile.width,
-            h: tile.height
+            x: candidate.isoX,
+            y: candidate.isoY,
+            w: 32,
+            h: 32,
         }
 
         if(rectColl(tileRect, objRect)){
             return true;
         };
     }
+
+    //LEGACY COLLISION CHECK:
+    // for(let tile of tileArr){
+    //     let tileRect = {
+    //         x: tile.x,
+    //         y: tile.y,
+    //         w: tile.width,
+    //         h: tile.height
+    //     }
+
+    //     if(rectColl(tileRect, objRect)){
+    //         // return true;
+    //         console.log(`should collide: ${tileRect.x}`)
+    //     };
+    // }
     return false;
 }
 
@@ -167,6 +203,41 @@ let wall1Tiles = loadLayerTiles(wall1Layer)
 let wall2Tiles = loadLayerTiles(wall2Layer)
 export let wallTiles = wall1Tiles.concat(wall2Tiles)
 
+console.log(`mapX: from ${mapXmin} to ${mapXmax}, mapY: from${mapYmin} to ${mapYmax}`)
+export const mapBoundRect = {
+    x: mapXmin,
+    y: mapYmin,
+    width: mapXmax - mapXmin,
+    height: mapYmax - mapYmin
+}
+
+//construct floor QuadTree:
+export const floorQTree = new Quadtree(mapBoundRect);
+for(let tile of floorTiles){
+    floorQTree.insert({
+        x: tile.ortX,
+        y: tile.ortY,
+        width: 64,
+        height: 64,
+        isoX: tile.x,
+        isoY: tile.y
+    })
+}
+
+//construct collision walls QuadTree:
+export const wallQTree = new Quadtree(mapBoundRect);
+for(let tile of wallTiles){
+    wallQTree.insert({
+        x: tile.ortX,
+        y: tile.ortY,
+        width: 64,
+        height: 64,
+        isoX: tile.x,
+        isoY: tile.y
+    })
+}
+
+// let characterQTree = new Quadtree(mapBoundRect);
 
 
 
@@ -301,7 +372,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
 
 
     //main loop:
-    setInterval(function(){
+    setInterval(function(){        
         //construct quadtree of Characters (Players and Bots):
         // let characterQTree = new Quadtree({
         //     x: leftMapBound,
