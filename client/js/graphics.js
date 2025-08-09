@@ -72,6 +72,9 @@ Img.map.src = "../img/map2.png"
 
 let mapData;
 let collisionLayer;
+let floorLayer;
+let tiles = []
+
 let tileImages;
 
 //get map data:
@@ -79,14 +82,19 @@ fetch("../img/map3.json")
     .then(res=>res.json())
     .then(async data=>{
         mapData = data;
-        console.log(data)
+        // console.log(data)
 
-        console.log(getUsedGIDs(mapData))
-        console.log(loadUsedTiles(mapData));
+        // console.log(getUsedGIDs(mapData))
+        // console.log(loadUsedTiles(mapData));
 
         tileImages = await loadUsedTiles(mapData)
         collisionLayer = getCollisionLayer(mapData)
-        console.log(collisionLayer)
+
+        floorLayer = getFloorLayer(mapData);
+        loadLayerTiles(floorLayer);
+        
+
+        console.log(tiles);
     });
 
 function getUsedGIDs(mapData){
@@ -156,6 +164,8 @@ function drawIsometricRect(tileX, tileY, width, height){
 
     ctx.strokeStyle = "red";
 
+    // console.log(x, y)
+
 
     ctx.beginPath();
     ctx.moveTo(x, y);                     // top
@@ -170,6 +180,56 @@ function drawIsometricRect(tileX, tileY, width, height){
     ctx.stroke();
 
     ctx.restore();
+}
+
+function screenToIso(x, y){
+    return{
+        x: (2*y + x)/2,
+        y: (2*y - x)/2
+    }
+}
+
+function loadLayerTiles(layer){
+    for(const chunk of layer.chunks){
+        const width = chunk.width;
+        const height = chunk.height;
+        const tileW = 64;
+        const tileH = 32;
+        const offsetX = layer.offsetx || 0;
+        const offsetY = layer.offsety || 0;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = y * width + x;
+                const gid = chunk.data[index];
+                if(gid == 0) continue;
+
+                // if (!gid || !tileImages[gid]) continue;
+
+                // const img = tileImages[gid];
+
+                // position:
+                const tileX = chunk.x + x;
+                const tileY = chunk.y + y;
+
+                //tile coordinates in orthogonal system (in game coordinates):
+                const ortX = (tileX - tileY) * tileW / 2 + offsetX ; //weird shift TO FIX
+                const ortY = (tileX + tileY) * tileH / 2 + offsetY - tileH;
+                
+
+                let scr = screenToIso(ortX, ortY)
+
+                tiles.push({x: scr.x, y: scr.y, w: 32, h: 32})
+            }
+        }
+    }
+}
+
+function getFloorLayer(mapData){
+    for(const layer of mapData.layers){
+        if(layer.name == 'floor') return layer;
+    }
+    return null;
 }
 
 function drawMap(){
@@ -310,7 +370,7 @@ export function gameLoop(){
             case 'image':
                 ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
-                if(obj.layerId>0) ctx.fillRect(obj.x,obj.sortY,3,3);
+                // if(obj.layerId>0) ctx.fillRect(obj.x,obj.sortY,3,3);
                 break;
             case 'text':
                 ctx.textAlign = "center";
@@ -333,6 +393,10 @@ export function gameLoop(){
     drawBuffer = []
 
     drawHUD();
+
+    // for(let tile of tiles){
+    //     drawIsometricRect(tile.x, tile.y, tile.w, tile.h)
+    // }
 
 
     //draw collision rectangles (for debug):

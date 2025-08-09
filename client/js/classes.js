@@ -244,7 +244,7 @@ export class Pickup extends Entity{
             img: Img.pickup,
             x: x-8,
             y: y,
-            sortY: y+8,
+            sortY: y+16,
             w: 16,
             h: 16
         })
