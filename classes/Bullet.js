@@ -1,6 +1,6 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
-import {scale} from '../socket.js'
+import {bulletQTree, characterQTree, scale} from '../socket.js'
 import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
 import { Character } from './Character.js';
 
@@ -91,6 +91,9 @@ export class Bullet extends Entity{
         this.x += this.spdX;
         this.y += this.spdY;
 
+        this.spdX *= 1.01;
+        this.spdY *= 1.01;
+
         //collision check
         let hitPlayerId = this.collidingPlayerId(Character.list);
         let isCollidingWall = checkWallCollision(this.x, this.y-32, bulletCollisionLayer)
@@ -117,9 +120,20 @@ export class Bullet extends Entity{
         let nearest = null;
         let minDistSq = maxDistance * maxDistance;
 
-        for(let i in objList){
-            let other = objList[i];
+        const nearestCandidates = bulletQTree.retrieve({
+            x: this.x - 300,
+            y: this.y - 300,
+            width: 600,
+            height: 600
+        })
 
+        //checking quadtree efficiency:
+        // console.log(nearestCandidates.length, Object.keys(objList).length)
+
+        if(nearestCandidates.length == 0) return null;
+        for(let candidate of nearestCandidates){
+            const other = objList[candidate.id]
+            if(!other) continue;
             if(other === this) continue;
             if(other.parent === this.parent) continue;
             if(other.note !== this.note) continue;
@@ -133,10 +147,28 @@ export class Bullet extends Entity{
                 nearest = other;
             }
 
-            // if(minDistSq < 500){
-            //     this.destroy();
-            // }
         }
+
+        // for(let i in objList){
+        //     let other = objList[i];
+
+        //     if(other === this) continue;
+        //     if(other.parent === this.parent) continue;
+        //     if(other.note !== this.note) continue;
+
+        //     const dx = this.x - other.x;
+        //     const dy = this.y - other.y;
+        //     const distSq = dx*dx + dy*dy;
+
+        //     if(distSq < minDistSq){
+        //         minDistSq = distSq;
+        //         nearest = other;
+        //     }
+
+        //     // if(minDistSq < 500){
+        //     //     this.destroy();
+        //     // }
+        // }
 
         return nearest;
     }
@@ -150,7 +182,7 @@ export class Bullet extends Entity{
         }
 
         //self-guide to the nearest player/bot in set range:
-        let nearestPlayer = this.findNearest(Character.list, 150);
+        let nearestPlayer = this.findNearest(Character.list, characterQTree, 150);
 
         if(nearestPlayer === this.parent) return;
         if(nearestPlayer){

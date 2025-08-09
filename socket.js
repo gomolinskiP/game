@@ -177,20 +177,6 @@ export function checkTilesCollision(x, y, tileArr, quadtree){
         };
     }
 
-    //LEGACY COLLISION CHECK:
-    // for(let tile of tileArr){
-    //     let tileRect = {
-    //         x: tile.x,
-    //         y: tile.y,
-    //         w: tile.width,
-    //         h: tile.height
-    //     }
-
-    //     if(rectColl(tileRect, objRect)){
-    //         // return true;
-    //         console.log(`should collide: ${tileRect.x}`)
-    //     };
-    // }
     return false;
 }
 
@@ -237,10 +223,9 @@ for(let tile of wallTiles){
     })
 }
 
-// let characterQTree = new Quadtree(mapBoundRect);
-
-
-
+export let characterQTree = new Quadtree(mapBoundRect);
+export let bulletQTree = new Quadtree(mapBoundRect);
+export let pickupQTree = new Quadtree(mapBoundRect);
 
 export let scale = new Scale('F#', 'major');
 
@@ -372,14 +357,42 @@ export default async function webSocketSetUp(serv, ses, Progress){
 
 
     //main loop:
-    setInterval(function(){        
-        //construct quadtree of Characters (Players and Bots):
-        // let characterQTree = new Quadtree({
-        //     x: leftMapBound,
-        //     y: topMapBound,
-        //     width: mapWidth,
-        //     height: mapHeight
-        // });
+    setInterval(function(){  
+        //reconstruct quadtrees for dynamic objects:
+        characterQTree.clear();
+        bulletQTree.clear();
+        pickupQTree.clear();
+
+        for(let id in Character.list){
+            const character = Character.list[id];
+            characterQTree.insert({
+                x: character.x - 32,
+                y: character.y - 32,
+                width: 64,
+                height: 64,
+                id: id
+            })
+        }
+        for(let id in Bullet.list){
+            const bullet = Bullet.list[id];
+            bulletQTree.insert({
+                x: bullet.x - 8,
+                y: bullet.y - 8,
+                width: 16,
+                height: 16,
+                id: id
+            })
+        }
+        for(let id in Pickup.list){
+            const pickup = Pickup.list[id];
+            pickupQTree.insert({
+                x: pickup.x - 4,
+                y: pickup.y - 4,
+                width: 8,
+                height: 8,
+                id: id
+            })
+        }
 
         // random pickup spawn:
         if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
@@ -388,10 +401,10 @@ export default async function webSocketSetUp(serv, ses, Progress){
         }
 
         // random bot spawn:
-        // if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
-        //     console.log("bot spawned")
-        //     new Bot();
-        // }
+        if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
+            console.log("bot spawned")
+            new Bot();
+        }
 
         Pickup.handleAll(Character.list, Socket.list);
         Bullet.updateAll();
