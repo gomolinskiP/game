@@ -13,10 +13,10 @@ export class Entity{
         let minDistSq = maxDistance * maxDistance;
 
         const nearestCandidates = quadtree.retrieve({
-            x: this.x - 300,
-            y: this.y - 300,
-            width: 600,
-            height: 600,
+            x: this.x - maxDistance,
+            y: this.y - maxDistance,
+            width: maxDistance*2,
+            height: maxDistance*2,
         })
 
         if(nearestCandidates.length == 0) return null;
@@ -34,21 +34,6 @@ export class Entity{
                 nearest = other;
             }
         }
-
-        // for(let i in objList){
-        //     let other = objList[i];
-
-        //     if(other === this) continue;
-
-        //     const dx = this.x - other.x;
-        //     const dy = this.y - other.y;
-        //     const distSq = dx*dx + dy*dy;
-
-        //     if(distSq < minDistSq){
-        //         minDistSq = distSq;
-        //         nearest = other;
-        //     }
-        // }
 
         return nearest;
     }
@@ -77,12 +62,6 @@ export class Entity{
             }
         }
 
-        // for(let i in playerList){
-        //     let targetPlayer = playerList[i];
-        //     if(this.isColliding(targetPlayer)){
-        //         return targetPlayer.id;
-        //     }
-        // }
         return null;
     }
 }

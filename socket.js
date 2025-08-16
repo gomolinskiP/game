@@ -59,6 +59,7 @@ function screenToIso(x, y){
 }
 
 export function checkWallCollision(x, y, collisionLayer){
+    //TODO quadtree
     const {x: isoObjX, y: isoObjY} = screenToIso(x, y)
 
     for(let isoRect of collisionLayer.objects){
@@ -125,13 +126,15 @@ function loadLayerTiles(layer){
                 let scr = screenToIso(ortX, ortY)
 
                 tileArr.push({
+                    layer: layer.name,
                     gid: gid,
                     x: scr.x,
                     y: scr.y,
                     width: 32,
                     height: 32,
                     ortX: ortX,
-                    ortY: ortY
+                    ortY: ortY,
+                    wallOffset: wallOffset,
                 })
             }
         }
@@ -140,11 +143,7 @@ function loadLayerTiles(layer){
     return tileArr;
 }
 
-export function checkTileLayerCollision(x, y, layer){
-
-}
-
-export function checkTilesCollision(x, y, tileArr, quadtree){
+export function checkTilesCollision(x, y, quadtree){
     let {x: isoObjX, y: isoObjY} = screenToIso(x, y)
 
     //TODO this is ok for floor collision, but x, y, w & h should be different for wall collision
@@ -188,6 +187,19 @@ let wall2Layer = loadCollisionLayer(mapData, "wall2");
 let wall1Tiles = loadLayerTiles(wall1Layer)
 let wall2Tiles = loadLayerTiles(wall2Layer)
 export let wallTiles = wall1Tiles.concat(wall2Tiles)
+
+//load all map layers tiles:
+let layerId = -4; //because 4 layers are lower than player
+for(const layer of mapData.layers){
+    if(layer.type !== "tilelayer" || layer.visible == false) continue;
+    layerId += 1;
+
+    let tileArr = loadLayerTiles(layer);
+    for(const tile of tileArr){
+        new Tile(tile.gid, tile.ortX, tile.ortY - tile.wallOffset, layerId);
+    }
+
+}
 
 console.log(`mapX: from ${mapXmin} to ${mapXmax}, mapY: from${mapYmin} to ${mapYmax}`)
 export const mapBoundRect = {
@@ -278,8 +290,9 @@ export default async function webSocketSetUp(serv, ses, Progress){
                 //progress already in DB
                 console.log(res)
                 player = new Player(socket.id, res.x, res.y, username, res.weapon, res.score)
+
                 //teleport player if they're stuck in collision area:
-                if(checkWallCollision(player.x, player.y, collisionLayer)){
+                if(checkTilesCollision(player.x, player.y, wallQTree) || !checkTilesCollision(player.x, player.y, floorQTree)){
                     player.x = 0;
                     player.y = 0;
                 }

@@ -1,4 +1,4 @@
-import { Player, Bullet, Pickup } from './classes.js'
+import { Player, Bullet, Pickup, Tile } from './classes.js'
 import { selfId } from './main.js'
 
 
@@ -75,7 +75,7 @@ let collisionLayer;
 let floorLayer;
 let tiles = []
 
-let tileImages;
+export let tileImages;
 
 //get map data:
 fetch("../img/map3.json")
@@ -234,85 +234,71 @@ function getFloorLayer(mapData){
 
 function drawMap(){
     if(Player.list[selfId]){
-        let bx = gameWidth/2 - Player.list[selfId].x;
-        let by = gameHeight/2 - Player.list[selfId].y;
-        // ctx.drawImage(Img.map, bx - 7138, by - 2559) //weird shift TO FIX
-
-        let layerId = -4; //because 4 layers are lower than player
-        if(mapData && tileImages){
-            for(const layer of mapData.layers){
-                if(layer.type !== "tilelayer" || layer.visible == false) continue;
-
-                layerId += 1;
-                //get layer height:
-                //from "wall1" to 0, from "wall2" to 1, etc.
-                // let match = layer.name.match(/\d+$/);
-                // let layerId = match ? parseInt(match[0], 10)-1 : null;
-
-                for(const chunk of layer.chunks){
-                    const width = chunk.width;
-                    const height = chunk.height;
-                    const tileW = 64;
-                    const tileH = 32;
-                    const offsetX = layer.offsetx || 0;
-                    const offsetY = layer.offsety || 0;
-                    for (let y = 0; y < height; y++) {
-                        for (let x = 0; x < width; x++) {
-                            const index = y * width + x;
-                            const gid = chunk.data[index];
-                            if (!gid || !tileImages[gid]) continue;
-
-                            const img = tileImages[gid];
-
-                            // position:
-                            const tileX = chunk.x + x;
-                            const tileY = chunk.y + y;
-
-
-                            //this code above ^^^ should be done once & not for each frame
-                            const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + offsetX - Player.list[selfId].x; //weird shift TO FIX
-                            const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
-
-                            let shiftSortY;
-
-                            if(layerId>0){
-                                shiftSortY = 48 + 33*(layerId-1);
-                            }
-                            else{
-                                shiftSortY = 64*layerId;
-                            }
-
-                            // switch(layerId){
-                            //     case 1:
-                            //         shiftSortY = 48*layerId;
-                            //         break;
-                            //     case 2:
-                            //         shiftSortY = 48 + 33;
-                            //         break;
-                            //     case 3:
-                            //         shiftSortY = 48 + 33*2;
-                            //         break;
-                            //     default:
-                            //         shiftSortY = 64*layerId;
-                            // }
-                            
-
-                            //LOOK AT THE DOTS - THEY SHOULD BE AT THE SAME POINT
-                            drawBuffer.push({
-                                type: 'image',
-                                img: img,
-                                x: screenX,
-                                y: screenY,
-                                sortY: screenY+shiftSortY,
-                                layerId: layerId,
-                                w: 64,
-                                h: 64
-                            })
-                        }
-                    }
-                }
-            }
+        //new: TODO
+        for(let i in Tile.list){
+            const tile = Tile.list[i];
+            tile.draw();
         }
+
+        //legacy:
+        // let bx = gameWidth/2 - Player.list[selfId].x;
+        // let by = gameHeight/2 - Player.list[selfId].y;
+
+        // let layerId = -4; //because 4 layers are lower than player
+        // if(mapData && tileImages){
+        //     for(const layer of mapData.layers){
+        //         if(layer.type !== "tilelayer" || layer.visible == false) continue;
+
+        //         layerId += 1;
+
+        //         for(const chunk of layer.chunks){
+        //             const width = chunk.width;
+        //             const height = chunk.height;
+        //             const tileW = 64;
+        //             const tileH = 32;
+        //             const offsetX = layer.offsetx || 0;
+        //             const offsetY = layer.offsety || 0;
+        //             for (let y = 0; y < height; y++) {
+        //                 for (let x = 0; x < width; x++) {
+        //                     const index = y * width + x;
+        //                     const gid = chunk.data[index];
+        //                     if (!gid || !tileImages[gid]) continue;
+
+        //                     const img = tileImages[gid];
+
+        //                     // position:
+        //                     const tileX = chunk.x + x;
+        //                     const tileY = chunk.y + y;
+
+
+        //                     //this code above ^^^ should be done once & not for each frame
+        //                     const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + offsetX - Player.list[selfId].x; //weird shift TO FIX
+        //                     const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
+
+        //                     let shiftSortY;
+
+        //                     if(layerId>0){
+        //                         shiftSortY = 48 + 33*(layerId-1);
+        //                     }
+        //                     else{
+        //                         shiftSortY = 64*layerId;
+        //                     }
+                          
+        //                     drawBuffer.push({
+        //                         type: 'image',
+        //                         img: img,
+        //                         x: screenX,
+        //                         y: screenY,
+        //                         sortY: screenY+shiftSortY,
+        //                         layerId: layerId,
+        //                         w: 64,
+        //                         h: 64
+        //                     })
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
     
 }

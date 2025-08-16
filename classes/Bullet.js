@@ -1,7 +1,6 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
-import {bulletQTree, characterQTree, scale} from '../socket.js'
-import { bulletCollisionLayer, checkWallCollision } from '../socket.js';
+import {bulletQTree, characterQTree, scale, wallQTree, checkTilesCollision} from '../socket.js'
 import { Character } from './Character.js';
 
 
@@ -96,7 +95,8 @@ export class Bullet extends Entity{
 
         //collision check
         let hitPlayerId = this.collidingPlayerId(Character.list);
-        let isCollidingWall = checkWallCollision(this.x, this.y-32, bulletCollisionLayer)
+        let isCollidingWall = checkTilesCollision(this.x, this.y, wallQTree)
+
         //player hit:
         if(hitPlayerId != null){
             let targetPlayer = Character.list[hitPlayerId];
@@ -121,10 +121,10 @@ export class Bullet extends Entity{
         let minDistSq = maxDistance * maxDistance;
 
         const nearestCandidates = bulletQTree.retrieve({
-            x: this.x - 300,
-            y: this.y - 300,
-            width: 600,
-            height: 600
+            x: this.x - maxDistance,
+            y: this.y - maxDistance,
+            width: maxDistance*2,
+            height: maxDistance*2
         })
 
         //checking quadtree efficiency:
@@ -175,14 +175,14 @@ export class Bullet extends Entity{
 
     selfGuide(){
         //self-guide to the nearest bullet with same note/tone:
-        let nearestSameBullet = this.findNearestSameNote(Bullet.list, 200); //have to check 1) type 2) parent
+        let nearestSameBullet = this.findNearestSameNote(Bullet.list, 600); //have to check 1) type 2) parent
         if(nearestSameBullet){
             this.guideTo(nearestSameBullet);
             return;
         }
 
         //self-guide to the nearest player/bot in set range:
-        let nearestPlayer = this.findNearest(Character.list, characterQTree, 150);
+        let nearestPlayer = this.findNearest(Character.list, characterQTree, 300);
 
         if(nearestPlayer === this.parent) return;
         if(nearestPlayer){
@@ -195,9 +195,13 @@ export class Bullet extends Entity{
         const dx = obj.x - this.x;
         const dy = obj.y - this.y;
         const dist = Math.hypot(dx, dy)
+        const targetSpdX = (dx/dist) * this.speed;
+        const targetSpdY = (dy/dist) * this.speed;
 
-        this.spdX = (dx/dist) * this.speed;
-        this.spdY = (dy/dist) * this.speed;
+        //weighted mean between current speeds and guiding speed:
+        //(3 to 1 weights)
+        this.spdX = (3*this.spdX + targetSpdX)/4;
+        this.spdY = (3*this.spdY + targetSpdY)/4;
     }
     
     destroy(){

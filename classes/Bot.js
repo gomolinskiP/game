@@ -1,5 +1,5 @@
 import { Character } from "./Character.js";
-import { collisionLayer, checkWallCollision } from '../socket.js';
+import { wallQTree, floorQTree, checkTilesCollision, mapBoundRect } from '../socket.js';
 
 
 export class Bot extends Character{
@@ -9,28 +9,21 @@ export class Bot extends Character{
         let x;
         let y;
 
-        let isUnreachable = true;
-        while(isUnreachable){
-            x = 0 + 2000*(Math.random()-0.5);
-            y = 0 + 1000*(Math.random()-0.5);
-            isUnreachable = checkWallCollision(x, y, collisionLayer);
+        let isPositionForbidden = true;
+        while(isPositionForbidden){
+            x = mapBoundRect.x + mapBoundRect.width*(Math.random());
+            y = mapBoundRect.y + mapBoundRect.height*(Math.random());
+
+            //check if random position is colliding a wall or is not on floor
+            isPositionForbidden = checkTilesCollision(x, y, wallQTree) || !checkTilesCollision(x, y, floorQTree)
         }
 
         let id = Math.random();
         let username = `bot${Math.round(id*1000)}`;
         super(id, x, y, username);
-        this.pressingDown = true;
-
-        let _this = this
 
         this.randTime = 1000*(Math.random() * 3 + 1)
-
         setTimeout(()=>this.setRandDirection(), this.randTime);
-
-
-
-        // this.randTime = Math.random()*10;
-
 
         Bot.list[this.id] = this;
     }

@@ -1,5 +1,5 @@
 import { limiter, selfId } from './main.js'
-import { Img, gameWidth, gameHeight, drawBuffer } from './graphics.js';
+import { Img, gameWidth, gameHeight, drawBuffer, tileImages } from './graphics.js';
 
 export class Entity{
     constructor(initPack){
@@ -248,5 +248,49 @@ export class Pickup extends Entity{
             w: 16,
             h: 16
         })
+    }
+}
+
+export class Tile{
+    static list = {};
+
+    constructor(initPack){
+        this.id = initPack.id;
+        this.x = initPack.x;
+        this.y = initPack.y;
+        this.gid = initPack.gid;
+        this.layerId = initPack.layerId;
+
+        Tile.list[this.id] = this;
+    }
+
+    draw(){
+        if(!tileImages) return;
+        let x = this.x - Player.list[selfId].x + gameWidth/2;
+        let y = this.y - Player.list[selfId].y + gameHeight/2;
+        const img = tileImages[this.gid];
+
+        let shiftSortY;
+        if(this.layerId>0){
+            shiftSortY = 48 + 33 * (this.layerId-1);
+        }
+        else{
+            shiftSortY = 64 * this.layerId;
+        }
+
+        drawBuffer.push({
+            type: 'image',
+            img: img,
+            x: x,
+            y: y,
+            sortY: y+shiftSortY,
+            layerId: this.layerId,
+            w: 64,
+            h: 64
+        })
+    }
+
+    destroy(){
+        delete Tile.list[this.id];
     }
 }

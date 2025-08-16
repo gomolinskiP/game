@@ -5,6 +5,7 @@ import { collisionLayer, checkWallCollision } from '../socket.js';
 import { scale } from '../socket.js';
 import { Socket } from './Socket.js';
 import { Character } from './Character.js';
+import { Tile } from './Tile.js'
 
 const loadDistance = 500; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
 const loadUnloadMargin = 100;
@@ -75,6 +76,24 @@ export class Player extends Character{
             })
 
             this.knownObjIDs.push(pickup.id)
+        }
+
+        for(let i in Tile.list){
+            let tile = Tile.list[i];
+            //check distance:
+            if(Math.abs(tile.ortX - this.x) > loadDistance ||
+               Math.abs(tile.ortY - this.y) > loadDistance) continue;
+            
+            initPack.entities.push({
+                type: "tile",
+                id: tile.id,
+                x: tile.ortX,
+                y: tile.ortY,
+                gid: tile.gid,
+                layerId: tile.layerId
+            })
+
+            this.knownObjIDs.push(tile.id)
         }
 
         initPack.selfId = this.id;
@@ -182,11 +201,32 @@ export class Player extends Character{
                     type: "pickup"
                 })
 
-                // pickup.needsUpdate = false;
                 this.knownObjIDs.push(pickup.id);
             }
         }
 
+        for(let i in Tile.list){
+            let tile = Tile.list[i]
+            //check distance:
+            if(Math.abs(tile.ortX - this.x) > unloadDistance ||
+               Math.abs(tile.ortY - this.y) > unloadDistance){
+                this.addToRemovePack(tile.id, "tile")
+                continue;
+            };
+
+            if(!this.knownObjIDs.includes(tile.id)){
+                this.updatePack.push({
+                    type: "tile",
+                    id: tile.id,
+                    x: tile.ortX,
+                    y: tile.ortY,
+                    gid: tile.gid,
+                    layerId: tile.layerId
+                })
+
+                this.knownObjIDs.push(tile.id);
+            }
+        }
     }
 
     emitUpdatePack(){

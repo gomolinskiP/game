@@ -1,7 +1,7 @@
 import { Entity } from './Entity.js';
 import { Character } from './Character.js';
 import { Player } from './Player.js';
-import { collisionLayer, checkWallCollision } from '../socket.js';
+import { wallQTree, floorQTree, checkTilesCollision, mapBoundRect } from '../socket.js';
 
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
@@ -19,9 +19,11 @@ export class Pickup extends Entity{
 
         let isUnreachable = true;
         while(isUnreachable){
-            x = 0 + 2000*(Math.random()-0.5);
-            y = 0 + 1000*(Math.random()-0.5);
-            isUnreachable = checkWallCollision(x, y, collisionLayer);
+            x = mapBoundRect.x + mapBoundRect.width*(Math.random());
+            y = mapBoundRect.y + mapBoundRect.height*(Math.random());
+
+            //check if pickup will be reachable (on floor and not inside a wall)
+            isUnreachable = checkTilesCollision(x, y, wallQTree) || !checkTilesCollision(x, y, floorQTree)
         }
         super(x, y)
 

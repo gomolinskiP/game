@@ -12,7 +12,7 @@ export function getIsInChat(){
 
 import { gameLoop, canvas } from './graphics.js'
 
-import { Player, Bullet, Pickup } from './classes.js'
+import { Player, Bullet, Pickup, Tile } from './classes.js'
 import { addKeyboardListeners } from './keyboard.js';
 import { chatInit } from './textChat.js';
 
@@ -54,6 +54,9 @@ socket.on('init', function(data){
             case "pickup":
                 new Pickup(entity);
                 break;
+            case "tile":
+                new Tile(entity);
+                break;
             default:
                 console.log(`Unknown entity type: ${entity.pickup}`)
         }
@@ -66,7 +69,7 @@ socket.on('init', function(data){
 
 socket.on('update', function(data){
     //gets an array of objects to update and updates or creates them:
-    console.log("updatePack:", data)
+    // console.log("updatePack:", data)
 
     for(let i = 0; i<data.length; i++){
         let pack = data[i];
@@ -102,13 +105,20 @@ socket.on('update', function(data){
                 break;
             case "weapon":
                 setWeaponType(pack.weaponType);
-                setDurationLabel(pack.duration)
+                setDurationLabel(pack.duration);
+                break;
+            case "tile":
+                let tile = Tile.list[id];
+                if(!tile){
+                    new Tile(pack);
+                }
+                break;
         }
     }
 })
 
 socket.on('remove', function(data){
-    console.log("removePack:", data)
+    // console.log("removePack:", data)
 
     for(let i = 0; i<data.length; i++){
         let entity = data[i]
@@ -118,23 +128,30 @@ socket.on('remove', function(data){
             case "player":
                 if(!Player.list[id]){
                     console.log(`ERROR NO PLAYER WITH ID=${id}`);
-                    return;
+                    continue;
                 }
                 delete Player.list[id];
                 break;
             case "bullet":
                 if(!Bullet.list[id]){
                     console.log(`ERROR NO BULLET WITH ID=${id}`);
-                    return;
+                    continue;
                 }
                 Bullet.list[id].destroy();
                 break;
             case "pickup":
                 if(!Pickup.list[id]){
                     console.log(`ERROR NO PICKUP WITH ID=${id}`);
-                    return;
+                    continue;
                 }
                 Pickup.list[id].destroy();
+                break;
+            case "tile":
+                if(!Tile.list[id]){
+                    console.log(`ERROR NO TILE WITH ID=${id}`);
+                    continue;
+                }
+                Tile.list[id].destroy();
                 break;
         }
     }
