@@ -2,7 +2,7 @@ import { Entity } from "./Entity.js";
 import { Weapon } from './Weapon.js';
 import { Bullet, scheduledBullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
-import { collisionLayer, checkTilesCollision, floorTiles, wallTiles, floorQTree, wallQTree } from '../socket.js';
+import { checkTilesCollision, floorTiles, wallTiles, floorQTree, wallQTree } from '../socket.js';
 import { Player } from "./Player.js";
 import { scale } from '../socket.js';
 import { Socket } from './Socket.js';

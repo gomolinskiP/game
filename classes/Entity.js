@@ -47,6 +47,16 @@ export class Entity{
         else return false;
     }
 
+    isWithinDistance(other, maxDistance){
+        if(!other) return false;
+        let dx = this.x - other.x;
+        let dy = this.y - other.y;
+        let distSq = dx*dx + dy*dy;
+
+        if(distSq < maxDistance*maxDistance) return true;
+        else return false;
+    }
+
     collidingPlayerId(playerList){
         const collCandidates = characterQTree.retrieve({
             x: this.x - 100,

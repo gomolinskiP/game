@@ -24,8 +24,6 @@ let mapYmin = 0;
 let mapYmax = 0;
 
 let mapData = await loadMapData();
-export let collisionLayer = await loadCollisionLayer(mapData, 'collision');
-export let bulletCollisionLayer = await loadCollisionLayer(mapData, 'bulletCollision')
 
 async function loadMapData() {
     const filePath = resolve(__dirname, './client/img/map3.json');
@@ -34,7 +32,7 @@ async function loadMapData() {
     return jsonData;
 }
 
-function loadCollisionLayer(mapData, layerName){
+function loadLayer(mapData, layerName){
     for(let layer of mapData.layers){
         if(layer.name == layerName){
 
@@ -44,34 +42,11 @@ function loadCollisionLayer(mapData, layerName){
     return null; //if layer not found return null;
 }
 
-function isoToScreen(x, y){
-    return{
-        x: (x-y),
-        y: (x+y)/2
-    }
-}
-
 function screenToIso(x, y){
     return{
         x: (2*y + x)/2,
         y: (2*y - x)/2
     }
-}
-
-export function checkWallCollision(x, y, collisionLayer){
-    //TODO quadtree
-    const {x: isoObjX, y: isoObjY} = screenToIso(x, y)
-
-    for(let isoRect of collisionLayer.objects){
-        if(isoObjX >= isoRect.x - 20 &&
-        isoObjX <= isoRect.x + isoRect.width - 0 &&
-            isoObjY >= isoRect.y - 50 &&
-            isoObjY <= isoRect.y + isoRect.height - 32
-        ){
-            return true;
-        }
-    }
-    return false;
 }
 
 function rectColl(r1, r2){
@@ -128,12 +103,12 @@ function loadLayerTiles(layer){
                 tileArr.push({
                     layer: layer.name,
                     gid: gid,
-                    x: scr.x,
-                    y: scr.y,
+                    isoX: scr.x,
+                    isoY: scr.y,
                     width: 32,
                     height: 32,
-                    ortX: ortX,
-                    ortY: ortY,
+                    x: ortX,
+                    y: ortY,
                     wallOffset: wallOffset,
                 })
             }
@@ -179,14 +154,23 @@ export function checkTilesCollision(x, y, quadtree){
     return false;
 }
 
-let floorLayer = loadCollisionLayer(mapData, "floor");
+let floorLayer = loadLayer(mapData, "floor");
 export let floorTiles = loadLayerTiles(floorLayer);
 
-let wall1Layer = loadCollisionLayer(mapData, "wall1");
-let wall2Layer = loadCollisionLayer(mapData, "wall2");
+let wall1Layer = loadLayer(mapData, "wall1");
+let wall2Layer = loadLayer(mapData, "wall2");
 let wall1Tiles = loadLayerTiles(wall1Layer)
 let wall2Tiles = loadLayerTiles(wall2Layer)
 export let wallTiles = wall1Tiles.concat(wall2Tiles)
+
+//map bounds:
+// console.log(`mapX: from ${mapXmin} to ${mapXmax}, mapY: from${mapYmin} to ${mapYmax}`)
+export const mapBoundRect = {
+    x: mapXmin,
+    y: mapYmin,
+    width: mapXmax - mapXmin,
+    height: mapYmax - mapYmin
+}
 
 //load all map layers tiles:
 let layerId = -4; //because 4 layers are lower than player
@@ -196,29 +180,33 @@ for(const layer of mapData.layers){
 
     let tileArr = loadLayerTiles(layer);
     for(const tile of tileArr){
-        new Tile(tile.gid, tile.ortX, tile.ortY - tile.wallOffset, layerId);
+        new Tile(tile.gid, tile.x, tile.y - tile.wallOffset, layerId);
     }
-
+}
+//construct all tiles QuadTree:
+export const tileQTree = new Quadtree(mapBoundRect);
+for(let id in Tile.list){
+    const tile = Tile.list[id];
+    tileQTree.insert({
+        x: tile.x,
+        y: tile.y,
+        width: 64,
+        height: 64,
+        id: tile.id,
+    })
 }
 
-console.log(`mapX: from ${mapXmin} to ${mapXmax}, mapY: from${mapYmin} to ${mapYmax}`)
-export const mapBoundRect = {
-    x: mapXmin,
-    y: mapYmin,
-    width: mapXmax - mapXmin,
-    height: mapYmax - mapYmin
-}
 
 //construct floor QuadTree:
 export const floorQTree = new Quadtree(mapBoundRect);
 for(let tile of floorTiles){
     floorQTree.insert({
-        x: tile.ortX,
-        y: tile.ortY,
+        x: tile.x,
+        y: tile.y,
         width: 64,
         height: 64,
-        isoX: tile.x,
-        isoY: tile.y
+        isoX: tile.isoX,
+        isoY: tile.isoY
     })
 }
 
@@ -226,12 +214,12 @@ for(let tile of floorTiles){
 export const wallQTree = new Quadtree(mapBoundRect);
 for(let tile of wallTiles){
     wallQTree.insert({
-        x: tile.ortX,
-        y: tile.ortY,
+        x: tile.x,
+        y: tile.y,
         width: 64,
         height: 64,
-        isoX: tile.x,
-        isoY: tile.y
+        isoX: tile.isoX,
+        isoY: tile.isoY
     })
 }
 
@@ -276,11 +264,12 @@ export default async function webSocketSetUp(serv, ses, Progress){
 
         //check if user is already in game on another socket:
         let loggedPlayer = Object.values(Player.list).find(player => player.name === username)
-        if(loggedPlayer != undefined){
+        if(loggedPlayer){
             //
             console.log(`>>>>MULTISOCKET DETECTED<<<<`)
             await Progress.updateOne({username: loggedPlayer.name}, {$set: {x: loggedPlayer.x, y: loggedPlayer.y, score: loggedPlayer.score}});
             Socket.list[loggedPlayer.id].emit('redirect', "/");
+            delete Socket.list[loggedPlayer.id]
             delete Player.list[loggedPlayer.id];
             delete Character.list[loggedPlayer.id];
         }
@@ -288,7 +277,6 @@ export default async function webSocketSetUp(serv, ses, Progress){
         let res = await Progress.findOne({username: username});
             if(res){
                 //progress already in DB
-                console.log(res)
                 player = new Player(socket.id, res.x, res.y, username, res.weapon, res.score)
 
                 //teleport player if they're stuck in collision area:
@@ -408,14 +396,14 @@ export default async function webSocketSetUp(serv, ses, Progress){
         }
 
         // random pickup spawn:
-        if(Math.random()<0.1 && Object.keys(Pickup.list).length<50){
+        if(Math.random()<0.1 && Object.keys(Pickup.list).length<500){
             // console.log("pickup spawned")
             new Pickup();
         }
 
         // random bot spawn:
         if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
-            console.log("bot spawned")
+            // console.log("bot spawned")
             new Bot();
         }
 
