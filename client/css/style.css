@@ -1,5 +1,5 @@
 :root{
-    filter: hue-rotate(0deg) saturate(1);
+    /* filter: hue-rotate(-70deg) saturate(1); */
     background-color: #006e56;
 }
 
@@ -18,6 +18,7 @@ body{
     font-family: monospace;
     text-align: center;
 
+    
     padding: 0;
     margin: 0;
 }
@@ -51,6 +52,7 @@ h1{
     position: absolute;
     left: 0;
     top: 0;
+    transform-origin: top left;
     /* filter: invert(1) hue-rotate(180deg); */
 }
 
@@ -146,7 +148,7 @@ label{
     text-align: left;
 }
 
-button:hover{
+.ui-button:hover{
     background: #ffd900;
     font-weight: bolder;
     color: black;
@@ -178,6 +180,8 @@ a{
     text-decoration: none;
     padding: 0 5px;
     border: 1px solid #ffd900;
+    text-shadow: 0 0 4px black;
+    box-shadow: 0 0 5px black;
     border-radius: 0;
 }
 
@@ -185,6 +189,8 @@ a:hover{
     background-color: #ffd900;
     color: black;
     font-weight: bolder;
+        /* text-shadow: 0 0 2px black; */
+
 }
 
 
@@ -319,25 +325,102 @@ a:hover{
     margin: 4px 0;
 }
 
-#scaleLabel, #weaponTypeLabel, #durationLabel{
+#weapon-buttons{
+    margin: -4px;
+    padding: 0;
+
+    width: calc(100%+8px);
+    display: flex;
+    gap: 0;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.game-button{
+    display: inline;
+    flex-grow: 10;
+}
+
+.game-button-label{
+    display: block;
+    cursor: pointer;
+    padding: 1px 4px;
+    margin: 0;
+    max-width: 300px;
+    flex: 10;
+}
+
+.game-button.active>*{
+    font-weight: normal;
+
     color: #00daaa;
-    background: #a68700;
-    padding: 2px;
-    border-radius: 4px;
+    background: black;
     border:#00daaa 1px solid;
 }
+
+.game-button-label, .game-button-popup{
+    font-weight: bolder;
+    color: #a68700;
+    background: #00000088;
+    border:#a68700 1px solid;
+}
+
+.game-button-popup{
+    display: none;
+    position: absolute;
+    bottom: 100px;
+    left: 0;
+    width: 100%;
+
+    padding: 5px;
+    margin: 0;
+}
+
+.game-button-popup>ul{
+    list-style-type: none;
+
+    padding: 0;
+
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.game-button-popup li{
+    border: 1px solid #00daaa;
+    padding: 1px 4px;
+
+    display: inline;
+    flex: 10 10;
+    align-self: center;
+
+    cursor: pointer;
+}
+
+.game-button-popup li:hover{
+    font-weight: bold;
+
+    color: black;
+    background-color: #00daaa;
+}
+
+
 
 #notes{
     position: absolute;
     bottom: 10px;
     left: 10px;
-    padding: 10px;
+    padding: 4px;
 
     background-color: transparent;
     backdrop-filter: blur(5px) saturate(2) contrast(0.8);
+    border: 1px solid black;
 }
 
 .note{
+    font-size: small;
     height: 60px;
     width: 30px;
     margin: 1px;
@@ -345,18 +428,23 @@ a:hover{
     color: black;
     border: none;
 
-    border-radius: 6px;
+    border-radius: 2px;
+    transition: scale 0.1s;
 }
 
 .note:disabled{
     background-color: gray !important;
     color: darkgray !important;
     font-weight: lighter !important;
+    border: none;
+
+    cursor: not-allowed;
 }
 
 .note.played{
-    border: 5px inset #00000088;
+    /* border: 5px inset #00000088; */
     font-weight: bold;
+    scale: 0.9;
 }
 
 
@@ -371,12 +459,13 @@ a:hover{
 }
 
 .note:hover{
-    color: #ffd900;
-    background-color: #a68700;
+    color: #a68700;
+    background-color: #ffd900;
+    font-weight: bold;
 }
 
 .note.active{
-    color: #006e56;
+    color: black;
     background-color: #00daaa;
     font-weight: bold;
 }

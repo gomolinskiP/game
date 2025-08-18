@@ -354,6 +354,11 @@ export default async function webSocketSetUp(serv, ses, Progress){
                 socket.emit('chatBroadcast', signedMsg);
             }
         })
+
+        socket.on('weaponChange', (change)=>{
+            console.log(change)
+            player.weapon.change(change)
+        })
     })
 
 

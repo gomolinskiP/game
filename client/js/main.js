@@ -15,6 +15,7 @@ import { gameLoop, canvas } from './graphics.js'
 import { Player, Bullet, Pickup, Tile } from './classes.js'
 import { addKeyboardListeners } from './keyboard.js';
 import { chatInit } from './textChat.js';
+import { setScale } from './gameButtons.js'
 
 
 export const limiter = new Tone.Compressor(
@@ -37,7 +38,7 @@ socket.on('init', function(data){
 
     selfId = data.selfId;
     setActiveNote(data.selectedNote)
-    setScale(data.scale.name, data.scale.allowedNotes)
+    setScale(scale, data.scale.name, data.scale.allowedNotes)
 
     //new:
     for(let i = 0; i<data.entities.length; i++){
@@ -45,7 +46,6 @@ socket.on('init', function(data){
 
         switch(entity.type){
             case "player":
-                console.log("CREATE NEW PLAYER")
                 new Player(entity);
                 break;
             case "bullet":
@@ -131,6 +131,7 @@ socket.on('remove', function(data){
                     continue;
                 }
                 delete Player.list[id];
+                // console.log(`removing player`)
                 break;
             case "bullet":
                 if(!Bullet.list[id]){
@@ -138,6 +139,8 @@ socket.on('remove', function(data){
                     continue;
                 }
                 Bullet.list[id].destroy();
+                // console.log(`removing bullet`)
+
                 break;
             case "pickup":
                 if(!Pickup.list[id]){
@@ -145,6 +148,7 @@ socket.on('remove', function(data){
                     continue;
                 }
                 Pickup.list[id].destroy();
+                // console.log(`removing pickup`)
                 break;
             case "tile":
                 if(!Tile.list[id]){
@@ -152,6 +156,7 @@ socket.on('remove', function(data){
                     continue;
                 }
                 Tile.list[id].destroy();
+                // console.log(`removing tile`)
                 break;
         }
     }
@@ -189,24 +194,6 @@ function setActiveNote(note){
     })
     document.querySelector(`[data-note="${note}"]`).classList.add('active');
     activeNote = note;
-}
-
-function setScale(name, allowedNotes){
-    scale.base = name[0];
-
-    let scaleLabel = document.querySelector("#scaleLabel")
-
-    scaleLabel.innerText = name;
-
-    noteBTNs.forEach((btn)=>{
-            btn.disabled = true;
-    })
-
-    for(let note of allowedNotes){
-        document.querySelector(`[data-note="${note}"]`).disabled = false;
-    }
-
-    console.log(scaleLabel, name, allowedNotes)
 }
 
 function setWeaponType(type){
@@ -255,7 +242,7 @@ function nextNote(){
 }
 
 let activeNote = null
-notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
 noteBTNs.forEach((item)=>{
     item.addEventListener("click", ()=>{
@@ -265,6 +252,10 @@ noteBTNs.forEach((item)=>{
         socket.emit('noteChange', item.dataset.note)
     })
 })
+
+export function weaponChange(change){
+    socket.emit('weaponChange', change);
+}
 
 
 

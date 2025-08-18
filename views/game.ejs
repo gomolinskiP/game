@@ -15,7 +15,7 @@
     <%- include('./partials/gameHeader.ejs') %>
 
     <div id="game">
-        <canvas id="ctx" width="1000" height="1000"></canvas>
+        <canvas id="ctx"></canvas>
     </div>
     <div id="chat">
         <div id="chat-content"></div>
@@ -27,9 +27,56 @@
     </div>
 
     <div id="notes" onsubmit="return false">
-        <label id="scaleLabel">SCALE NAME</label>
-        <label id="weaponTypeLabel">WEAPON TYPE</label>
-        <label id="durationLabel">DURATION</label><br><br>
+        <div id="weapon-buttons">
+            <div class="game-button">
+                <div id="scaleLabel" class="game-button-label">SCALE NAME</div>
+                <div id="scale-popup" class="game-button-popup">
+                    This is the current <b>musical scale</b>.<br><br>
+
+                    The scale dictates allowed notes, so the ones that are available on the piano keyboard below &DownArrow;
+                </div>
+            </div>
+            <!-- <label id="scaleLabel">SCALE NAME</label> -->
+
+            <div class="game-button">
+                <div id="weaponTypeLabel" class="game-button-label">WEAPON TYPE</div>
+                <div id="weapon-type-popup" class="game-button-popup">
+                    This is your chosen weapon type.
+                    <br><br>
+
+                    <b>Change to:</b>
+                    <ul>
+                        <li data-code="normal">single note</li>
+                        <li data-code="random">random note</li>
+                        <li data-code="chord">triad chord</li>
+                        <li data-code="arp-up">ascending arpeggio</li>
+                        <li data-code="arp-down">descending arpeggio</li>
+                        <li data-code="arp-alt">alternating arpeggio</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- <label id="weaponTypeLabel">WEAPON TYPE</label> -->
+            <div class="game-button">
+                <div id="durationLabel" class="game-button-label">DURATION</div>
+                <div id="duration-popup" class="game-button-popup">
+                    This is your chosen note duration.
+                    <br><br>
+                    <b>Change to:</b>
+                    <ul>
+                        <li data-code="1n">whole note</li>
+                        <li data-code="2n">half note</li>
+                        <li data-code="4n">quarter note</li>
+                        <li data-code="8n">eighth note</li>
+                        <li data-code="1n.">dotted whole note</li>
+                        <li data-code="2n.">dotted half note</li>
+                        <li data-code="4n.">dotted quarter note</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!-- <label id="durationLabel">DURATION</label> -->
+        <br>
+
         <button class="note" data-note="C">C</button>
         <button class="note blk" data-note="C#">C#</button>
         <button class="note" data-note="D">D</button>

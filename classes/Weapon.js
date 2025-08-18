@@ -6,23 +6,70 @@ export class Weapon{
 
     constructor(sound, duration, type, wielder, durationType){
         this.sound = sound;
-        this.duration = duration;
-        this.durationType = durationType;
         this.wielder = wielder;
+        
+        this.setType(type);
+        this.setDuration(duration)
+    }
+
+    change(requestedChange){
+        //TODO this can be better
+
+        //if string contains any of digits below (1, 2, 4 or 8) it is duration
+        if(/[1248]/.test(requestedChange)){
+            const duration = requestedChange;
+            this.setDuration(duration);
+        }
+        else{
+            //else it is a weapon type:
+            const type = requestedChange;
+            this.setType(type);
+        }
+    }
+
+    setType(type){
         this.type = type;
         this.shootCount = 0;
 
+        if(!this.wielder.updatePack) return;
+        this.wielder.updatePack.push({
+            weaponType: this.type,
+            duration: this.duration,
+            type: "weapon",
+        })
+    }
+
+    setDuration(duration){
+        this.duration = duration;
+
+        // determine note duration type: normal, dotted or triplet?
+        if(this.duration.includes(".")) this.durationType = "dotted";
+        else this.durationType = "normal";
+
+        const durationInt = parseInt(duration.replace("n", "").replace(".", ""))
+        //update weapon damage depending on duration:
         switch(this.durationType){
             case "normal":
-                this.damage = 200/parseInt(this.duration.replace("n", ""));
+                this.damage = 200/durationInt;
+                this.wielder.shootTimeoutTime = 60000/120 * (4/durationInt);
                 break;
             case "dotted":
-                this.damage = (3/2)*200/parseInt(this.duration.replace("n", "").replace(".", ""));
+                this.damage = (3/2)*200/durationInt;
+                this.wielder.shootTimeoutTime = 60000/120 * (4/durationInt) * 3/2
                 break;
             default:
                 this.damage = 1;
                 break;
         }
+
+        this.shootCount = 0;
+
+        if(!this.wielder.updatePack) return;
+        this.wielder.updatePack.push({
+            weaponType: this.type,
+            duration: this.duration,
+            type: "weapon",
+        })
     }
 
     shoot(note){
