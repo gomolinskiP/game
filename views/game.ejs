@@ -26,21 +26,31 @@
         <label id="chat-label" for="chat-input">chat&UpArrow;</label>
     </div>
 
-    <div id="notes" onsubmit="return false">
+    <div id="bottom-left-ui" onsubmit="return false">
         <div id="weapon-buttons">
             <div class="game-button">
-                <div id="scaleLabel" class="game-button-label">SCALE NAME</div>
-                <div id="scale-popup" class="game-button-popup">
-                    This is the current <b>musical scale</b>.<br><br>
+                <div id="sound-label" class="game-button-label">SOUND</div>
+                <div id="sound-popup" class="game-button-popup" data-type="sound">
+                    This is your currently chosen sound.
+                    <br><br>
 
-                    The scale dictates allowed notes, so the ones that are available on the piano keyboard below &DownArrow;
+                    <b>Change to:</b>
+                    <ul>
+                        <li data-code="Synth">Synth</li>
+                        <li data-code="DuoSynth">DuoSynth</li>
+                        <li data-code="MonoSynth">MonoSynth</li>
+                        <li data-code="PolySynth">PolySynth</li>
+                        <li data-code="FMSynth">FMSynth</li>
+                        <li data-code="AMSynth">AMSynth</li>
+                        <li data-code="MetalSynth">MetalSynth</li>
+                        <li data-code="MembraneSynth">MembraneSynth</li>
+                    </ul>
                 </div>
             </div>
-            <!-- <label id="scaleLabel">SCALE NAME</label> -->
 
             <div class="game-button">
                 <div id="weaponTypeLabel" class="game-button-label">WEAPON TYPE</div>
-                <div id="weapon-type-popup" class="game-button-popup">
+                <div id="weapon-type-popup" class="game-button-popup" data-type="type">
                     This is your chosen weapon type.
                     <br><br>
 
@@ -55,10 +65,10 @@
                     </ul>
                 </div>
             </div>
-            <!-- <label id="weaponTypeLabel">WEAPON TYPE</label> -->
+
             <div class="game-button">
                 <div id="durationLabel" class="game-button-label">DURATION</div>
-                <div id="duration-popup" class="game-button-popup">
+                <div id="duration-popup" class="game-button-popup" data-type="duration">
                     This is your chosen note duration.
                     <br><br>
                     <b>Change to:</b>
@@ -74,7 +84,6 @@
                 </div>
             </div>
         </div>
-        <!-- <label id="durationLabel">DURATION</label> -->
         <br>
 
         <button class="note" data-note="C">C</button>
@@ -89,6 +98,27 @@
         <button class="note" data-note="A">A</button>
         <button class="note blk" data-note="A#">A#</button>
         <button class="note" data-note="B">B</button>
+
+        <br><br>
+        <div id="sounds-info-buttons">
+            <div class="game-button">
+                <div id="scaleLabel" class="game-button-label">SCALE NAME</div>
+                <div id="scale-popup" class="game-button-popup">
+                    This is the current <b>musical scale</b>.<br><br>
+
+                    The scale dictates allowed notes, so the ones that are available on the piano keyboard below &DownArrow;
+                </div>
+            </div>
+
+            <div class="game-button">
+                <div id="bpm-label" class="game-button-label">BPM</div>
+                <div id="bpm-popup" class="game-button-popup">
+                    This is the current <b>BPM</b>.<br><br>
+
+                    BPM stands for Beats Per Minute.
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>

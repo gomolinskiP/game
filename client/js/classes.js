@@ -1,8 +1,14 @@
-import { limiter, selfId } from './main.js'
+import { limiter } from './main.js'
 import { Img, gameWidth, gameHeight, drawBuffer, tileImages } from './graphics.js';
+import { Socket } from './clientSocket.js'
+import { Sounds } from './sounds.js';
+
+let selfId = null;
 
 export class Entity{
     constructor(initPack){
+        if(!selfId) selfId = Socket.selfId;
+
         this.x = initPack.x;
         this.y = initPack.y;
         this.id = initPack.id;
@@ -162,6 +168,14 @@ export class Bullet extends Entity{
         super(initPack);
         this.note = initPack.note;
         this.duration = initPack.duration;
+        this.imgWidth = 32;
+        this.imgHeight = 32;
+        this.shrinkFactor = 1000/Sounds.toneDurationToMs(this.duration);
+        this.shrinkInterval = setInterval(()=>{
+            this.imgWidth -= this.shrinkFactor;
+            this.imgHeight -= this.shrinkFactor;
+        }, 100)
+        
 
         // let synthClass = Tone[initPack.sound];
         this.synth = new Tone[initPack.sound];
@@ -174,9 +188,7 @@ export class Bullet extends Entity{
 
         Bullet.list[this.id] = this;
 
-        this.interval = setInterval(()=>{
-            // this.synth.triggerAttackRelease("C5", "64n");
-        }, 200);
+        
 
         if(Tone.context.state == "running"){
             this.synth.triggerAttack(`${this.note}5`);
@@ -205,11 +217,11 @@ export class Bullet extends Entity{
         drawBuffer.push({
             type: 'image',
             img: Img.note[this.duration],
-            x: x-16,
-            y: y-16,
+            x: x - this.imgWidth/2,
+            y: y - this.imgHeight/2,
             sortY: y+16,
-            w: 32,
-            h: 32,
+            w: this.imgWidth,
+            h: this.imgHeight,
         })
 
         drawBuffer.push({

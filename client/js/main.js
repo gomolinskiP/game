@@ -1,4 +1,3 @@
-var socket = io();
 let isInChat = false;
 export function setIsInChat(state){
     isInChat = state;
@@ -15,8 +14,11 @@ import { gameLoop, canvas } from './graphics.js'
 import { Player, Bullet, Pickup, Tile } from './classes.js'
 import { addKeyboardListeners } from './keyboard.js';
 import { chatInit } from './textChat.js';
-import { setScale } from './gameButtons.js'
+import { GameUI } from './gameButtons.js'
+import { Sounds } from './sounds.js';
+import { Socket } from './clientSocket.js';
 
+const socket = Socket.clientSocket;
 
 export const limiter = new Tone.Compressor(
     -0.1,
@@ -28,19 +30,22 @@ const delay = new Tone.FeedbackDelay("1n", 0.2);
 limiter.toDestination();
 
 
-export let selfId = null;
-
-let scale = {};
 
 
 socket.on('init', function(data){
     console.log("InitPack:", data)
 
-    selfId = data.selfId;
-    setActiveNote(data.selectedNote)
-    setScale(scale, data.scale.name, data.scale.allowedNotes)
+    Socket.setSelfID(data.selfId);
 
-    //new:
+    Sounds.setScale(data.scale.name, data.scale.allowedNotes)
+    Sounds.setBPM(data.bpm);
+
+    GameUI.setActiveNote(data.selectedNote);
+    GameUI.setSoundLabel(data.weapon.sound);
+    GameUI.setDurationLabel(data.weapon.duration);
+    GameUI.setWeaponType(data.weapon.type);
+
+    //create game objects from initPack:
     for(let i = 0; i<data.entities.length; i++){
         let entity = data.entities[i];
 
@@ -62,6 +67,7 @@ socket.on('init', function(data){
         }
     }
 
+    //start the game loop:
     requestAnimationFrame(gameLoop);
     addKeyboardListeners(socket);
     chatInit(socket, canvas, isInChat);
@@ -92,8 +98,8 @@ socket.on('update', function(data){
                 }
                 else{
                     new Bullet(pack);
-                    if(pack.parentId == selfId){
-                        highlightPlayedNote(pack.note, pack.duration)
+                    if(pack.parentId == Socket.selfId){
+                        GameUI.highlightPlayedNote(pack.note, pack.duration)
                     }
                 }
                 break;
@@ -103,15 +109,17 @@ socket.on('update', function(data){
                     new Pickup(pack)
                 }
                 break;
-            case "weapon":
-                setWeaponType(pack.weaponType);
-                setDurationLabel(pack.duration);
-                break;
             case "tile":
                 let tile = Tile.list[id];
                 if(!tile){
                     new Tile(pack);
                 }
+                break;
+            case "weapon":
+                console.log(pack)
+                if(pack.weaponType) GameUI.setWeaponType(pack.weaponType);
+                if(pack.duration) GameUI.setDurationLabel(pack.duration);
+                if(pack.sound) GameUI.setSoundLabel(pack.sound);
                 break;
         }
     }
@@ -165,103 +173,16 @@ socket.on('remove', function(data){
 
 
 canvas.onblur = ()=>{
-    // alert("xd")
+    // alert("x")
 }
-
-
-
-
-// const playBTN = document.getElementById("sound-btn");
-
-// playBTN.addEventListener("click", ()=>{
-//     if(Tone.context.state != "running")
-//         Tone.start();
-
-//     console.log(Bullet.list)
-//     // synth.triggerAttackRelease("C3", "8n");
-// })
 
 socket.on('redirect', (destination)=>{
     window.location.href = destination;
 })
 
-
-
-const noteBTNs = document.querySelectorAll(".note")
-function setActiveNote(note){
-    noteBTNs.forEach((btn)=>{
-            btn.classList.remove("active")
-    })
-    document.querySelector(`[data-note="${note}"]`).classList.add('active');
-    activeNote = note;
-}
-
-function setWeaponType(type){
-    let weaponTypeLabel = document.querySelector("#weaponTypeLabel")
-
-    weaponTypeLabel.innerText = type;
-}
-
-function setDurationLabel(duration){
-    let durationLabel = document.querySelector("#durationLabel");
-
-    durationLabel.innerText = duration;
-}
-
-function highlightPlayedNote(note, duration){
-    let playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
-    let durationMs = toneDurationToMs(duration, BPM)
-    playedNoteBTN.classList.add('played');
-    setTimeout(()=>{
-        playedNoteBTN.classList.remove('played')
-    }, durationMs-100);
-}
-
-function toneDurationToMs(duration, bpm){
-    //Tone.js duration to miliseconds
-    let timeMs = 60000/bpm * (4/parseInt(duration.replace("n", "")));
-    return timeMs;
-}
-
-function previousNote(){
-    i = notes.findIndex((n)=>{
-        return n==activeNote;
-    })
-    let iNew = (i>0) ? (i-1) : notes.length-1
-    setActiveNote(notes[iNew])
-    socket.emit('noteChange', activeNote);
-}
-
-function nextNote(){
-    i = notes.findIndex((n)=>{
-        return n==activeNote;
-    })
-    let iNew = (i<notes.length-1) ? (i+1) : 0
-    setActiveNote(notes[iNew])
-    socket.emit('noteChange', activeNote);
-}
-
-let activeNote = null
 let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-noteBTNs.forEach((item)=>{
-    item.addEventListener("click", ()=>{
-        canvas.focus();
-        setActiveNote(item.dataset.note)
-
-        socket.emit('noteChange', item.dataset.note)
-    })
-})
-
-export function weaponChange(change){
-    socket.emit('weaponChange', change);
-}
-
-
-
-
 let timeSig = 4;
-let BPM = 120;
 Tone.Transport.bpm.value = 120;
 Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
@@ -270,35 +191,17 @@ const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-26);
 metronome.chain(metrVol, Tone.Master);
 
-// function playClick(time){
-//     console.log(Tone.Transport.position)
-
-//     if(beatCounter%timeSig === 0){
-//         metronome.triggerAttackRelease("C5", "16n", time)
-//     } else{
-//         metronome.triggerAttackRelease("C6", "16n", time)
-//     }
-//     beatCounter++;
-// }
-
-// Tone.Transport.scheduleRepeat(playClick, "4n");
-
 socket.on("tick", (data)=>{
     if(Tone.context.state !== "running") return;
+    if(!Sounds.scaleBase) return;
     let clientNow = Date.now()
 
     if(Tone.Transport.state != 'started') Tone.Transport.start();
     else{
-        let pitch = data.tick%8==0 ? `${scale.base}6` : `${scale.base}5`; 
+        let pitch = data.tick%8==0 ? `${Sounds.scaleBase}6` : `${Sounds.scaleBase}5`; 
         Tone.Transport.scheduleOnce((time)=>{
             metronome.triggerAttackRelease(pitch, "8n", time)
         }, Tone.Transport.toSeconds())
     }
     // console.log(data.now, data.tick, data.now - clientNow)
 })
-
-// socket.on("new weapon", (data)=>{
-//     setWeaponType(data.type);
-//     setDurationLabel(data.duration)
-//     console.log("new weapon", data)
-// })

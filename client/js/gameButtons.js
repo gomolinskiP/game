@@ -1,62 +1,18 @@
-import { weaponChange } from "./main.js";
+// import { weaponChange, noteChange } from "./main.js";
+import { Socket } from "./clientSocket.js";
+import { Sounds } from "./sounds.js";
 
 const noteBTNs = document.querySelectorAll(".note");
 
+const canvas = document.getElementById("ctx");
+
 const scaleLabel = document.querySelector("#scaleLabel")
-const scalePopup = document.getElementById("scale-popup");
+const bpmLabel = document.querySelector("#bpm-label")
+const weaponTypeLabel = document.getElementById('weaponTypeLabel');
+const durationLabel = document.querySelector("#durationLabel");
+const soundLabel = document.querySelector("#sound-label");
 
-const weaponTypeLabel = document.querySelector("#weaponTypeLabel")
-const weaponTypePopup = document.getElementById("weapon-type-popup");
-
-const durationLabel = document.querySelector("#durationLabel")
-const durationPopup = document.getElementById("duration-popup");
-
-export function setScale(scale, name, allowedNotes){
-    scale.base = name[0];
-    scaleLabel.innerText = name;
-
-    noteBTNs.forEach((btn)=>{
-            btn.disabled = true;
-    })
-
-    for(let note of allowedNotes){
-        document.querySelector(`[data-note="${note}"]`).disabled = false;
-    }
-}
-
-// scaleLabel.onclick = ()=>{
-//     if(window.getComputedStyle(scalePopup).getPropertyValue('display') == 'none'){
-//         weaponTypePopup.style.display = 'none';
-//         durationPopup.style.display = 'none';
-//         scalePopup.style.display = 'block';
-//     }
-//     else{
-//         scalePopup.style.display = 'none';
-//     }
-// }
-
-// weaponTypeLabel.onclick = ()=>{
-//     if(window.getComputedStyle(weaponTypePopup).getPropertyValue('display') == 'none'){
-//         scalePopup.style.display = 'none';
-//         durationPopup.style.display = 'none';
-//         weaponTypePopup.style.display = 'block';
-//     }
-//     else{
-//         weaponTypePopup.style.display = 'none';
-//     }
-// }
-
-// durationLabel.onclick = ()=>{
-//     if(window.getComputedStyle(durationPopup).getPropertyValue('display') == 'none'){
-//         scalePopup.style.display = 'none';
-//         weaponTypePopup.style.display = 'none';
-//         durationPopup.style.display = 'block';
-//     }
-//     else{
-//         durationPopup.style.display = 'none';
-//     }
-// }
-
+//hiding all UI popups:
 function hideAllPopups(gameButtons){
     gameButtons.forEach((button)=>{
         if(button.matches(':hover')) return;
@@ -69,6 +25,7 @@ function hideAllPopups(gameButtons){
     })
 }
 
+//showing a UI popup being a child of a clicked element:
 function showPopup(button){
     button.classList.add('active');
     for(const child of button.children){
@@ -78,8 +35,8 @@ function showPopup(button){
     }
 }
 
-let buttonsHideTimeout;
-
+//manage showing and hiding popups on mouse interaction:
+let popupHideTimeout;
 let gameButtons = document.querySelectorAll(".game-button");
 gameButtons.forEach((button)=>{
     button.onmouseover = ()=>{
@@ -88,19 +45,87 @@ gameButtons.forEach((button)=>{
     }
 
     button.onmouseout = ()=>{
-        if(buttonsHideTimeout) clearTimeout(buttonsHideTimeout);
-        buttonsHideTimeout = setTimeout(()=>{
+        if(popupHideTimeout) clearTimeout(popupHideTimeout);
+        popupHideTimeout = setTimeout(()=>{
             hideAllPopups(gameButtons);
         }, 100);
-        // hideAllPopups(gameButtons);
     }
 })
 
-let weaponChangeButtons = document.querySelectorAll(".game-button-popup li");
-weaponChangeButtons.forEach((button)=>{
-    button.onclick = ()=>{
-        console.log(button.dataset.code)
-        weaponChange(button.dataset.code)
-    }
+//manage emitting change weapon requests on in-popup button clicks:
+let weaponChangePopups = document.querySelectorAll(".game-button-popup");
+weaponChangePopups.forEach((popup)=>{
+    const type = popup.dataset.type;
+    let popupButtons = popup.querySelectorAll('li');
+    popupButtons.forEach((button)=>{
+        const code = button.dataset.code;
+        button.onclick = ()=>{
+            Socket.weaponChange(type, code);
+        }
+    })
 })
 
+//manage emitting note change requests:
+noteBTNs.forEach((item)=>{
+    item.addEventListener("click", ()=>{
+        canvas.focus();
+        GameUI.setActiveNote(item.dataset.note)
+
+        Socket.noteChange(item.dataset.note);
+    })
+})
+
+//game UI exports class:
+export class GameUI{
+    static setScaleLabel(scaleName){
+        scaleLabel.innerText = scaleName;
+    }
+
+    static setBPMLabel(bpm){
+        bpmLabel.innerText = bpm;
+    }
+
+    static disableDisallowedNoteKeys(allowedNotes){
+        //disable not allowed note keys on piano keyboard
+        noteBTNs.forEach((btn)=>{
+                btn.disabled = true;
+        })
+
+        //allow only matching notes:
+        for(let note of allowedNotes){
+            document.querySelector(`[data-note="${note}"]`).disabled = false;
+        }
+    }
+
+    static setActiveNote(note){
+        //remove active class for all:
+        noteBTNs.forEach((btn)=>{
+            btn.classList.remove("active")
+        })
+
+        //add active class for matching keyboard key button:
+        document.querySelector(`[data-note="${note}"]`).classList.add('active');
+    }
+
+    static highlightPlayedNote(note, duration){
+        const playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
+        const durationMs = Sounds.toneDurationToMs(duration);
+
+        playedNoteBTN.classList.add('played');
+        setTimeout(()=>{
+            playedNoteBTN.classList.remove('played')
+        }, durationMs-100);
+    }
+
+    static setWeaponType(type){
+        weaponTypeLabel.innerText = type;
+    }
+
+    static setDurationLabel(duration){
+        durationLabel.innerText = duration;
+    }
+    
+    static setSoundLabel(sound){
+        soundLabel.innerText = sound;
+    }
+}

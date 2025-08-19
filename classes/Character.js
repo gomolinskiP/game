@@ -34,8 +34,8 @@ export class Character extends Entity{
 
         this.selectedNote = scale.base;
 
-        if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this, "normal")
-        this.giveWeapon(weapon.sound, weapon.duration, "normal", "normal");
+        if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this)
+        this.giveWeapon(weapon.sound, weapon.duration, "normal");
 
         Character.list[this.id] = this;
 
@@ -99,10 +99,10 @@ export class Character extends Entity{
         }
     }
 
-    giveWeapon(sound, duration, type, durationType){
-        this.weapon = new Weapon(sound, duration, type, this, durationType)
+    giveWeapon(sound, duration, type){
+        this.weapon = new Weapon(sound, duration, type, this)
         let durationInt = parseInt(duration.replace("n", "").replace(".", ""))
-        switch(durationType){
+        switch(this.weapon.durationType){
             case "normal":
                 this.shootTimeoutTime = 60000/120 * (4/durationInt)
                 break;
@@ -126,6 +126,13 @@ export class Character extends Entity{
             this.die(byWho);
         }
         this.needsUpdate = true;
+    }
+
+    heal(hpAmount){
+        this.hp += hpAmount;
+        if(this.hp > Character.fullHP){
+            this.hp = Character.fullHP;
+        }
     }
 
     die(byWho){

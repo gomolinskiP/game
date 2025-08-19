@@ -1,6 +1,7 @@
 import { Player, Bullet, Pickup, Tile } from './classes.js'
-import { selfId } from './main.js'
-
+// import { selfId } from './main.js'
+import { Socket } from './clientSocket.js';
+let selfId = null;
 
 export let gameWidth = window.innerWidth;
 export let gameHeight = window.innerHeight;
@@ -234,71 +235,10 @@ function getFloorLayer(mapData){
 
 function drawMap(){
     if(Player.list[selfId]){
-        //new: TODO
         for(let i in Tile.list){
             const tile = Tile.list[i];
             tile.draw();
         }
-
-        //legacy:
-        // let bx = gameWidth/2 - Player.list[selfId].x;
-        // let by = gameHeight/2 - Player.list[selfId].y;
-
-        // let layerId = -4; //because 4 layers are lower than player
-        // if(mapData && tileImages){
-        //     for(const layer of mapData.layers){
-        //         if(layer.type !== "tilelayer" || layer.visible == false) continue;
-
-        //         layerId += 1;
-
-        //         for(const chunk of layer.chunks){
-        //             const width = chunk.width;
-        //             const height = chunk.height;
-        //             const tileW = 64;
-        //             const tileH = 32;
-        //             const offsetX = layer.offsetx || 0;
-        //             const offsetY = layer.offsety || 0;
-        //             for (let y = 0; y < height; y++) {
-        //                 for (let x = 0; x < width; x++) {
-        //                     const index = y * width + x;
-        //                     const gid = chunk.data[index];
-        //                     if (!gid || !tileImages[gid]) continue;
-
-        //                     const img = tileImages[gid];
-
-        //                     // position:
-        //                     const tileX = chunk.x + x;
-        //                     const tileY = chunk.y + y;
-
-
-        //                     //this code above ^^^ should be done once & not for each frame
-        //                     const screenX = (tileX - tileY) * tileW / 2 + gameWidth/2 + offsetX - Player.list[selfId].x; //weird shift TO FIX
-        //                     const screenY = (tileX + tileY) * tileH / 2 + gameHeight/2 + offsetY - img.height + tileH  - Player.list[selfId].y;
-
-        //                     let shiftSortY;
-
-        //                     if(layerId>0){
-        //                         shiftSortY = 48 + 33*(layerId-1);
-        //                     }
-        //                     else{
-        //                         shiftSortY = 64*layerId;
-        //                     }
-                          
-        //                     drawBuffer.push({
-        //                         type: 'image',
-        //                         img: img,
-        //                         x: screenX,
-        //                         y: screenY,
-        //                         sortY: screenY+shiftSortY,
-        //                         layerId: layerId,
-        //                         w: 64,
-        //                         h: 64
-        //                     })
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
     }
     
 }
@@ -320,6 +260,10 @@ function drawHUD(){
 
 //game Loop:
 export function gameLoop(){
+    if(!selfId){
+        selfId = Socket.selfId;
+    }
+
     //draw background & map elements:
     ctx.fillStyle = "#363636ff";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
@@ -327,6 +271,7 @@ export function gameLoop(){
     
     //draw game objects:
     for(var i in Pickup.list){
+        if(!Pickup.list[i]) continue;
         Pickup.list[i].draw();
     }
     for(var i in Player.list){

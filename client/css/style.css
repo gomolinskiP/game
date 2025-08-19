@@ -325,7 +325,7 @@ a:hover{
     margin: 4px 0;
 }
 
-#weapon-buttons{
+#weapon-buttons, #sounds-info-buttons{
     margin: -4px;
     padding: 0;
 
@@ -368,7 +368,7 @@ a:hover{
 .game-button-popup{
     display: none;
     position: absolute;
-    bottom: 100px;
+    bottom: 130px;
     left: 0;
     width: 100%;
 
@@ -408,7 +408,7 @@ a:hover{
 
 
 
-#notes{
+#bottom-left-ui{
     position: absolute;
     bottom: 10px;
     left: 10px;

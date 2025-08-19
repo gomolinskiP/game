@@ -66,7 +66,7 @@ export class Pickup extends Entity{
         let playerId = this.collidingPlayerId(Character.list)
 
         if(playerId != null){
-            playerList[playerId].giveWeapon(this.sound, this.duration, this.type, this.durationType)
+            playerList[playerId].giveWeapon(this.sound, this.duration, this.type)
             playerList[playerId].addScore(1);
             this.destroy();
         }

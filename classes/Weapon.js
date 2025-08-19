@@ -4,7 +4,7 @@ import { scale } from "../socket.js";
 export class Weapon{
     static chordNotes = ["onSpawn", "+4", "+7"]
 
-    constructor(sound, duration, type, wielder, durationType){
+    constructor(sound, duration, type, wielder){
         this.sound = sound;
         this.wielder = wielder;
         
@@ -13,18 +13,33 @@ export class Weapon{
     }
 
     change(requestedChange){
-        //TODO this can be better
+        const type = requestedChange.type;
+        const code = requestedChange.code;
 
-        //if string contains any of digits below (1, 2, 4 or 8) it is duration
-        if(/[1248]/.test(requestedChange)){
-            const duration = requestedChange;
-            this.setDuration(duration);
+        switch(type){
+            case 'sound':
+                this.setSound(code);
+                break;
+            case 'type':
+                this.setType(code);
+                break;
+            case 'duration':
+                this.setDuration(code);
+                break;
+            default:
+                console.log(`unknown change type ${type} during requested weapon change`);
+                break;
         }
-        else{
-            //else it is a weapon type:
-            const type = requestedChange;
-            this.setType(type);
-        }
+    }
+
+    setSound(sound){
+        this.sound = sound;
+
+        if(!this.wielder.updatePack) return;
+        this.wielder.updatePack.push({
+            sound: this.sound,
+            type: "weapon",
+        })
     }
 
     setType(type){
@@ -34,7 +49,6 @@ export class Weapon{
         if(!this.wielder.updatePack) return;
         this.wielder.updatePack.push({
             weaponType: this.type,
-            duration: this.duration,
             type: "weapon",
         })
     }
@@ -66,7 +80,6 @@ export class Weapon{
 
         if(!this.wielder.updatePack) return;
         this.wielder.updatePack.push({
-            weaponType: this.type,
             duration: this.duration,
             type: "weapon",
         })
