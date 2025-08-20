@@ -4,8 +4,8 @@ const require = createRequire(import.meta.url);
 import {transports} from 'engine.io'
 
 
-import expressSetUp from './express.js'
-import webSocketSetUp from './socket.js'
+import expressSetUp from './server/express.js'
+import webSocketSetUp from './server/socket.js'
 
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod

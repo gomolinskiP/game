@@ -69,9 +69,6 @@ Img.note['8n.'].src = "../img/eightnote.png"
 Img.pickup = new Image();
 Img.pickup.src = "../img/tileset/blocks_101.png"
 
-Img.map = new Image();
-Img.map.src = "../img/map2.png"
-
 let mapData;
 let collisionLayer;
 let floorLayer;
@@ -80,7 +77,7 @@ let tiles = []
 export let tileImages;
 
 //get map data:
-fetch("../img/map3.json")
+fetch("../map3.json")
     .then(res=>res.json())
     .then(async data=>{
         mapData = data;

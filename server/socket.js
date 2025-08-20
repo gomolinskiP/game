@@ -26,7 +26,7 @@ let mapYmax = 0;
 let mapData = await loadMapData();
 
 async function loadMapData() {
-    const filePath = resolve(__dirname, './client/img/map3.json');
+    const filePath = resolve(__dirname, '../client/map3.json');
     const jsonData = JSON.parse(await readFile(filePath, 'utf-8'));
 
     return jsonData;
