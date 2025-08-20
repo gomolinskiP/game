@@ -419,6 +419,20 @@ a:hover{
     border: 1px solid black;
 }
 
+#audio-on-label{
+    font-size: smaller;
+}
+
+#bpm-label.green{
+    background-color: #00daaa;
+    color: black;
+}
+
+#bpm-label.red{
+    background-color: #ffd900;
+    color: black;
+}
+
 .note{
     font-size: small;
     height: 60px;

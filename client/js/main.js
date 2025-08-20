@@ -192,15 +192,26 @@ let metrVol = new Tone.Volume(-26);
 metronome.chain(metrVol, Tone.Master);
 
 socket.on("tick", (data)=>{
-    if(Tone.context.state !== "running") return;
     if(!Sounds.scaleBase) return;
     let clientNow = Date.now()
 
     if(Tone.Transport.state != 'started') Tone.Transport.start();
     else{
-        let pitch = data.tick%8==0 ? `${Sounds.scaleBase}6` : `${Sounds.scaleBase}5`; 
+        let pitch;
+        let color;
+        if(data.tick%8 == 0){
+            pitch = `${Sounds.scaleBase}6`
+            color = 'green';
+        }
+        else{
+            pitch = `${Sounds.scaleBase}5`
+            color = 'red';
+        }
+        
+        GameUI.highlightMetronome(color);
+        if(Tone.context.state !== "running" || !Sounds.audioOn) return;
         Tone.Transport.scheduleOnce((time)=>{
-            metronome.triggerAttackRelease(pitch, "8n", time)
+            metronome.triggerAttackRelease(pitch, "32n", time)
         }, Tone.Transport.toSeconds())
     }
     // console.log(data.now, data.tick, data.now - clientNow)

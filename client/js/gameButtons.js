@@ -11,6 +11,18 @@ const bpmLabel = document.querySelector("#bpm-label")
 const weaponTypeLabel = document.getElementById('weaponTypeLabel');
 const durationLabel = document.querySelector("#durationLabel");
 const soundLabel = document.querySelector("#sound-label");
+const audioOnLabel = document.querySelector("#audio-on-label");
+
+audioOnLabel.onclick = ()=>{
+    if(Sounds.audioOn == false){
+        Sounds.audioOn = true;
+        audioOnLabel.innerText = '🔊'
+    }
+    else{
+        Sounds.audioOn = false;
+        audioOnLabel.innerText = '🔇'
+    }
+}
 
 //hiding all UI popups:
 function hideAllPopups(gameButtons){
@@ -127,5 +139,14 @@ export class GameUI{
     
     static setSoundLabel(sound){
         soundLabel.innerText = sound;
+    }
+
+    static highlightMetronome(color){
+        if(bpmLabel.matches(':hover')) return;
+        bpmLabel.classList.add(color)
+
+        setTimeout(()=>{
+            bpmLabel.classList.remove(color)
+        }, 200)
     }
 }

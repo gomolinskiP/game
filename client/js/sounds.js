@@ -5,6 +5,8 @@ export class Sounds{
     static scaleName;
     static scaleBase;
 
+    static audioOn = false;
+
     static setScale(scaleName, allowedNotes){
         Sounds.scaleName = scaleName;
         Sounds.scaleBase = scaleName[0];

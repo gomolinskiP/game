@@ -228,6 +228,7 @@ export let bulletQTree = new Quadtree(mapBoundRect);
 export let pickupQTree = new Quadtree(mapBoundRect);
 
 export let scale = new Scale('F#', 'major');
+export let BPM = 120;
 
 export default async function webSocketSetUp(serv, ses, Progress){
     //socket.io:
@@ -356,7 +357,7 @@ export default async function webSocketSetUp(serv, ses, Progress){
         })
 
         socket.on('weaponChange', (change)=>{
-            console.log(change)
+            // console.log(change)
             player.weapon.change(change)
         })
     })
@@ -417,8 +418,8 @@ export default async function webSocketSetUp(serv, ses, Progress){
         Player.updateAll();
     }, 1000/25);
 
-    const BPM = 120;
-    const beatInterval = 60000/BPM;
+    
+    let beatInterval = 60000/BPM;
     let tick = 0;
 
     //music time intervals:

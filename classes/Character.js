@@ -86,6 +86,11 @@ export class Character extends Entity{
 
         //shooting:
         if(this.pressingSpace){
+            //shooting not allowed on spawn:
+            if(this.isWithinDistance({
+                x: 0,
+                y: 0
+            }, 1600)) return;
             this.needsUpdate = true;
             if(!this.shootTimeout){
                 

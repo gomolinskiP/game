@@ -12,13 +12,13 @@ import webSocketSetUp from './socket.js'
 //mongoDB:
 const mongoose = require('mongoose');
 
-// Połączenie z bazą
+//connecting to MongoDB:
 mongoose.connect('mongodb://localhost:27017/mgrGame')
 .then(() => console.log("✅ MongoDB connected"))
 .catch(err => console.error("❌ MongoDB connection error:", err));
 
 
-// Definicje modeli
+//schema definitions:
 const AccountSchema = new mongoose.Schema({
     username: String,
     password: String

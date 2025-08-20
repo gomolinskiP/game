@@ -51,8 +51,6 @@ export class Scale{
             newIndex++;
             if(newIndex > 11) newIndex = newIndex-12;
         }
-
-        console.log(Scale.notes[newIndex], transposition, noteIndex)
         return Scale.notes[newIndex];
     }
 }

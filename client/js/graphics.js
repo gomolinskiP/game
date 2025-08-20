@@ -1,6 +1,7 @@
 import { Player, Bullet, Pickup, Tile } from './classes.js'
 // import { selfId } from './main.js'
 import { Socket } from './clientSocket.js';
+import { Sounds } from './sounds.js';
 let selfId = null;
 
 export let gameWidth = window.innerWidth;
@@ -89,13 +90,13 @@ fetch("../img/map3.json")
         // console.log(loadUsedTiles(mapData));
 
         tileImages = await loadUsedTiles(mapData)
-        collisionLayer = getCollisionLayer(mapData)
+        // collisionLayer = getCollisionLayer(mapData)
 
-        floorLayer = getFloorLayer(mapData);
-        loadLayerTiles(floorLayer);
+        // floorLayer = getFloorLayer(mapData);
+        // loadLayerTiles(floorLayer);
         
 
-        console.log(tiles);
+        // console.log(tiles);
     });
 
 function getUsedGIDs(mapData){
@@ -113,12 +114,12 @@ function getUsedGIDs(mapData){
     return gids;
 }
 
-function getCollisionLayer(mapData){
-    for(const layer of mapData.layers){
-        if(layer.name == 'collision') return layer;
-    }
-    return null;
-}
+// function getCollisionLayer(mapData){
+//     for(const layer of mapData.layers){
+//         if(layer.name == 'collision') return layer;
+//     }
+//     return null;
+// }
 
 async function loadUsedTiles(mapData){
     const usedGIDs = getUsedGIDs(mapData);
@@ -141,97 +142,97 @@ async function loadUsedTiles(mapData){
     return tileImages;
 }
 
-function isoToScreen(x, y){
-    return{
-        x: (x-y),
-        y: (x+y)/2
-    }
-}
+// function isoToScreen(x, y){
+//     return{
+//         x: (x-y),
+//         y: (x+y)/2
+//     }
+// }
 
-function drawIsometricRect(tileX, tileY, width, height){
-    ctx.save()
+// function drawIsometricRect(tileX, tileY, width, height){
+//     ctx.save()
 
-    const tileW = 64;
-    const tileH = 32;
+//     const tileW = 64;
+//     const tileH = 32;
 
-    let tilesNWtoSE = width/32;
-    let tilesNEtoSW = height/32;
+//     let tilesNWtoSE = width/32;
+//     let tilesNEtoSW = height/32;
 
-    let worldCoord = isoToScreen(tileX, tileY)
+//     let worldCoord = isoToScreen(tileX, tileY)
 
-    let x = worldCoord.x + gameWidth/2 + tileW/2  - Player.list[selfId].x
+//     let x = worldCoord.x + gameWidth/2 + tileW/2  - Player.list[selfId].x
     
-    let y = worldCoord.y + gameHeight/2 + 0 - Player.list[selfId].y
+//     let y = worldCoord.y + gameHeight/2 + 0 - Player.list[selfId].y
 
-    ctx.strokeStyle = "red";
+//     ctx.strokeStyle = "red";
 
-    // console.log(x, y)
+//     // console.log(x, y)
 
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);                     // top
+//     ctx.beginPath();
+//     ctx.moveTo(x, y);                     // top
 
-    ctx.lineTo(x + tilesNWtoSE*tileW/2, y + tilesNWtoSE*tileH/2);     // right
+//     ctx.lineTo(x + tilesNWtoSE*tileW/2, y + tilesNWtoSE*tileH/2);     // right
 
-    ctx.lineTo(x + (tilesNWtoSE - tilesNEtoSW)*tileW/2, y + (tilesNWtoSE + tilesNEtoSW)*tileH/2);            // bottom
+//     ctx.lineTo(x + (tilesNWtoSE - tilesNEtoSW)*tileW/2, y + (tilesNWtoSE + tilesNEtoSW)*tileH/2);            // bottom
 
-    ctx.lineTo(x - tilesNEtoSW*tileW/2, y + tilesNEtoSW*tileH/2);     // left
+//     ctx.lineTo(x - tilesNEtoSW*tileW/2, y + tilesNEtoSW*tileH/2);     // left
     
-    ctx.closePath();
-    ctx.stroke();
+//     ctx.closePath();
+//     ctx.stroke();
 
-    ctx.restore();
-}
+//     ctx.restore();
+// }
 
-function screenToIso(x, y){
-    return{
-        x: (2*y + x)/2,
-        y: (2*y - x)/2
-    }
-}
+// function screenToIso(x, y){
+//     return{
+//         x: (2*y + x)/2,
+//         y: (2*y - x)/2
+//     }
+// }
 
-function loadLayerTiles(layer){
-    for(const chunk of layer.chunks){
-        const width = chunk.width;
-        const height = chunk.height;
-        const tileW = 64;
-        const tileH = 32;
-        const offsetX = layer.offsetx || 0;
-        const offsetY = layer.offsety || 0;
+// function loadLayerTiles(layer){
+//     for(const chunk of layer.chunks){
+//         const width = chunk.width;
+//         const height = chunk.height;
+//         const tileW = 64;
+//         const tileH = 32;
+//         const offsetX = layer.offsetx || 0;
+//         const offsetY = layer.offsety || 0;
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const index = y * width + x;
-                const gid = chunk.data[index];
-                if(gid == 0) continue;
+//         for (let y = 0; y < height; y++) {
+//             for (let x = 0; x < width; x++) {
+//                 const index = y * width + x;
+//                 const gid = chunk.data[index];
+//                 if(gid == 0) continue;
 
-                // if (!gid || !tileImages[gid]) continue;
+//                 // if (!gid || !tileImages[gid]) continue;
 
-                // const img = tileImages[gid];
+//                 // const img = tileImages[gid];
 
-                // position:
-                const tileX = chunk.x + x;
-                const tileY = chunk.y + y;
+//                 // position:
+//                 const tileX = chunk.x + x;
+//                 const tileY = chunk.y + y;
 
-                //tile coordinates in orthogonal system (in game coordinates):
-                const ortX = (tileX - tileY) * tileW / 2 + offsetX ; //weird shift TO FIX
-                const ortY = (tileX + tileY) * tileH / 2 + offsetY - tileH;
+//                 //tile coordinates in orthogonal system (in game coordinates):
+//                 const ortX = (tileX - tileY) * tileW / 2 + offsetX ; //weird shift TO FIX
+//                 const ortY = (tileX + tileY) * tileH / 2 + offsetY - tileH;
                 
 
-                let scr = screenToIso(ortX, ortY)
+//                 let scr = screenToIso(ortX, ortY)
 
-                tiles.push({x: scr.x, y: scr.y, w: 32, h: 32})
-            }
-        }
-    }
-}
+//                 tiles.push({x: scr.x, y: scr.y, w: 32, h: 32})
+//             }
+//         }
+//     }
+// }
 
-function getFloorLayer(mapData){
-    for(const layer of mapData.layers){
-        if(layer.name == 'floor') return layer;
-    }
-    return null;
-}
+// function getFloorLayer(mapData){
+//     for(const layer of mapData.layers){
+//         if(layer.name == 'floor') return layer;
+//     }
+//     return null;
+// }
 
 function drawMap(){
     if(Player.list[selfId]){

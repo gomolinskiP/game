@@ -79,7 +79,7 @@ export class Player extends Entity{
             this.animFrame += 1;
 
             
-            if(!this.synthTimeout && Tone.context.state == "running"){
+            if(!this.synthTimeout && Tone.context.state == "running" && Sounds.audioOn){
                 this.synthTimeout = true;
                 this.footstepSyn.triggerAttackRelease("128n");
                 setTimeout(()=>{
@@ -170,10 +170,12 @@ export class Bullet extends Entity{
         this.duration = initPack.duration;
         this.imgWidth = 32;
         this.imgHeight = 32;
+        this.labelSize = 20;
         this.shrinkFactor = 1000/Sounds.toneDurationToMs(this.duration);
         this.shrinkInterval = setInterval(()=>{
             this.imgWidth -= this.shrinkFactor;
             this.imgHeight -= this.shrinkFactor;
+            this.labelSize -= this.shrinkFactor;
         }, 100)
         
 
@@ -188,9 +190,9 @@ export class Bullet extends Entity{
 
         Bullet.list[this.id] = this;
 
-        
 
-        if(Tone.context.state == "running"){
+
+        if(Tone.context.state == "running" && Sounds.audioOn){
             this.synth.triggerAttack(`${this.note}5`);
         }
     }
@@ -198,9 +200,9 @@ export class Bullet extends Entity{
     destroy(){
         clearInterval(this.interval);
         this.synth.triggerRelease();
-        if(Tone.context.state == "running"){
-            this.synth.triggerAttack(`${this.note}4`);
-        }
+        // if(Tone.context.state == "running" && Sounds.audioOn){
+        //     this.synth.triggerAttack(`${this.note}4`);
+        // }
         
         setTimeout(()=>{
             this.synth.triggerRelease();
@@ -230,7 +232,7 @@ export class Bullet extends Entity{
             x: x-8,
             y: y-16,
             sortY: y+16,
-            font: '20px Cascadia Mono',
+            font: `${this.labelSize}px Cascadia Mono`,
         })
     }
 }

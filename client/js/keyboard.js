@@ -1,6 +1,6 @@
 import { setIsInChat, getIsInChat } from "./main.js";
 
-export function addKeyboardListeners(isInChat, socket){
+export function addKeyboardListeners(socket){
     const chatInput = document.getElementById("chat-input")
     const chatSendBTN = document.getElementById("chat-send-btn");
     //key handling:
@@ -21,24 +21,28 @@ export function addKeyboardListeners(isInChat, socket){
 
         switch(event.key){
             case "d":
+            case "D":
                 socket.emit('keyPress', {
                     inputId: 'right',
                     state: true
                 });
                 break;
             case "s":
+            case "S":
                 socket.emit('keyPress', {
                 inputId: 'down',
                 state: true
                 });
                 break;
             case "a":
+            case "A":
                 socket.emit('keyPress', {
                 inputId: 'left',
                 state: true
                 });
                 break;
             case "w":
+            case "W":
                 socket.emit('keyPress', {
                 inputId: 'up',
                 state: true
@@ -69,24 +73,28 @@ export function addKeyboardListeners(isInChat, socket){
     document.onkeyup = function(event){
         switch(event.key){
             case "d":
+            case "D":
                 socket.emit('keyPress', {
                 inputId: 'right',
                 state: false
                 });
                 break;
             case "s":
+            case "S":
                 socket.emit('keyPress', {
                 inputId: 'down',
                 state: false
                 });
                 break;
             case "a":
+            case "A":
                 socket.emit('keyPress', {
                 inputId: 'left',
                 state: false
                 });
                 break;
             case "w":
+            case "W":
                 socket.emit('keyPress', {
                 inputId: 'up',
                 state: false
