@@ -17,6 +17,7 @@ import { Character } from './classes/Character.js';
 import { Tile } from './classes/Tile.js';
 
 import Quadtree from '@timohausmann/quadtree-js';
+import { nextTick } from 'process';
 
 let mapXmin = 0;
 let mapXmax = 0;
@@ -419,12 +420,47 @@ export default async function webSocketSetUp(serv, ses, Progress){
     }, 1000/25);
 
     
+    function newTick(){
+        const nowT = process.hrtime.bigint(); //ns
+        const deltaT = nowT - startT; //ns
+        const desiredT = tick2 * beatInterval; //ms
+
+        //compensate for clock drift:
+        const compensateT = Number(deltaT/BigInt(1e6)) - desiredT;
+        //next tick in compensated time
+        const nextTickT = Math.max(0, beatInterval - compensateT)
+
+        console.log(`tick: ${tick2} | t: ${(nowT - startT)/BigInt(1e6)} ms | desiredT: ${desiredT} | err: ${(nowT - startT)/BigInt(1e6) - BigInt(desiredT)}`)
+
+        //emit metronome signal:
+        for(var i in Socket.list){
+            var socket = Socket.list[i];
+            socket.emit("tick2", {
+                tick: tick2,
+                serverTime: Date.now()
+            });
+        }
+
+        tick2 ++;
+        setTimeout(() => {
+            newTick();
+        }, nextTickT);
+    }
+
+
     let beatInterval = 60000/BPM;
+    console.log(beatInterval)
     let tick = 0;
+    let tick2 = 0;
+
+    const NS_PER_SEC = 1e9;
+    const startT = process.hrtime.bigint();
+    newTick();
 
     //music time intervals:
     setInterval(()=>{
         const now = Date.now();
+        
 
         //emit metronome signal:
         if(tick%2 == 0){

@@ -33,7 +33,7 @@ limiter.toDestination();
 
 
 socket.on('init', function(data){
-    console.log("InitPack:", data)
+    // console.log("InitPack:", data)
 
     Socket.setSelfID(data.selfId);
 
@@ -194,6 +194,7 @@ metronome.chain(metrVol, Tone.Master);
 socket.on("tick", (data)=>{
     if(!Sounds.scaleBase) return;
     let clientNow = Date.now()
+    // console.log(data.now, data.tick, data.now - clientNow)
 
     if(Tone.Transport.state != 'started') Tone.Transport.start();
     else{
@@ -214,5 +215,29 @@ socket.on("tick", (data)=>{
             metronome.triggerAttackRelease(pitch, "32n", time)
         }, Tone.Transport.toSeconds())
     }
-    // console.log(data.now, data.tick, data.now - clientNow)
+})
+
+let beatInterval = 60000/120;
+let firstTickT;
+let firstTickNum;
+socket.on('tick2', (data)=>{
+    const tickNum = data.tick;
+    const clientTime = Date.now();
+    const serverTime = data.serverTime;
+
+    const timeDelay = clientTime - serverTime;
+
+    if(!firstTickT){
+        firstTickT = clientTime;
+        firstTickNum = tickNum;
+    }
+    else{
+        const deltaT = clientTime - firstTickT;
+        const localTickNum = tickNum - firstTickNum;
+
+        const desiredDeltaT = localTickNum * beatInterval;
+        const err = deltaT - desiredDeltaT;
+
+        console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
+    }
 })
