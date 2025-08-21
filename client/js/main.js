@@ -186,41 +186,68 @@ let timeSig = 4;
 Tone.Transport.bpm.value = 120;
 Tone.Transport.timeSignature = timeSig;
 let beatCounter = 0;
-Tone.Transport.start();
+
 const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-26);
 metronome.chain(metrVol, Tone.Master);
 
-socket.on("tick", (data)=>{
-    if(!Sounds.scaleBase) return;
-    let clientNow = Date.now()
-    // console.log(data.now, data.tick, data.now - clientNow)
+// socket.on("tick", (data)=>{
+//     if(!Sounds.scaleBase) return;
+//     let clientNow = Date.now()
+//     // console.log(data.now, data.tick, data.now - clientNow)
 
-    if(Tone.Transport.state != 'started') Tone.Transport.start();
-    else{
-        let pitch;
-        let color;
-        if(data.tick%8 == 0){
-            pitch = `${Sounds.scaleBase}6`
-            color = 'green';
-        }
-        else{
-            pitch = `${Sounds.scaleBase}5`
-            color = 'red';
-        }
+//     if(Tone.Transport.state != 'started') Tone.Transport.start();
+//     else{
+//         let pitch;
+//         let color;
+//         if(data.tick%8 == 0){
+//             pitch = `${Sounds.scaleBase}6`
+//             color = 'green';
+//         }
+//         else{
+//             pitch = `${Sounds.scaleBase}5`
+//             color = 'red';
+//         }
         
-        GameUI.highlightMetronome(color);
-        if(Tone.context.state !== "running" || !Sounds.audioOn) return;
-        Tone.Transport.scheduleOnce((time)=>{
-            metronome.triggerAttackRelease(pitch, "32n", time)
-        }, Tone.Transport.toSeconds())
-    }
-})
+//         console.log(Tone.Transport.seconds)
+//         console.log(Tone.Transport.position)
+//         GameUI.highlightMetronome(color);
+//         if(Tone.context.state !== "running" || !Sounds.audioOn) return;
+//         Tone.Transport.scheduleOnce((time)=>{
+//             metronome.triggerAttackRelease(pitch, "32n", time)
+//         }, Tone.Transport.toSeconds())
+//     }
+// })
 
 let beatInterval = 60000/120;
 let firstTickT;
 let firstTickNum;
+
+Tone.Transport.scheduleRepeat((time)=>{
+    const [bar, beat, subbeat] = Tone.Transport.position.split(":").map(Number);
+    let octave;
+    let metronomeHighlight;
+    if(beat%4 == 0){
+        octave = 6;
+        metronomeHighlight = 'green';
+    }
+    else{
+        octave = 5;
+        metronomeHighlight = 'red';
+    }
+
+    GameUI.highlightMetronome(metronomeHighlight);
+
+    const note = `${Sounds.scaleBase}${octave}`
+
+    console.log(`metronome: ${Tone.Transport.position}`)
+    metronome.triggerAttackRelease(note, "32n", time)
+}, "4n")
+
 socket.on('tick2', (data)=>{
+    //cannot start transport until audio context is running:
+    if(Tone.context.state !== "running") return;
+
     const tickNum = data.tick;
     const clientTime = Date.now();
     const serverTime = data.serverTime;
@@ -228,8 +255,12 @@ socket.on('tick2', (data)=>{
     const timeDelay = clientTime - serverTime;
 
     if(!firstTickT){
-        firstTickT = clientTime;
+        if(!tickNum%4) return; //want to start on first beat
+        firstTickT = clientTime - timeDelay;
         firstTickNum = tickNum;
+
+        console.log(`starting transport`)
+        Tone.Transport.start("+0", `${timeDelay/1000}`);
     }
     else{
         const deltaT = clientTime - firstTickT;
@@ -238,6 +269,89 @@ socket.on('tick2', (data)=>{
         const desiredDeltaT = localTickNum * beatInterval;
         const err = deltaT - desiredDeltaT;
 
+        fixTransport(desiredDeltaT)
+
         console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
+        console.log(Tone.Transport.seconds, Tone.Transport.position, `${Math.round(Tone.Transport.seconds*1000 - desiredDeltaT)}`)
+        
     }
 })
+
+function fixTransport(miliseconds){
+    //TODO compare positions (not seconds) & make bpm faster or slower
+    const baseBPM = 120;
+
+    const desiredSeconds = miliseconds/1000;
+    const desiredPosition = secondsToPosition(desiredSeconds);
+
+    const tPosition = Tone.Transport.position;
+
+    const error = positionToSeconds(desiredPosition) - positionToSeconds(tPosition)
+
+    console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
+
+    if(Math.abs(error)<0.1){
+        Tone.Transport.bpm.value = baseBPM;
+        return;
+    }
+
+    const correction = Math.max(0.5, Math.min(2, 1+error));
+    
+    Tone.Transport.bpm.value = baseBPM * correction;
+    console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
+
+    
+
+    // const baseBPM = 120;
+    // const seconds = miliseconds/1000;
+    // const tPosition = Tone.Transport.position;
+    // const desiredPosition = secondsToPosition(seconds);
+    // console.log(tPosition, desiredPosition)
+
+    // if(tPosition>desiredPosition){
+    //     //Tone transport is too early!
+
+    //     Tone.Transport.bpm.value = Tone.Transport.bpm.value * 0.99;
+    // }
+
+    // if(tPosition<desiredPosition){
+    //     //Tone transport is late
+    //     Tone.Transport.bpm.value = Tone.Transport.bpm.value * 1.01;
+    // }
+    // console.log(`bpm changer: ${Tone.Transport.bpm.value}`)
+
+//     const error = seconds - Tone.Transport.seconds
+//     console.log(`fixTransport transportError: ${error}`)
+
+//     if(Math.abs(error)<0.1){
+//         Tone.Transport.bpm.value = baseBPM;
+//         return;
+//     }
+
+//     Tone.Transport.bpm.value = baseBPM * error;
+//     console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
+}
+
+function positionToSeconds(position){
+    const beatsPerBar = 4;
+    const bpm = 120;
+    const [bars, beats, sixteenths] = position.split(":").map(Number);
+    const beatSec = 60 / bpm;
+    const totalBeats = bars * beatsPerBar + beats + sixteenths / 4;
+    return totalBeats * beatSec;
+}
+
+function secondsToPosition(seconds){
+    const beatSec = 60 / 120;
+    const totalBeats = seconds / beatSec;
+
+    const beatsPerBar = 4; // np. 4/4
+    const bars = Math.floor(totalBeats / beatsPerBar);
+    const beatInBar = Math.floor(totalBeats % beatsPerBar);
+
+    const sixteenthSec = beatSec / 4; // 1 beat = 4 szesnastki
+    const sixteenths = ((seconds % beatSec) / sixteenthSec).toFixed(3);
+
+    const position = `${bars}:${beatInBar}:${sixteenths}`;
+    return position;
+}
