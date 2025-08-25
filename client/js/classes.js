@@ -6,6 +6,8 @@ import { Sounds } from './sounds.js';
 let selfId = null;
 
 export class Entity{
+    static list = {};
+
     constructor(initPack){
         if(!selfId) selfId = Socket.selfId;
 
@@ -13,25 +15,52 @@ export class Entity{
         this.y = initPack.y;
         this.id = initPack.id;
 
-        this.pan3d = new Tone.Panner3D(
-            0,
-            0,
-            0
-        );
-        this.pan3d.panningModel = "HRTF";
+        Entity.list[this.id] = this;
+
+        //Audio node for every entity is overkill:
+        // this.pan3d = new Tone.Panner3D(
+        //     0,
+        //     0,
+        //     0
+        // );
+        // this.pan3d.panningModel = "HRTF";
         // this.pan3d.distanceModel = "inverse";
-        this.pan3d.connect(limiter);
+        // this.pan3d.connect(limiter);
     }
 
     update(pack){
         this.x = pack.x
         this.y = pack.y
-        if(Player.list[selfId]){
-            this.pan3d.setPosition(
-                (this.x - Player.list[selfId].x)*0.1,
-                (this.y - Player.list[selfId].y)*0.1,
-                0
-            );
+        // if(Player.list[selfId]){
+        //     this.pan3d.setPosition(
+        //         (this.x - Player.list[selfId].x)*0.1,
+        //         (this.y - Player.list[selfId].y)*0.1,
+        //         0
+        //     );
+        // }
+    }
+
+    destroy(){
+        delete Entity.list[this.id];
+    }
+
+    static getDistanceSq(id){
+        //returns distance squared between client's player and entity with given ID
+        console.log(`get distancesq id=${id}`)
+        const entity = Entity.list[id];
+        console.log(entity.x)
+        const dx = entity.x - Player.list[selfId].x;
+        const dy = entity.y - Player.list[selfId].y 
+        const distSq = dx*dx + dy*dy;
+
+        console.log(`dist sq ${distSq}`)
+        return distSq;
+    }
+
+    getPos(){
+        return {
+            x: this.x,
+            y: this.y
         }
     }
 }
@@ -55,14 +84,29 @@ export class Player extends Entity{
         this.score = initPack.score;
         this.synthTimeout = false;
         this.footstepSyn = new Tone.NoiseSynth(Player.synOptions);
+        this.pan3d = new Tone.Panner3D();
+        if(Player.list[selfId]){
+            this.pan3d.setPosition(
+                (this.x - Player.list[selfId].x)*0.1,
+                (this.y - Player.list[selfId].y)*0.1,
+                0
+            );
+        }
         this.pan3d.distanceModel = "linear";
         this.footstepVolume = new Tone.Volume(-9);
         this.footstepSyn.connect(this.footstepVolume);
         this.footstepVolume.connect(this.pan3d);
 
+        // this.bulletSounds = new SoundPool(7);
+
+
         this.direction = this.updateDirection(initPack.direction);
         this.image = Img.player;
         this.animFrame = 1 * 2;
+
+        if(!SoundPool.globalSoundPool){
+            SoundPool.globalSoundPool = new SoundPool(2);
+        }
 
         Player.list[this.id] = this;
     }
@@ -73,6 +117,13 @@ export class Player extends Entity{
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
+            if(Player.list[selfId]){
+                this.pan3d.setPosition(
+                    (this.x - Player.list[selfId].x)*0.1,
+                    (this.y - Player.list[selfId].y)*0.1,
+                    0
+                );
+            }
 
             this.lastMovedTime = Date.now();
             
@@ -87,6 +138,10 @@ export class Player extends Entity{
                 }, 250);
             }
         }
+    }
+
+    destroy(){
+        // this.bulletSounds.disposeAll();
     }
 
     draw(){
@@ -166,6 +221,17 @@ export class Bullet extends Entity{
 
     constructor(initPack){
         super(initPack);
+        this.parent = Player.list[initPack.parentId];
+        this.hasSoundSlot = false;
+        this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
+        if(this.soundSlot){
+            this.hasSoundSlot = true;
+            this.soundSlot.occupierId = this.id;
+            this.pan3D = this.soundSlot.pan3D;
+            this.sampler = this.soundSlot.sampler;
+            this.soundSlot.occupierId = this.id;
+        }
+
         this.note = initPack.note;
         this.duration = initPack.duration;
         this.imgWidth = 32;
@@ -180,36 +246,72 @@ export class Bullet extends Entity{
         
 
         // let synthClass = Tone[initPack.sound];
-        this.synth = new Tone[initPack.sound];
-        this.pan3d.setPosition(
-            (this.x - Player.list[selfId].x)*0.1,
-            (this.y - Player.list[selfId].y)*0.1,
-            0
-        )
-        this.synth.connect(this.pan3d);
+
+        //get a free synth from synth pool:
+        // this.synthPoolSlot = SynthPool.getFreeSynthSlot(initPack.sound);
+        // this.synth = this.synthPoolSlot.synth;
+
+        // this.noteShift = Sounds.notes.indexOf(this.note)
+        // this.pitchShift = new Tone.PitchShift(this.noteShift)
+
+        // this.synth = new Tone[initPack.sound];
+        // console.log(this.synth)
+        // this.pan3d.setPosition(
+        //     (this.x - Player.list[selfId].x)*0.1,
+        //     (this.y - Player.list[selfId].y)*0.1,
+        //     0
+        // )
+        // this.synth.connect(this.pitchShift);
+        // this.pitchShift.connect(this.pan3d)
+
 
         Bullet.list[this.id] = this;
 
 
 
-        if(Tone.context.state == "running" && Sounds.audioOn){
-            this.synth.triggerAttack(`${this.note}5`);
+        if(Tone.context.state == "running" && Sounds.audioOn && this.hasSoundSlot){
+            // this.synth.triggerAttack(`${this.note}4`);
+            // this.synth.start();
+            this.sampler.play(this.note);
+        }
+    }
+
+    update(pack){
+        super.update(pack);
+        if(Player.list[selfId] && this.hasSoundSlot){
+            this.pan3D.setPosition(
+                (this.x - Player.list[selfId].x)*0.1,
+                (this.y - Player.list[selfId].y)*0.1,
+                0
+            );
         }
     }
 
     destroy(){
-        clearInterval(this.interval);
-        this.synth.triggerRelease();
+        if(this.hasSoundSlot){
+            this.sampler.stop();
+            this.soundSlot.free = true;
+        }
+        // this.synth.triggerRelease();
+        // this.synth.stop();
+        // this.synth.disconnect();
+        // this.synthPoolSlot.busy = false;
+        // this.pan3d.dispose();
+        // this.pitchShift.dispose();
         // if(Tone.context.state == "running" && Sounds.audioOn){
         //     this.synth.triggerAttack(`${this.note}4`);
         // }
+
+        // this.synthPoolSlot.busy = false;
+        
         
         setTimeout(()=>{
-            this.synth.triggerRelease();
-            this.synth.dispose();
-            this.pan3d.dispose();
+            // this.synth.triggerRelease();
+            
+            
+            super.destroy();
             delete Bullet.list[this.id]
-        }, 250);
+        }, 50);
     }
 
     draw(){
@@ -246,6 +348,7 @@ export class Pickup extends Entity{
     }
 
     destroy(){
+        super.destroy();
         delete Pickup.list[this.id];
     }
 
@@ -305,6 +408,168 @@ export class Tile{
     }
 
     destroy(){
+        // super.destroy();
         delete Tile.list[this.id];
+    }
+}
+
+// export class SynthPool{
+//     // let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
+//     static pools = {
+//         "AMSynth": [],
+//         "DuoSynth": [],
+//         "FMSynth": [],
+//         "MembraneSynth": [],
+//         "MetalSynth": [],
+//         "MonoSynth": [],
+//         "PolySynth": [],
+//         "Synth": []
+//     }
+
+//     static populatePool(synthName, numberOfSynths){
+//         for(let i = 0; i < numberOfSynths; i++){
+//             // SynthPool.pools[synthName].push({
+//             //     synth: new Tone[synthName](),
+//             //     busy: false,
+//             //     name: `${synthName}${i}`
+//             // })
+//             SynthPool.pools[synthName].push({
+//                 synth: new Tone.Player("../audio/banjo.wav"),
+//                 busy: false,
+//                 name: `${synthName}${i}`,
+//                 isFallback: false,
+//             })
+//         }
+//     }
+
+//     static populateAllPools(numberEach){
+//         for(let synthName in SynthPool.pools){
+//             // console.log(synthName)
+//             SynthPool.populatePool(synthName, numberEach);
+//         }
+//         console.log(SynthPool.pools)
+//     }
+
+//     static getFreeSynthSlot(synthName){
+//         const pool = SynthPool.pools[synthName];
+//         const freeSlot = pool.find(slot => !slot.busy)
+//         console.log(freeSlot)
+//         if(freeSlot){
+//             freeSlot.busy = true;
+//             console.log(freeSlot)
+//             return freeSlot;
+//         }
+//         else{
+//             //fallback - no free slots left:
+//             console.log(`getFreeSynthSlot fallback`)
+//             const fallbackSlot = pool[0];
+//             fallbackSlot.isFallback = true;
+//             // fallbackSlot.synth.triggerRelease();
+//             fallbackSlot.synth.stop();
+//             fallbackSlot.synth.disconnect();
+//             fallbackSlot.busy = true;
+//             console.log(fallbackSlot)
+//             return fallbackSlot;
+//         }
+//     }
+
+//     //TODO: some synths create a lot of audio nodes! - if we create a lot of them the AudioContext is overloaded
+//     //it would be better to render synth sounds as samples to Tone.Player
+// }
+
+class SoundPool{
+    static globalSoundPool;
+
+    constructor(soundNum){
+        this.pool = []
+
+        for(let i = 0; i < soundNum; i++){
+            this.pool.push(new SoundSlot())
+        }
+    }
+
+    getFree(forID){
+        const freeSlot = this.pool.find(slot => slot.free);
+
+        if(freeSlot){
+            freeSlot.free = false;
+            return freeSlot;
+        }
+        else{
+            console.log(`sound pool no free slots left`)
+            //if sound slot is demanded by an entity further than current sound slot occupiers, it won't be given:
+            const demandingEntityDistSq = Entity.getDistanceSq(forID);
+
+            //find a slot occupied by the furthest entity:
+            let maxDistSq = demandingEntityDistSq;
+            let furthestSlot = undefined;
+            for(let slot of this.pool){
+                const occupierDistSq = Entity.getDistanceSq(slot.occupierId);
+                console.log(demandingEntityDistSq, occupierDistSq)
+
+                if(occupierDistSq>maxDistSq){
+                    maxDistSq = occupierDistSq;
+                    furthestSlot = slot;
+                }
+            }
+            //if no occupier were further, we deny the demander the slot;
+            if(!furthestSlot){
+                return null;
+            }
+
+            //occupier which was further is deprived of the sound slot:
+            console.log(furthestSlot)
+            Entity.list[furthestSlot.occupierId].hasSoundSlot = false;
+            return furthestSlot;
+        }
+    }
+
+    disposeAll(){
+        for(let slot of this.pool){
+            slot.pan3D.dispose();
+            slot.sampler.dispose();
+            free = false;
+        }
+    }
+}
+
+class SoundSlot{
+    constructor(){
+        this.sampler = new Sampler("../audio/banjo.wav");
+        this.pan3D = new Tone.Panner3D();
+        this.sampler.pitchShift.connect(this.pan3D);
+        this.pan3D.connect(limiter);
+
+        this.free = true;
+        this.occupierId = null;
+    }
+    
+}
+
+class Sampler{
+    constructor(sampleSrc){
+        this.samplePlayer = new Tone.Player(sampleSrc)
+        this.samplePlayer.playbackRate = 0.1;
+        this.pitchShift = new Tone.PitchShift()
+
+        this.samplePlayer.connect(this.pitchShift);
+    }
+
+    play(note){
+        const shift = Sounds.notes.indexOf(note);
+        console.log(note, shift)
+
+        this.pitchShift.pitch = shift + 48;
+        console.log(this.pitchShift)
+        this.samplePlayer.start();
+    }
+
+    stop(){
+        this.samplePlayer.stop();
+    }
+
+    dispose(){
+        this.samplePlayer.dispose();
+        this.pitchShift.dispose();
     }
 }

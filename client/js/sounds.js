@@ -4,6 +4,7 @@ export class Sounds{
     static bpm;
     static scaleName;
     static scaleBase;
+    static notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
     static audioOn = false;
 
