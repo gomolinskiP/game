@@ -6,6 +6,10 @@ export function getIsInChat(){
     return isInChat;
 }
 
+const audioContext = Tone.getContext();
+console.log(audioContext)
+
+
 
 // game:
 
@@ -24,12 +28,13 @@ export const limiter = new Tone.Compressor(
     -0.1,
     20
 )
-const reverb = new Tone.Reverb();
-const delay = new Tone.FeedbackDelay("1n", 0.2);
+// const reverb = new Tone.Reverb();
+// const delay = new Tone.FeedbackDelay("1n", 0.2);
 
 limiter.toDestination();
 
-
+//create synths beforehand and store them in a synth pool:
+// SynthPool.populateAllPools(4)
 
 
 socket.on('init', function(data){
@@ -189,7 +194,7 @@ let beatCounter = 0;
 
 const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-26);
-metronome.chain(metrVol, Tone.Master);
+metronome.chain(metrVol, Tone.Destination);
 
 // socket.on("tick", (data)=>{
 //     if(!Sounds.scaleBase) return;
@@ -240,7 +245,7 @@ Tone.Transport.scheduleRepeat((time)=>{
 
     const note = `${Sounds.scaleBase}${octave}`
 
-    console.log(`metronome: ${Tone.Transport.position}`)
+    // console.log(`metronome: ${Tone.Transport.position}`)
     metronome.triggerAttackRelease(note, "32n", time)
 }, "4n")
 
@@ -271,8 +276,8 @@ socket.on('tick2', (data)=>{
 
         fixTransport(desiredDeltaT)
 
-        console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
-        console.log(Tone.Transport.seconds, Tone.Transport.position, `${Math.round(Tone.Transport.seconds*1000 - desiredDeltaT)}`)
+        // console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
+        // console.log(Tone.Transport.seconds, Tone.Transport.position, `${Math.round(Tone.Transport.seconds*1000 - desiredDeltaT)}`)
         
     }
 })
@@ -288,7 +293,7 @@ function fixTransport(miliseconds){
 
     const error = positionToSeconds(desiredPosition) - positionToSeconds(tPosition)
 
-    console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
+    // console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
 
     if(Math.abs(error)<0.1){
         Tone.Transport.bpm.value = baseBPM;
@@ -298,7 +303,7 @@ function fixTransport(miliseconds){
     const correction = Math.max(0.5, Math.min(2, 1+error));
     
     Tone.Transport.bpm.value = baseBPM * correction;
-    console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
+    // console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
 
     
 

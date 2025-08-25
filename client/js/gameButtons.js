@@ -17,6 +17,7 @@ audioOnLabel.onclick = ()=>{
     if(Sounds.audioOn == false){
         Sounds.audioOn = true;
         audioOnLabel.innerText = '🔊'
+        Tone.start()
     }
     else{
         Sounds.audioOn = false;
