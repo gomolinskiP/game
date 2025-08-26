@@ -105,7 +105,7 @@ export class Player extends Entity{
         this.animFrame = 1 * 2;
 
         if(!SoundPool.globalSoundPool){
-            SoundPool.globalSoundPool = new SoundPool(2);
+            SoundPool.globalSoundPool = new SoundPool(MAX_BULLET_SOUNDS);
         }
 
         Player.list[this.id] = this;
@@ -477,6 +477,7 @@ export class Tile{
 //     //it would be better to render synth sounds as samples to Tone.Player
 // }
 
+const MAX_BULLET_SOUNDS = 16;
 class SoundPool{
     static globalSoundPool;
 
@@ -560,7 +561,6 @@ class Sampler{
         console.log(note, shift)
 
         this.pitchShift.pitch = shift + 48;
-        console.log(this.pitchShift)
         this.samplePlayer.start();
     }
 
