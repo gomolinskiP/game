@@ -245,27 +245,28 @@ Tone.Transport.scheduleRepeat((time)=>{
 
     const note = `${Sounds.scaleBase}${octave}`
 
-    // console.log(`metronome: ${Tone.Transport.position}`)
+    console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`)
     metronome.triggerAttackRelease(note, "32n", time)
 }, "4n")
 
+let tickNum = 0;
 socket.on('tick2', (data)=>{
     //cannot start transport until audio context is running:
     if(Tone.context.state !== "running") return;
 
-    const tickNum = data.tick;
+    tickNum = data.tick;
     const clientTime = Date.now();
     const serverTime = data.serverTime;
 
     const timeDelay = clientTime - serverTime;
 
     if(!firstTickT){
-        if(!tickNum%4) return; //want to start on first beat
+        if(tickNum%4 != 0) return; //want to start on first beat
         firstTickT = clientTime - timeDelay;
         firstTickNum = tickNum;
 
-        console.log(`starting transport`)
-        Tone.Transport.start("+0", `${timeDelay/1000}`);
+        console.log(`starting transport | ticknum: ${tickNum}`)
+        Tone.Transport.start("+0", `${-timeDelay/1000}`);
     }
     else{
         const deltaT = clientTime - firstTickT;
