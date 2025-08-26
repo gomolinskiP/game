@@ -1,29 +1,98 @@
 import { Entity } from './Entity.js';
 import { Player } from './Player.js';
-import {bulletQTree, characterQTree, scale, wallQTree, checkTilesCollision} from '../socket.js'
+import {bulletQTree, characterQTree, scale, wallQTree, checkTilesCollision, startT, tick2, beatInterval} from '../socket.js'
 import { Character } from './Character.js';
 
 
-export class scheduledBullet{
+export class ScheduledBullet{
     static list = {};
 
     constructor(parent, note = 'onSpawn', durationType, damage){
         this.id = Math.random();
         this.parent = parent;
+        this.x = parent.x;
+        this.y = parent.y;
 
         this.sound = parent.weapon.sound;
         this.duration = parent.weapon.duration;
         this.durationType = durationType;
         this.damage = damage;
-        
         this.note = note;
+        let spawnInT = this.getSpawnTime();
 
-        scheduledBullet.list[this.id] = this;
+        setTimeout(()=>{
+            this.spawn();
+        }, spawnInT)
+
+        ScheduledBullet.list[this.id] = this;
         return this;
+    }
+
+    updatePosition(x, y){
+        this.x = x;
+        this.y = y;
     }
 
     spawn(){
         new Bullet(this.parent, this.parent.lastAngle, this.note, this.durationType, this.damage);
+        this.destroy();
+    }
+
+    getSpawnTime(){
+        const creationTimeNs = process.hrtime.bigint() - startT;
+        const lastTickT = (tick2 - 1) * beatInterval; //in ms
+        const timeDif = Number(creationTimeNs/BigInt(1e6)) - lastTickT;
+
+        let spawnInT;
+        switch(this.duration){
+            case "1n":
+                spawnInT = (4 - (tick2 -1)%4) * beatInterval - timeDif;
+                break;
+            case "2n":
+                spawnInT = (2 - (tick2 -1)%2) * beatInterval - timeDif;
+                break;
+            case "4n":
+                spawnInT = beatInterval - timeDif;
+                break;
+            case "8n":
+                if(timeDif > beatInterval/2){
+                    spawnInT = beatInterval - timeDif;
+                }
+                else{
+                    spawnInT = beatInterval/2 - timeDif;
+                }
+                break;
+            case "1n.":
+                spawnInT = (6 - (tick2 -1)%6) * beatInterval - timeDif;
+                break;
+            case "2n.":
+                spawnInT = (3 - (tick2 -1)%3) * beatInterval - timeDif;
+                break;
+            case "4n.":
+                let quarterInCycle = (tick2 -1)%3;
+                switch(quarterInCycle){
+                    case 0:
+                        spawnInT = 3 * beatInterval/2 - timeDif;
+                        break;
+                    case 1:
+                        if(timeDif > beatInterval/2){
+                            spawnInT = 2 * beatInterval - timeDif;
+                        }
+                        else{
+                            spawnInT = beatInterval/2 - timeDif;
+                        }
+                        break;
+                    case 2:
+                        spawnInT = beatInterval - timeDif;
+                        break;
+                }
+                break;
+        }
+        return spawnInT;
+    }
+
+    destroy(){
+        delete ScheduledBullet.list[this.id];
     }
 }
 
