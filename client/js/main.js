@@ -13,7 +13,7 @@ console.log(audioContext)
 
 // game:
 
-import { gameLoop, canvas } from './graphics.js'
+import { gameLoop, canvas, Graphics } from './graphics.js'
 
 import { Player, Bullet, Pickup, Tile } from './classes.js'
 import { addKeyboardListeners } from './keyboard.js';
@@ -126,6 +126,9 @@ socket.on('update', function(data){
                 if(pack.duration) GameUI.setDurationLabel(pack.duration);
                 if(pack.sound) GameUI.setSoundLabel(pack.sound);
                 break;
+            case "gameMsg":
+                console.log(pack.msg);
+                Graphics.addGameMsg(pack.msg);
         }
     }
 })

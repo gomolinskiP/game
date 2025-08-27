@@ -1,6 +1,6 @@
 import { Entity } from "./Entity.js";
 import { Weapon } from './Weapon.js';
-import { Bullet, scheduledBullet } from './Bullet.js';
+import { Bullet, ScheduledBullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
 import { checkTilesCollision, floorTiles, wallTiles, floorQTree, wallQTree } from '../socket.js';
 import { Player } from "./Player.js";
@@ -27,15 +27,17 @@ export class Character extends Entity{
 
         this.needsUpdate = true;
 
-        this.pressingUp = this.pressingDown = this.pressingLeft = this.pressingRight = this.pressingSpace = false;
+        this.pressingUp = this.pressingDown = this.pressingLeft = this.pressingRight = false;
         this.speed = 10;
         this.lastAngle = 90;
-        this.shootTimeout = false;
+        this.hasShotScheduled = false;
 
         this.selectedNote = scale.base;
 
         if(weapon == null) weapon = new Weapon("Synth", "1n", "normal", this)
         this.giveWeapon(weapon.sound, weapon.duration, "normal");
+
+        this.scheduledBullets = [];
 
         Character.list[this.id] = this;
 
@@ -81,25 +83,62 @@ export class Character extends Entity{
                 !checkTilesCollision(newX, newY, wallQTree)){
                 this.x = newX
                 this.y = newY 
+
+                //update all scheduledBullets positions:
+                for(const scheduledBullet of this.scheduledBullets){
+                    scheduledBullet.updatePosition(this.x, this.y);
+                }
             }          
         }
 
         //shooting:
-        if(this.pressingSpace){
-            //shooting not allowed on spawn:
-            if(this.isWithinDistance({
-                x: 0,
-                y: 0
-            }, 1600)) return;
-            this.needsUpdate = true;
-            if(!this.shootTimeout){
+        // if(this.pressingSpace){
+        //     //shooting not allowed on spawn:
+        //     if(this.isWithinDistance({
+        //         x: 0,
+        //         y: 0
+        //     }, 1600)) return;
+        //     this.needsUpdate = true;
+        //     if(!this.hasShotScheduled){
                 
-                this.shootTimeout = true;
-                this.weapon.shoot(this.selectedNote);
+        //         this.hasShotScheduled = true;
+        //         let newBullets = this.weapon.shoot(this.selectedNote);
+        //         //add to this players scheduled bullet list:
+        //         this.scheduledBullets = this.scheduledBullets.concat(newBullets);
+        //         // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
 
-                setTimeout(()=>{
-                    this.shootTimeout = false
-                }, this.shootTimeoutTime)
+        //         // setTimeout(()=>{
+        //         //     this.shootTimeout = false
+        //         // }, this.shootTimeoutTime)
+        //     }
+        // }
+    }
+
+    shoot(){
+        //shooting not allowed on spawn:
+        if(this.isWithinDistance({
+            x: 0,
+            y: 0
+        }, 1600)) return;
+        this.needsUpdate = true;
+        if(!this.hasShotScheduled){
+            
+            this.hasShotScheduled = true;
+            let newBullets = this.weapon.shoot(this.selectedNote);
+            //add to this players scheduled bullet list:
+            this.scheduledBullets = this.scheduledBullets.concat(newBullets);
+            // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
+
+            // setTimeout(()=>{
+            //     this.shootTimeout = false
+            // }, this.shootTimeoutTime)
+        }
+        else{
+            if(this.updatePack){
+                this.updatePack.push({
+                    msg: "To early!",
+                    type: "gameMsg"
+                })
             }
         }
     }

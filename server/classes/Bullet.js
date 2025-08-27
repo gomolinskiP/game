@@ -18,11 +18,33 @@ export class ScheduledBullet{
         this.durationType = durationType;
         this.damage = damage;
         this.note = note;
-        let spawnInT = this.getSpawnTime();
+        this.spawnInT = this.getSpawnTime();
+        this.durationInMs = this.getTimeFromDuration(this.duration, this.durationType)
+        this.maxTimeInaccuracy = Math.max(100, this.durationInMs / 10);
 
-        setTimeout(()=>{
+        console.log(this.spawnInT, this.duration, this.durationInMs)
+        if(this.spawnInT > this.durationInMs - this.maxTimeInaccuracy){
+            //player is late by no more than 200ms TOFIX 1800 is good only for whole notes
             this.spawn();
-        }, spawnInT)
+            setTimeout(()=>{
+                this.parent.hasShotScheduled = false;
+            }, this.durationInMs - this.maxTimeInaccuracy)
+            
+        }
+        else if(this.spawnInT > this.maxTimeInaccuracy){
+            //player is too early;
+            this.cancel();
+        }
+        else{
+            //player early but within max inaccuracy:
+            setTimeout(()=>{
+                this.spawn();
+            }, this.spawnInT)
+
+            setTimeout(()=>{
+                this.parent.hasShotScheduled = false;
+            }, this.durationInMs - this.maxTimeInaccuracy)
+        }
 
         ScheduledBullet.list[this.id] = this;
         return this;
@@ -31,6 +53,26 @@ export class ScheduledBullet{
     updatePosition(x, y){
         this.x = x;
         this.y = y;
+    }
+
+    cancel(){
+        let message;
+        if(this.spawnInT < this.durationInMs/2){
+            message = "To early!"
+        }
+        else{
+            message = "To late!"
+        }
+
+        if(this.parent.updatePack){
+            this.parent.updatePack.push({
+                msg: message,
+                type: "gameMsg"
+            })
+        }
+        setTimeout(()=>{
+                this.parent.hasShotScheduled = false;
+        }, this.spawnInT)
     }
 
     spawn(){
@@ -89,6 +131,22 @@ export class ScheduledBullet{
                 break;
         }
         return spawnInT;
+    }
+
+    getTimeFromDuration(duration, durationType){
+        let timeMs;
+
+        let durationInt = parseInt(duration.replace("n", "").replace(".", ""))
+        switch(durationType){
+            case "normal":
+                timeMs = 60000/120 * (4/durationInt)
+                break;
+            case "dotted":
+                timeMs = 60000/120 * (4/durationInt) * 3/2
+                break;
+        }
+
+        return timeMs;
     }
 
     destroy(){

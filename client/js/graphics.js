@@ -11,6 +11,22 @@ export var canvas = document.getElementById("ctx");
 canvas.tabIndex = 1000; //so I can listen to events on canvas specifically
 var ctx = canvas.getContext("2d");
 
+export class Graphics{
+    static gameMessages = [];
+
+    static addGameMsg(msg){
+        Graphics.gameMessages.push({
+            text: msg,
+            x: gameWidth/2 + (Math.random()-0.5)*gameWidth/4,
+            y: gameHeight/2+ (Math.random()-0.5)*gameHeight/4
+        });
+
+        setTimeout(()=>{
+            Graphics.gameMessages.shift();
+        }, 500);
+    }
+}
+
 canvasResize()
 
 function canvasResize() {
@@ -321,6 +337,12 @@ export function gameLoop(){
     }
     drawBuffer = []
 
+    for(const msg of Graphics.gameMessages){
+        ctx.fillStyle = "red";
+        ctx.font = 'bold 12px Cascadia Mono';
+        ctx.fillText(msg.text, msg.x, msg.y);
+        console.log(msg.text, msg.x, msg.y)
+    }
     drawHUD();
 
     // for(let tile of tiles){

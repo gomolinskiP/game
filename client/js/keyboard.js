@@ -1,5 +1,7 @@
 import { setIsInChat, getIsInChat } from "./main.js";
 
+let spacePressed = false;
+
 export function addKeyboardListeners(socket){
     const chatInput = document.getElementById("chat-input")
     const chatSendBTN = document.getElementById("chat-send-btn");
@@ -49,6 +51,8 @@ export function addKeyboardListeners(socket){
                 });
                 break;
             case " ":
+                if(spacePressed) return;
+                spacePressed = true;
                 socket.emit('keyPress', {
                     inputId: 'space',
                     state: true
@@ -101,10 +105,11 @@ export function addKeyboardListeners(socket){
                 });
                 break;
             case " ":
-                socket.emit('keyPress', {
-                inputId: 'space',
-                state: false
-                });
+                spacePressed = false;
+                // socket.emit('keyPress', {
+                // inputId: 'space',
+                // state: false
+                // });
                 break;
         }
     }
