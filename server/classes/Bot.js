@@ -1,5 +1,6 @@
 import { Character } from "./Character.js";
-import { wallQTree, floorQTree, checkTilesCollision, mapBoundRect } from '../socket.js';
+import { Map } from "./Map.js";
+import { Tile } from "./Tile.js";
 
 
 export class Bot extends Character{
@@ -11,11 +12,11 @@ export class Bot extends Character{
 
         let isPositionForbidden = true;
         while(isPositionForbidden){
-            x = mapBoundRect.x + mapBoundRect.width*(Math.random());
-            y = mapBoundRect.y + mapBoundRect.height*(Math.random());
+            x = Map.boundRect.x + Map.boundRect.width*(Math.random());
+            y = Map.boundRect.y + Map.boundRect.height*(Math.random());
 
             //check if random position is colliding a wall or is not on floor
-            isPositionForbidden = checkTilesCollision(x, y, wallQTree) || !checkTilesCollision(x, y, floorQTree)
+            isPositionForbidden = Tile.checkTilesCollision(x, y, Tile.wallQTree) || !Tile.checkTilesCollision(x, y, Tile.floorQTree)
         }
 
         let id = Math.random();

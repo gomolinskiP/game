@@ -1,33 +1,28 @@
 let isInChat = false;
-export function setIsInChat(state){
+export function setIsInChat(state) {
     isInChat = state;
 }
-export function getIsInChat(){
+export function getIsInChat() {
     return isInChat;
 }
 
 const audioContext = Tone.getContext();
-console.log(audioContext)
-
-
+console.log(audioContext);
 
 // game:
 
-import { gameLoop, canvas, Graphics } from './graphics.js'
+import { gameLoop, canvas, Graphics } from "./graphics.js";
 
-import { Player, Bullet, Pickup, Tile } from './classes.js'
-import { addKeyboardListeners } from './keyboard.js';
-import { chatInit } from './textChat.js';
-import { GameUI } from './gameButtons.js'
-import { Sounds } from './sounds.js';
-import { Socket } from './clientSocket.js';
+import { Player, Bullet, Pickup, Tile } from "./classes.js";
+import { Sounds } from "./sounds.js";
+import { addKeyboardListeners } from "./keyboard.js";
+import { chatInit } from "./textChat.js";
+import { GameUI } from "./gameButtons.js";
+import { Socket } from "./clientSocket.js";
 
 const socket = Socket.clientSocket;
 
-export const limiter = new Tone.Compressor(
-    -0.1,
-    20
-)
+export const limiter = new Tone.Compressor(-0.1, 20);
 // const reverb = new Tone.Reverb();
 // const delay = new Tone.FeedbackDelay("1n", 0.2);
 
@@ -36,13 +31,12 @@ limiter.toDestination();
 //create synths beforehand and store them in a synth pool:
 // SynthPool.populateAllPools(4)
 
-
-socket.on('init', function(data){
+socket.on("init", function (data) {
     // console.log("InitPack:", data)
 
     Socket.setSelfID(data.selfId);
-
-    Sounds.setScale(data.scale.name, data.scale.allowedNotes)
+    console.log(data.scale.allowedNotes);
+    Sounds.setScale(data.scale.name, data.scale.allowedNotes);
     Sounds.setBPM(data.bpm);
 
     GameUI.setActiveNote(data.selectedNote);
@@ -51,10 +45,10 @@ socket.on('init', function(data){
     GameUI.setWeaponType(data.weapon.type);
 
     //create game objects from initPack:
-    for(let i = 0; i<data.entities.length; i++){
+    for (let i = 0; i < data.entities.length; i++) {
         let entity = data.entities[i];
 
-        switch(entity.type){
+        switch (entity.type) {
             case "player":
                 new Player(entity);
                 break;
@@ -68,7 +62,7 @@ socket.on('init', function(data){
                 new Tile(entity);
                 break;
             default:
-                console.log(`Unknown entity type: ${entity.pickup}`)
+                console.log(`Unknown entity type: ${entity.pickup}`);
         }
     }
 
@@ -76,73 +70,71 @@ socket.on('init', function(data){
     requestAnimationFrame(gameLoop);
     addKeyboardListeners(socket);
     chatInit(socket, canvas, isInChat);
-})
+});
 
-socket.on('update', function(data){
+socket.on("update", function (data) {
     //gets an array of objects to update and updates or creates them:
     // console.log("updatePack:", data)
 
-    for(let i = 0; i<data.length; i++){
+    for (let i = 0; i < data.length; i++) {
         let pack = data[i];
         let id = pack.id;
 
-        switch(pack.type){
+        switch (pack.type) {
             case "player":
                 let p = Player.list[id];
-                if(p){
+                if (p) {
                     p.update(pack);
-                }
-                else{
+                } else {
                     new Player(pack);
                 }
                 break;
             case "bullet":
-                let b = Bullet.list[id]
-                if(b){
+                let b = Bullet.list[id];
+                if (b) {
                     b.update(pack);
-                }
-                else{
+                } else {
                     new Bullet(pack);
-                    if(pack.parentId == Socket.selfId){
-                        GameUI.highlightPlayedNote(pack.note, pack.duration)
+                    if (pack.parentId == Socket.selfId) {
+                        GameUI.highlightPlayedNote(pack.note, pack.duration);
                     }
                 }
                 break;
             case "pickup":
-                let pU = Pickup.list[id]
-                if(!pU){
-                    new Pickup(pack)
+                let pU = Pickup.list[id];
+                if (!pU) {
+                    new Pickup(pack);
                 }
                 break;
             case "tile":
                 let tile = Tile.list[id];
-                if(!tile){
+                if (!tile) {
                     new Tile(pack);
                 }
                 break;
             case "weapon":
-                console.log(pack)
-                if(pack.weaponType) GameUI.setWeaponType(pack.weaponType);
-                if(pack.duration) GameUI.setDurationLabel(pack.duration);
-                if(pack.sound) GameUI.setSoundLabel(pack.sound);
+                console.log(pack);
+                if (pack.weaponType) GameUI.setWeaponType(pack.weaponType);
+                if (pack.duration) GameUI.setDurationLabel(pack.duration);
+                if (pack.sound) GameUI.setSoundLabel(pack.sound);
                 break;
             case "gameMsg":
                 console.log(pack.msg);
                 Graphics.addGameMsg(pack.msg);
         }
     }
-})
+});
 
-socket.on('remove', function(data){
+socket.on("remove", function (data) {
     // console.log("removePack:", data)
 
-    for(let i = 0; i<data.length; i++){
-        let entity = data[i]
+    for (let i = 0; i < data.length; i++) {
+        let entity = data[i];
         let id = entity.id;
 
-        switch(entity.type){
+        switch (entity.type) {
             case "player":
-                if(!Player.list[id]){
+                if (!Player.list[id]) {
                     console.log(`ERROR NO PLAYER WITH ID=${id}`);
                     continue;
                 }
@@ -150,7 +142,7 @@ socket.on('remove', function(data){
                 // console.log(`removing player`)
                 break;
             case "bullet":
-                if(!Bullet.list[id]){
+                if (!Bullet.list[id]) {
                     console.log(`ERROR NO BULLET WITH ID=${id}`);
                     continue;
                 }
@@ -159,7 +151,7 @@ socket.on('remove', function(data){
 
                 break;
             case "pickup":
-                if(!Pickup.list[id]){
+                if (!Pickup.list[id]) {
                     console.log(`ERROR NO PICKUP WITH ID=${id}`);
                     continue;
                 }
@@ -167,7 +159,7 @@ socket.on('remove', function(data){
                 // console.log(`removing pickup`)
                 break;
             case "tile":
-                if(!Tile.list[id]){
+                if (!Tile.list[id]) {
                     console.log(`ERROR NO TILE WITH ID=${id}`);
                     continue;
                 }
@@ -176,19 +168,17 @@ socket.on('remove', function(data){
                 break;
         }
     }
-})
+});
 
-
-
-canvas.onblur = ()=>{
+canvas.onblur = () => {
     // alert("x")
-}
+};
 
-socket.on('redirect', (destination)=>{
+socket.on("redirect", (destination) => {
     window.location.href = destination;
-})
+});
 
-let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 let timeSig = 4;
 Tone.Transport.bpm.value = 120;
@@ -198,6 +188,10 @@ let beatCounter = 0;
 const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-26);
 metronome.chain(metrVol, Tone.Destination);
+
+socket.on("scaleChange", (newScale) => {
+    Sounds.setScale(newScale.name, newScale.allowedNotes);
+});
 
 // socket.on("tick", (data)=>{
 //     if(!Sounds.scaleBase) return;
@@ -216,7 +210,7 @@ metronome.chain(metrVol, Tone.Destination);
 //             pitch = `${Sounds.scaleBase}5`
 //             color = 'red';
 //         }
-        
+
 //         console.log(Tone.Transport.seconds)
 //         console.log(Tone.Transport.position)
 //         GameUI.highlightMetronome(color);
@@ -227,35 +221,34 @@ metronome.chain(metrVol, Tone.Destination);
 //     }
 // })
 
-let beatInterval = 60000/120;
+let beatInterval = 60000 / 120;
 let firstTickT;
 let firstTickNum;
 
-Tone.Transport.scheduleRepeat((time)=>{
+Tone.Transport.scheduleRepeat((time) => {
     const [bar, beat, subbeat] = Tone.Transport.position.split(":").map(Number);
     let octave;
     let metronomeHighlight;
-    if(beat%4 == 0){
+    if (beat % 4 == 0) {
         octave = 6;
-        metronomeHighlight = 'green';
-    }
-    else{
+        metronomeHighlight = "green";
+    } else {
         octave = 5;
-        metronomeHighlight = 'red';
+        metronomeHighlight = "red";
     }
 
     GameUI.highlightMetronome(metronomeHighlight);
 
-    const note = `${Sounds.scaleBase}${octave}`
+    const note = `${Sounds.scaleBase}${octave}`;
 
-    console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`)
-    metronome.triggerAttackRelease(note, "32n", time)
-}, "4n")
+    console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
+    metronome.triggerAttackRelease(note, "32n", time);
+}, "4n");
 
 let tickNum = 0;
-socket.on('tick2', (data)=>{
+socket.on("tick2", (data) => {
     //cannot start transport until audio context is running:
-    if(Tone.context.state !== "running") return;
+    if (Tone.context.state !== "running") return;
 
     tickNum = data.tick;
     const clientTime = Date.now();
@@ -263,53 +256,50 @@ socket.on('tick2', (data)=>{
 
     const timeDelay = clientTime - serverTime;
 
-    if(!firstTickT){
-        if(tickNum%4 != 0) return; //want to start on first beat
+    if (!firstTickT) {
+        if (tickNum % 4 != 0) return; //want to start on first beat
         firstTickT = clientTime - timeDelay;
         firstTickNum = tickNum;
 
-        console.log(`starting transport | ticknum: ${tickNum}`)
-        Tone.Transport.start("+0", `${-timeDelay/1000}`);
-    }
-    else{
+        console.log(`starting transport | ticknum: ${tickNum}`);
+        Tone.Transport.start("+0", `${-timeDelay / 1000}`);
+    } else {
         const deltaT = clientTime - firstTickT;
         const localTickNum = tickNum - firstTickNum;
 
         const desiredDeltaT = localTickNum * beatInterval;
         const err = deltaT - desiredDeltaT;
 
-        fixTransport(desiredDeltaT)
+        fixTransport(desiredDeltaT);
 
         // console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
         // console.log(Tone.Transport.seconds, Tone.Transport.position, `${Math.round(Tone.Transport.seconds*1000 - desiredDeltaT)}`)
-        
     }
-})
+});
 
-function fixTransport(miliseconds){
+function fixTransport(miliseconds) {
     //TODO compare positions (not seconds) & make bpm faster or slower
     const baseBPM = 120;
 
-    const desiredSeconds = miliseconds/1000;
+    const desiredSeconds = miliseconds / 1000;
     const desiredPosition = secondsToPosition(desiredSeconds);
 
     const tPosition = Tone.Transport.position;
 
-    const error = positionToSeconds(desiredPosition) - positionToSeconds(tPosition)
+    const error =
+        positionToSeconds(desiredPosition) - positionToSeconds(tPosition);
 
     // console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
 
-    if(Math.abs(error)<0.1){
+    if (Math.abs(error) < 0.1) {
         Tone.Transport.bpm.value = baseBPM;
         return;
     }
 
-    const correction = Math.max(0.5, Math.min(2, 1+error));
-    
+    const correction = Math.max(0.5, Math.min(2, 1 + error));
+
     Tone.Transport.bpm.value = baseBPM * correction;
     // console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
-
-    
 
     // const baseBPM = 120;
     // const seconds = miliseconds/1000;
@@ -329,19 +319,19 @@ function fixTransport(miliseconds){
     // }
     // console.log(`bpm changer: ${Tone.Transport.bpm.value}`)
 
-//     const error = seconds - Tone.Transport.seconds
-//     console.log(`fixTransport transportError: ${error}`)
+    //     const error = seconds - Tone.Transport.seconds
+    //     console.log(`fixTransport transportError: ${error}`)
 
-//     if(Math.abs(error)<0.1){
-//         Tone.Transport.bpm.value = baseBPM;
-//         return;
-//     }
+    //     if(Math.abs(error)<0.1){
+    //         Tone.Transport.bpm.value = baseBPM;
+    //         return;
+    //     }
 
-//     Tone.Transport.bpm.value = baseBPM * error;
-//     console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
+    //     Tone.Transport.bpm.value = baseBPM * error;
+    //     console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
 }
 
-function positionToSeconds(position){
+function positionToSeconds(position) {
     const beatsPerBar = 4;
     const bpm = 120;
     const [bars, beats, sixteenths] = position.split(":").map(Number);
@@ -350,7 +340,7 @@ function positionToSeconds(position){
     return totalBeats * beatSec;
 }
 
-function secondsToPosition(seconds){
+function secondsToPosition(seconds) {
     const beatSec = 60 / 120;
     const totalBeats = seconds / beatSec;
 

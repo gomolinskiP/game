@@ -1,7 +1,9 @@
 import { Entity } from './Entity.js';
 import { Character } from './Character.js';
 import { Player } from './Player.js';
-import { wallQTree, floorQTree, checkTilesCollision, mapBoundRect } from '../socket.js';
+import { Map } from './Map.js';
+import { Tile } from './Tile.js';
+import Quadtree from "@timohausmann/quadtree-js";
 
 
 let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
@@ -12,6 +14,26 @@ let typeList = ["normal", "random", "chord", "arp-up", "arp-down", "arp-alt"]
 
 export class Pickup extends Entity{
     static list = {};
+    static quadtree;
+
+    static createQuadtree(rect){
+        Pickup.quadtree = new Quadtree(rect);
+    }
+
+    static refreshQuadtree(){
+        Pickup.quadtree.clear();
+
+        for (let id in Pickup.list) {
+            const pickup = Pickup.list[id];
+            Pickup.quadtree.insert({
+                x: pickup.x - 4,
+                y: pickup.y - 4,
+                width: 8,
+                height: 8,
+                id: id,
+            });
+        }
+    }
 
     constructor(){
         let x;
@@ -19,11 +41,11 @@ export class Pickup extends Entity{
 
         let isUnreachable = true;
         while(isUnreachable){
-            x = mapBoundRect.x + mapBoundRect.width*(Math.random());
-            y = mapBoundRect.y + mapBoundRect.height*(Math.random());
+            x = Map.boundRect.x + Map.boundRect.width*(Math.random());
+            y = Map.boundRect.y + Map.boundRect.height*(Math.random());
 
             //check if pickup will be reachable (on floor and not inside a wall)
-            isUnreachable = checkTilesCollision(x, y, wallQTree) || !checkTilesCollision(x, y, floorQTree)
+            isUnreachable = Tile.checkTilesCollision(x, y, Tile.wallQTree) || !Tile.checkTilesCollision(x, y, Tile.floorQTree)
         }
         super(x, y)
 
@@ -63,7 +85,7 @@ export class Pickup extends Entity{
     }
 
     checkPicked(playerList, socketList){
-        let playerId = this.collidingPlayerId(Character.list)
+        let playerId = this.collidingPlayerId(Character.list, Character.quadtree)
 
         if(playerId != null){
             playerList[playerId].giveWeapon(this.sound, this.duration, this.type)

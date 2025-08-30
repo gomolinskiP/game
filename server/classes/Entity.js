@@ -1,5 +1,3 @@
-import { characterQTree } from "../socket.js";
-
 export class Entity{
     static list = {};
 
@@ -57,7 +55,7 @@ export class Entity{
         else return false;
     }
 
-    collidingPlayerId(playerList){
+    collidingPlayerId(characterList, characterQTree){
         const collCandidates = characterQTree.retrieve({
             x: this.x - 100,
             y: this.y - 100,
@@ -67,7 +65,7 @@ export class Entity{
 
         if(collCandidates.length == 0) return null;
         for(let candidate of collCandidates){
-            if(this.isColliding(playerList[candidate.id])){
+            if(this.isColliding(characterList[candidate.id])){
                 return candidate.id;
             }
         }

@@ -1,13 +1,12 @@
 import { Weapon } from './Weapon.js';
-import { Bullet, scheduledBullet } from './Bullet.js';
+import { Bullet, ScheduledBullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
-import { characterQTree, bulletQTree, tileQTree, pickupQTree } from '../socket.js';
-import { scale, BPM } from '../socket.js';
+import { Sounds } from './Sounds.js';
 import { Socket } from './Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 
-const loadDistance = 1600; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadDistance = 600; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
 const loadUnloadMargin = 1600;
 const unloadDistance = loadDistance + loadUnloadMargin;
 
@@ -93,7 +92,7 @@ export class Player extends Character{
         }
 
         //get pickups in load distance from character quadtree:
-        let pickupsToLoad = pickupQTree.retrieve(loadRect)
+        let pickupsToLoad = Pickup.quadtree.retrieve(loadRect)
 
         for(const pu of pickupsToLoad){
             const pickup = Pickup.list[pu.id]
@@ -110,7 +109,7 @@ export class Player extends Character{
         }
 
         //get pickups in load distance from character quadtree:
-        let tilesToLoad = tileQTree.retrieve(loadRect)
+        let tilesToLoad = Tile.quadtree.retrieve(loadRect)
 
         for(const t of tilesToLoad){
             const tile = Tile.list[t.id]
@@ -131,10 +130,10 @@ export class Player extends Character{
         initPack.selfId = this.id;
         initPack.selectedNote = this.selectedNote;
         initPack.scale = {
-            name: `${scale.base} ${scale.type}`,
-            allowedNotes: scale.allowedNotes
+            name: `${Sounds.scale.base} ${Sounds.scale.type}`,
+            allowedNotes: Sounds.scale.allowedNotes
         }
-        initPack.bpm = BPM;
+        initPack.bpm = Sounds.bpm;
 
         initPack.weapon = {
             sound: this.weapon.sound,
@@ -162,7 +161,7 @@ export class Player extends Character{
         }
 
         //TODO: based on proximity to player:
-        let charactersToUpdate = characterQTree.retrieve(loadRect)
+        let charactersToUpdate = Character.quadtree.retrieve(loadRect)
 
         for(const c of charactersToUpdate){
             const character = Character.list[c.id];
@@ -186,8 +185,24 @@ export class Player extends Character{
             }
         }
 
+        // //Scheduled Bullets:
+        // let scheduledBulletsToUpdate = ScheduledBullet.quadtree.retrieve(loadRect);
+        // for(const sb of scheduledBulletsToUpdate){
+        //     const scheduledBullet = ScheduledBullet.list[sb.id];
+        //     if(!scheduledBullet) continue;
+        //     if(!this.isWithinDistance(scheduledBullet, loadDistance)) continue;
 
-        let bulletsToUpdate = bulletQTree.retrieve(loadRect)
+        //     this.updatePack.push({
+        //         x:
+        //         y:
+        //         id: 
+        //         scheduledFor:
+
+        //     })
+        // }
+
+        //Bullets:
+        let bulletsToUpdate = Bullet.quadtree.retrieve(loadRect)
 
         for(const b of bulletsToUpdate){
             const bullet = Bullet.list[b.id];
@@ -212,7 +227,7 @@ export class Player extends Character{
         }
 
 
-        let pickupsToUpdate = pickupQTree.retrieve(loadRect)
+        let pickupsToUpdate = Pickup.quadtree.retrieve(loadRect)
 
         for(const pu of pickupsToUpdate){
             const pickup = Pickup.list[pu.id];
@@ -233,7 +248,7 @@ export class Player extends Character{
         }
 
 
-        let tilesToUpdate = tileQTree.retrieve(loadRect)
+        let tilesToUpdate = Tile.quadtree.retrieve(loadRect)
 
         for(const t of tilesToUpdate){
             const tile = Tile.list[t.id];
@@ -293,7 +308,7 @@ export class Player extends Character{
 
         // //for characters:
         let notToRemoveIDs = []
-        let charactersNotToRemove = characterQTree.retrieve(unloadRect);
+        let charactersNotToRemove = Character.quadtree.retrieve(unloadRect);
         for(const c of charactersNotToRemove){
             if(!this.isWithinDistance(c, unloadDistance)) continue;
             notToRemoveIDs.push(c.id);
@@ -311,7 +326,7 @@ export class Player extends Character{
         //skip bullets (let them just be removed by timeout)
 
         //for pickups:
-        let pickupsNotToRemove = pickupQTree.retrieve(unloadRect);
+        let pickupsNotToRemove = Pickup.quadtree.retrieve(unloadRect);
         notToRemoveIDs = []
         for(const pu of pickupsNotToRemove){
             if(!this.isWithinDistance(pu, unloadDistance)) continue;
@@ -328,7 +343,7 @@ export class Player extends Character{
         }
 
         // for tiles:
-        let tilesNotToRemove = tileQTree.retrieve(unloadRect);
+        let tilesNotToRemove = Tile.quadtree.retrieve(unloadRect);
         notToRemoveIDs = []
         for(const t of tilesNotToRemove){
             if(!this.isWithinDistance(t, unloadDistance)) continue;
