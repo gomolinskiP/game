@@ -1,6 +1,24 @@
+import { Socket } from "./clientSocket.js";
 import { setIsInChat, getIsInChat } from "./main.js";
+import { Sounds } from "./sounds.js";
+import { GameUI } from "./gameButtons.js";
 
 let spacePressed = false;
+
+export class Keyboard{
+    static addNoteKeyboardListener(digit, note){
+        if(digit>9) return;
+        console.log(`digit ${digit} | note ${note}`)
+
+        addEventListener("keydown", (event)=>{
+            if(event.key == `${digit}`){
+                console.log(`pressed ${digit}`)
+                Socket.noteFire(note);
+                GameUI.setActiveNote(note);
+            }
+        })
+    }
+}
 
 export function addKeyboardListeners(socket){
     const chatInput = document.getElementById("chat-input")

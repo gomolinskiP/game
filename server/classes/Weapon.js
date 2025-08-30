@@ -1,5 +1,5 @@
-import { scheduledBullet } from "./Bullet.js";
-import { scale } from "../socket.js";
+import { ScheduledBullet } from "./Bullet.js";
+import { Sounds } from "./Sounds.js";
 
 export class Weapon{
     static chordNotes = ["onSpawn", "+4", "+7"]
@@ -86,34 +86,35 @@ export class Weapon{
     }
 
     shoot(note){
+        let bullets = [];
         switch(this.type){
             case 'normal':
-                new scheduledBullet(this.wielder, "onSpawn", this.durationType, this.damage)
+                bullets.push(new ScheduledBullet(this.wielder, "onSpawn", this.durationType, this.damage))
                 break;
             case 'random':
-                let randNote = scale.allowedNotes[Math.floor(Math.random()*scale.allowedNotes.length)]
-                new scheduledBullet(this.wielder, randNote, this.durationType, this.damage)
+                let randNote = Sounds.scale.allowedNotes[Math.floor(Math.random()*Sounds.scale.allowedNotes.length)]
+                bullets.push(new ScheduledBullet(this.wielder, randNote, this.durationType, this.damage))
                 break;
             case 'chord':
-                new scheduledBullet(this.wielder, "onSpawn", this.durationType, this.damage/3)
-                new scheduledBullet(this.wielder, "+4", this.durationType, this.damage/3)
-                new scheduledBullet(this.wielder, "+7", this.durationType, this.damage/3)
+                bullets.push(new ScheduledBullet(this.wielder, "onSpawn", this.durationType, this.damage/3))
+                bullets.push(new ScheduledBullet(this.wielder, "+4", this.durationType, this.damage/3))
+                bullets.push(new ScheduledBullet(this.wielder, "+7", this.durationType, this.damage/3))
                 break;
             case 'arp-up':
-                new scheduledBullet(this.wielder, this.getAscendingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage)
+                bullets.push(new ScheduledBullet(this.wielder, this.getAscendingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage))
                 this.shootCount += 1;
                 break;
             case 'arp-down':
-                new scheduledBullet(this.wielder, this.getDescendingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage)
+                bullets.push(new ScheduledBullet(this.wielder, this.getDescendingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage))
                 this.shootCount += 1;
                 break;
             case 'arp-alt':
-                new scheduledBullet(this.wielder, this.getAlternatingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage)
-                
+                bullets.push(new ScheduledBullet(this.wielder, this.getAlternatingArpNote(this.shootCount, Weapon.chordNotes), this.durationType, this.damage))
                 this.shootCount += 1;
                 break;
         }
-        
+
+        return bullets;
     }
 
     getAscendingArpNote(count, notes){

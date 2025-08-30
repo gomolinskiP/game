@@ -1,19 +1,24 @@
-export class Socket{
-    static clientSocket = io();
-    static selfId = null;
+export class Socket {
+  static clientSocket = io();
+  static selfId = null;
 
-    static setSelfID(id){
-        Socket.selfId = id;
-    }
+  static setSelfID(id) {
+    Socket.selfId = id;
+  }
 
-    static noteChange(note){
-        Socket.clientSocket.emit('noteChange', note);
-    };
+  static noteChange(note) {
+    Socket.clientSocket.emit("noteChange", note);
+  }
 
-    static weaponChange(type, code){
-        Socket.clientSocket.emit('weaponChange', {
-            type: type,
-            code: code
-        });
-    }
+  static weaponChange(type, code) {
+    Socket.clientSocket.emit("weaponChange", {
+      type: type,
+      code: code,
+    });
+  }
+
+  static noteFire(note) {
+    console.log(note)
+    Socket.clientSocket.emit("noteFire", note);
+  }
 }
