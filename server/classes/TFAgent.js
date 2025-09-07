@@ -1,4 +1,4 @@
-import * as tf from "@tensorflow/tfjs";
+import * as tf from "@tensorflow/tfjs-node";
 // import "@tensorflow/tfjs-node";
 
 class ReplayBuffer{
