@@ -16,6 +16,8 @@ export class Map {
 
   static mapData;
 
+  static boundRect = {};
+
   static async loadMapData() {
     const filePath = resolve(__dirname, "../../client/map3.json");
     const jsonData = JSON.parse(await readFile(filePath, "utf-8"));
@@ -80,6 +82,8 @@ export class Map {
           if (ortX > Map.mapXmax) Map.mapXmax = ortX + 64;
           if (ortY < Map.mapYmin) Map.mapYmin = ortY;
           if (ortY > Map.mapYmax) Map.mapYmax = ortY + 64;
+
+          Map.updateMapBoundRect();
 
           let scr = Map.screenToIso(ortX, ortY);
 

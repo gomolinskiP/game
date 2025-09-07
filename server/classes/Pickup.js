@@ -48,7 +48,6 @@ export class Pickup extends Entity{
             isUnreachable = Tile.checkTilesCollision(x, y, Tile.wallQTree) || !Tile.checkTilesCollision(x, y, Tile.floorQTree)
         }
         super(x, y)
-
         this.entityType = "pickup";
 
         this.sound = soundList[Math.floor(Math.random() * soundList.length)]
@@ -90,6 +89,8 @@ export class Pickup extends Entity{
         if(playerId != null){
             playerList[playerId].giveWeapon(this.sound, this.duration, this.type)
             playerList[playerId].addScore(1);
+            playerList[playerId].agentReward += 2;
+            // console.log(`givin 10 reward for pickup`)
             this.destroy();
         }
     }

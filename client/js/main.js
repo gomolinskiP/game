@@ -242,7 +242,8 @@ Tone.Transport.scheduleRepeat((time) => {
     const note = `${Sounds.scaleBase}${octave}`;
 
     console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
-    metronome.triggerAttackRelease(note, "32n", time);
+    if(Sounds.audioOn == true)
+        metronome.triggerAttackRelease(note, "32n", time);
 }, "4n");
 
 let tickNum = 0;

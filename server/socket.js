@@ -37,6 +37,8 @@ Bullet.createQuadtree(Map.boundRect);
 ScheduledBullet.createQuadtree(Map.boundRect);
 Pickup.createQuadtree(Map.boundRect);
 
+Bot.startAgentStep();
+
 export default async function webSocketSetUp(serv, ses, Progress) {
     //socket.io:
 
@@ -210,10 +212,10 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         }
 
         // random bot spawn:
-        // if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
-        //     // console.log("bot spawned")
-        //     new Bot();
-        // }
+        if(Math.random()<0.1 && Object.keys(Bot.list).length<1){
+            // console.log("bot spawned")
+            new Bot();
+        }
 
         Pickup.handleAll(Character.list, Socket.list);
         Bullet.updateAll();

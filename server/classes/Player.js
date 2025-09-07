@@ -48,6 +48,77 @@ export class Player extends Character{
         return this;
     }
 
+    getEnvironment(){
+        const state = [];
+        // - 9 najbliższych kafelków mapy (x i y); 
+        // - 1 najbliższy obiekt klasy Pickup (x i y); 
+        // - 1 najbliższy obiekt klasy bullet (x, y oraz parametr "note"); 
+        // - 1 najbliższy obiekt klasy Character (x, y oraz HP); 
+        // - czas serwera, 
+        // - informacje o sobie (x, y, HP)
+
+        //self-info
+        // state.push(0, 0, this.hp/1000);
+
+        state.push(this.spdX/this.speed, this.spdY/this.speed);
+
+        const gridDims = 5; //5x5 grid around agent
+        //2:1 grid because of isometric view and proportions:
+        const cellW = 200;
+        const cellH = 100;
+
+        let minDX = gridDims*cellW/2;
+        let minDY = gridDims*cellH/2;
+        let minDistSq = minDX*minDX + minDY*minDY;
+        const maxDistSq = minDistSq;
+        console.log(minDX, minDY, minDistSq)
+
+        for(let i = 0; i < gridDims; i++){
+            for(let j = 0; j < gridDims; j++){
+                const cellX = this.x - (gridDims * cellW) / 2 + j * cellW;
+                const cellY = this.y - (gridDims * cellH) / 2 + i * cellH;
+
+                let isPickupInCell = 0;
+                
+                const pickupCandidates = Pickup.quadtree.retrieve({
+                    x: cellX,
+                    y: cellY,
+                    width: cellW,
+                    height: cellH,
+                })
+
+                for(const pickup of pickupCandidates){
+                    if(pickup.x > cellX &&
+                        pickup.x < cellX + cellW &&
+                        pickup.y > cellY &&
+                        pickup.y < cellY + cellH
+                    ){
+                        isPickupInCell = 1;
+                        const dx = this.x - pickup.x;
+                        const dy = this.y - pickup.y;
+                        const distSq = dx*dx + dy*dy;
+
+                        if(distSq < minDistSq){
+                            minDistSq = distSq;
+                            minDX = dx;
+                            minDY = dy;
+                        }
+                    }
+                }
+
+                state.push(isPickupInCell);
+            }
+        }
+        if(!this.lastMinDistSq) this.lastMinDistSq = minDistSq;
+        else{
+            console.log(minDistSq, this.lastMinDistSq, Math.sqrt(this.lastMinDistSq) - Math.sqrt(minDistSq))
+            this.lastMinDistSq = minDistSq;
+        }
+        
+        state.push(minDX/maxDistSq, minDY/maxDistSq);
+        this.updatePack.push(state);
+    }
+
     giveWeapon(sound, duration, type){
         super.giveWeapon(sound, duration, type);
 

@@ -272,6 +272,26 @@ function drawHUD(){
     ctx.fillText(`Score: ${Player.list[selfId].score}`, 180, 85);
 }
 
+function drawAgentGrid(player){
+    const x = player.x - Player.list[selfId].x + gameWidth/2;
+    const y = player.y - Player.list[selfId].y + gameHeight / 2;
+
+    const gridDims = 5;
+    const cellH = 100;
+    const cellW = 200;
+
+    for(let i = 0; i < gridDims; i++){
+        for(let j = 0; j < gridDims; j++){
+            const cellX = x - gridDims*cellW/2 + j*cellW;
+            const cellY = y - gridDims*cellH/2 + i*cellH;
+
+            ctx.fillStyle = `#${(3*i)%9}000${(3*j)%9}044`;
+            ctx.fillRect(cellX, cellY, cellW, cellH);
+            // ctx.stroke();
+        }
+    }
+}
+
 //game Loop:
 export function gameLoop(){
     if(!selfId){
@@ -355,6 +375,12 @@ export function gameLoop(){
         for(let obj of collisionLayer.objects){
             drawIsometricRect(obj.x, obj.y, obj.width, obj. height)
         }
+    }
+
+    for(const id in Player.list){
+        const player = Player.list[id];
+
+        drawAgentGrid(player);
     }
 
     requestAnimationFrame(gameLoop)

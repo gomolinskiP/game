@@ -89,9 +89,13 @@ export class Character extends Entity {
       !this.pressingDown &&
       !this.pressingLeft &&
       !this.pressingRight
-    )
+    ){
       // console.log("---") //TO FIX -- animation does not stop when player stops walking because he stops getting updated!!
       this.needsUpdate = false;
+      // if(this.agentReward){
+        // this.agentReward -= 0.1;
+      // }
+      }
     else {
       this.dirY *= 50 / 100; //SCALER if map image is in perspective
       this.lastAngle = (Math.atan2(this.dirY, this.dirX) * 180) / Math.PI;
@@ -109,10 +113,19 @@ export class Character extends Entity {
         this.x = newX;
         this.y = newY;
 
+        // if(this.agentReward){
+          // this.agentReward += 0.5;
+        // }
+
         //update all scheduledBullets positions:
         for (const scheduledBullet of this.scheduledBullets) {
           scheduledBullet.updatePosition(this.x, this.y);
         }
+      }
+      else{
+        // if(this.agentReward){
+          // this.agentReward -= 0.2;
+        // }
       }
     }
 
