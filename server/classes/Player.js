@@ -1,5 +1,5 @@
 import { Weapon } from './Weapon.js';
-import { Bullet, ScheduledBullet } from './Bullet.js';
+import { Bullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
 import { Sounds } from './Sounds.js';
 import { Socket } from './Socket.js';
@@ -36,6 +36,8 @@ export class Player extends Character{
         super(id, x, y, username, weapon, score);
         this.id = id;
 
+        this.characterType = 'player';
+
         Player.list[this.id] = this;
 
         this.knownObjIDs = [] //all objects' IDs known to this player
@@ -48,76 +50,76 @@ export class Player extends Character{
         return this;
     }
 
-    getEnvironment(){
-        const state = [];
-        // - 9 najbliższych kafelków mapy (x i y); 
-        // - 1 najbliższy obiekt klasy Pickup (x i y); 
-        // - 1 najbliższy obiekt klasy bullet (x, y oraz parametr "note"); 
-        // - 1 najbliższy obiekt klasy Character (x, y oraz HP); 
-        // - czas serwera, 
-        // - informacje o sobie (x, y, HP)
+    // getEnvironment(){
+    //     const state = [];
+    //     // - 9 najbliższych kafelków mapy (x i y); 
+    //     // - 1 najbliższy obiekt klasy Pickup (x i y); 
+    //     // - 1 najbliższy obiekt klasy bullet (x, y oraz parametr "note"); 
+    //     // - 1 najbliższy obiekt klasy Character (x, y oraz HP); 
+    //     // - czas serwera, 
+    //     // - informacje o sobie (x, y, HP)
 
-        //self-info
-        // state.push(0, 0, this.hp/1000);
+    //     //self-info
+    //     // state.push(0, 0, this.hp/1000);
 
-        state.push(this.spdX/this.speed, this.spdY/this.speed);
+    //     state.push(this.spdX/this.speed, this.spdY/this.speed);
 
-        const gridDims = 5; //5x5 grid around agent
-        //2:1 grid because of isometric view and proportions:
-        const cellW = 200;
-        const cellH = 100;
+    //     const gridDims = 5; //5x5 grid around agent
+    //     //2:1 grid because of isometric view and proportions:
+    //     const cellW = 200;
+    //     const cellH = 100;
 
-        let minDX = gridDims*cellW/2;
-        let minDY = gridDims*cellH/2;
-        let minDistSq = minDX*minDX + minDY*minDY;
-        const maxDistSq = minDistSq;
-        console.log(minDX, minDY, minDistSq)
+    //     let minDX = gridDims*cellW/2;
+    //     let minDY = gridDims*cellH/2;
+    //     let minDistSq = minDX*minDX + minDY*minDY;
+    //     const maxDistSq = minDistSq;
+    //     console.log(minDX, minDY, minDistSq)
 
-        for(let i = 0; i < gridDims; i++){
-            for(let j = 0; j < gridDims; j++){
-                const cellX = this.x - (gridDims * cellW) / 2 + j * cellW;
-                const cellY = this.y - (gridDims * cellH) / 2 + i * cellH;
+    //     for(let i = 0; i < gridDims; i++){
+    //         for(let j = 0; j < gridDims; j++){
+    //             const cellX = this.x - (gridDims * cellW) / 2 + j * cellW;
+    //             const cellY = this.y - (gridDims * cellH) / 2 + i * cellH;
 
-                let isPickupInCell = 0;
+    //             let isPickupInCell = 0;
                 
-                const pickupCandidates = Pickup.quadtree.retrieve({
-                    x: cellX,
-                    y: cellY,
-                    width: cellW,
-                    height: cellH,
-                })
+    //             const pickupCandidates = Pickup.quadtree.retrieve({
+    //                 x: cellX,
+    //                 y: cellY,
+    //                 width: cellW,
+    //                 height: cellH,
+    //             })
 
-                for(const pickup of pickupCandidates){
-                    if(pickup.x > cellX &&
-                        pickup.x < cellX + cellW &&
-                        pickup.y > cellY &&
-                        pickup.y < cellY + cellH
-                    ){
-                        isPickupInCell = 1;
-                        const dx = this.x - pickup.x;
-                        const dy = this.y - pickup.y;
-                        const distSq = dx*dx + dy*dy;
+    //             for(const pickup of pickupCandidates){
+    //                 if(pickup.x > cellX &&
+    //                     pickup.x < cellX + cellW &&
+    //                     pickup.y > cellY &&
+    //                     pickup.y < cellY + cellH
+    //                 ){
+    //                     isPickupInCell = 1;
+    //                     const dx = this.x - pickup.x;
+    //                     const dy = this.y - pickup.y;
+    //                     const distSq = dx*dx + dy*dy;
 
-                        if(distSq < minDistSq){
-                            minDistSq = distSq;
-                            minDX = dx;
-                            minDY = dy;
-                        }
-                    }
-                }
+    //                     if(distSq < minDistSq){
+    //                         minDistSq = distSq;
+    //                         minDX = dx;
+    //                         minDY = dy;
+    //                     }
+    //                 }
+    //             }
 
-                state.push(isPickupInCell);
-            }
-        }
-        if(!this.lastMinDistSq) this.lastMinDistSq = minDistSq;
-        else{
-            console.log(minDistSq, this.lastMinDistSq, Math.sqrt(this.lastMinDistSq) - Math.sqrt(minDistSq))
-            this.lastMinDistSq = minDistSq;
-        }
+    //             state.push(isPickupInCell);
+    //         }
+    //     }
+    //     if(!this.lastMinDistSq) this.lastMinDistSq = minDistSq;
+    //     else{
+    //         console.log(minDistSq, this.lastMinDistSq, Math.sqrt(this.lastMinDistSq) - Math.sqrt(minDistSq))
+    //         this.lastMinDistSq = minDistSq;
+    //     }
         
-        state.push(minDX/maxDistSq, minDY/maxDistSq);
-        this.updatePack.push(state);
-    }
+    //     state.push(minDX/maxDistSq, minDY/maxDistSq);
+    //     this.updatePack.push(state);
+    // }
 
     giveWeapon(sound, duration, type){
         super.giveWeapon(sound, duration, type);
@@ -141,26 +143,45 @@ export class Player extends Character{
         }
 
         //get characters in load distance from character quadtree:
-        for(var i in Character.list){
-            let player = Character.list[i]
-            
-            //check distance:
-            if(Math.abs(player.x - this.x) > loadDistance ||
-               Math.abs(player.y - this.y) > loadDistance) continue;
-            
-            initPack.entities.push({
-                x: player.x,
-                y: player.y,
-                type: "player",
-                id: player.id,
-                name: player.name,
-                hp: player.hp,
-                score: player.score,
-                direction: player.lastAngle
-            })
+        const charactersToLoad = Character.quadtree.retrieve(loadRect);
+        for(const candidate of charactersToLoad){
+            const character = Character.list[candidate.id];
 
-            this.knownObjIDs.push(player.id)
+            if(!this.isWithinDistance(character, loadDistance)) continue;
+
+            initPack.entities.push({
+                x: character.x,
+                y: character.y,
+                type: character.characterType,
+                id: character.id,
+                name: character.name,
+                hp: character.hp,
+                score: character.score,
+                direction: character.lastAngle,
+            });
+
+            this.knownObjIDs.push(character.id);
         }
+        // for(var i in Character.list){
+        //     let player = Character.list[i]
+            
+        //     //check distance:
+        //     if(Math.abs(player.x - this.x) > loadDistance ||
+        //        Math.abs(player.y - this.y) > loadDistance) continue;
+            
+        //     initPack.entities.push({
+        //         x: player.x,
+        //         y: player.y,
+        //         type: "player",
+        //         id: player.id,
+        //         name: player.name,
+        //         hp: player.hp,
+        //         score: player.score,
+        //         direction: player.lastAngle
+        //     })
+
+        //     this.knownObjIDs.push(player.id)
+        // }
 
         //get pickups in load distance from character quadtree:
         let pickupsToLoad = Pickup.quadtree.retrieve(loadRect)
@@ -242,7 +263,7 @@ export class Player extends Character{
                 this.updatePack.push({
                     x: character.x,
                     y: character.y,
-                    type: "player",
+                    type: character.characterType,
                     id: character.id,
                     name: character.name,
                     hp: character.hp,
@@ -390,7 +411,7 @@ export class Player extends Character{
             if(!this.knownObjIDs.includes(character.id)) continue;
             if(notToRemoveIDs.includes(character.id)) continue;
             if(!this.isWithinDistance(character, unloadDistance)){
-                this.addToRemovePack(character.id, 'player');
+                this.addToRemovePack(character.id, character.characterType);
             }
         }
 

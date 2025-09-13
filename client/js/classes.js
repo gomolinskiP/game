@@ -101,7 +101,9 @@ export class Player extends Entity{
 
 
         this.direction = this.updateDirection(initPack.direction);
-        this.image = Img.player;
+        this.idleAnimFrame = 2;
+        this.imageAnim = Img.playerAnim;
+        this.image = this.imageAnim[this.direction][this.idleAnimFrame];
         this.animFrame = 1 * 2;
 
         if(!SoundPool.globalSoundPool){
@@ -150,7 +152,7 @@ export class Player extends Entity{
 
         //set a static frame if player has not moved in some short time:
         if(Date.now() - this.lastMovedTime > 50){
-            this.animFrame = 1 * 2;
+            this.animFrame = this.idleAnimFrame;
         }
 
         //player image:
@@ -163,7 +165,7 @@ export class Player extends Entity{
                     w: 64,
                     h: 64,
         })
-        this.image = Img.playerAnim[this.direction][parseInt(this.animFrame/2%3)]
+        this.image = this.imageAnim[this.direction][parseInt(this.animFrame/2%3)]
 
         //player nametag:
         let nameFont = ''
@@ -213,6 +215,20 @@ export class Player extends Entity{
         }
 
         return 's';
+    }
+}
+
+export class Bot extends Player{
+    constructor(initPack){
+        super(initPack);
+        
+        this.idleAnimFrame = 1;
+        this.imageAnim = Img.botAnim;
+        // this.image = Img.botAnim[this.direction][this.idleAnimFrame];
+
+        console.log('bot created')
+
+        return this;
     }
 }
 

@@ -9,6 +9,16 @@ export class Socket {
     }
   }
 
+  static emitShootFeedbackMsg(recipient, message, rating){
+    if(recipient.updatePack){
+      recipient.updatePack.push({
+          msg: message,
+          rating: rating,
+          type: "gameMsg",
+      });
+    }
+  }
+
   constructor(socket) {
     this.id = Math.random();
 

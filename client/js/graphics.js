@@ -14,16 +14,35 @@ var ctx = canvas.getContext("2d");
 export class Graphics{
     static gameMessages = [];
 
-    static addGameMsg(msg){
+    static addGameMsg(msg, rating){
+        if(Graphics.gameMessages.length > 10) Graphics.gameMessages.shift();
+
+        let msgColor;
+        switch(rating){
+            case 'good':
+                msgColor = 'green';
+                break;
+            case 'ok':
+                msgColor = 'darkyellow';
+                break;
+            case 'bad':
+                msgColor = 'red';
+                break;
+            default:
+                console.log('unknown shoot feedback message rating: ' + rating); 
+        }
+
         Graphics.gameMessages.push({
             text: msg,
+            color: msgColor,
+            fontSize: 26,
             x: gameWidth/2 + (Math.random()-0.5)*gameWidth/4,
-            y: gameHeight/2+ (Math.random()-0.5)*gameHeight/4
+            y: gameHeight/2 - 32
         });
 
         setTimeout(()=>{
             Graphics.gameMessages.shift();
-        }, 500);
+        }, 10000);
     }
 }
 
@@ -57,6 +76,15 @@ for(let dir of directions){
     for(let i = 0; i<3; i++){
         Img.playerAnim[dir][i] = new Image();
         Img.playerAnim[dir][i].src = `../img/char/${dir}${i+1}.png`
+    }
+}
+Img.botAnim = {};
+for (let dir of directions) {
+    Img.botAnim[dir] = {};
+
+    for (let i = 0; i < 3; i++) {
+        Img.botAnim[dir][i] = new Image();
+        Img.botAnim[dir][i].src = `../img/bot/${dir}${i + 1}.png`;
     }
 }
 
@@ -358,9 +386,16 @@ export function gameLoop(){
     drawBuffer = []
 
     for(const msg of Graphics.gameMessages){
-        ctx.fillStyle = "red";
-        ctx.font = 'bold 12px Cascadia Mono';
+        ctx.fillStyle = msg.color;
+        ctx.font = 'bold ' + msg.fontSize + 'px Cascadia Mono';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = Math.max(1, msg.fontSize - 24);
+        ctx.strokeText(msg.text, msg.x, msg.y);
         ctx.fillText(msg.text, msg.x, msg.y);
+
+        msg.y -= 1;
+        if(msg.fontSize > 2) msg.fontSize -= 0.05;
+
         console.log(msg.text, msg.x, msg.y)
     }
     drawHUD();
@@ -377,11 +412,12 @@ export function gameLoop(){
         }
     }
 
-    for(const id in Player.list){
-        const player = Player.list[id];
+    //draw agent environment grid:
+    // for(const id in Player.list){
+    //     const player = Player.list[id];
 
-        drawAgentGrid(player);
-    }
+    //     drawAgentGrid(player);
+    // }
 
     requestAnimationFrame(gameLoop)
 }

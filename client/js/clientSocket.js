@@ -6,6 +6,13 @@ export class Socket {
     Socket.selfId = id;
   }
 
+  static pressingDirection(direction, state){
+    Socket.clientSocket.emit("keyPress", {
+        inputId: direction,
+        state: state,
+    });
+  }
+
   static noteChange(note) {
     Socket.clientSocket.emit("noteChange", note);
   }

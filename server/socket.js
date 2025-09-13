@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 import { Socket } from "./classes/Socket.js";
 import { Player } from "./classes/Player.js";
 import { Bot } from "./classes/Bot.js";
-import { Bullet, ScheduledBullet } from "./classes/Bullet.js";
+import { Bullet } from "./classes/Bullet.js";
 import { Pickup } from "./classes/Pickup.js";
 import { Character } from "./classes/Character.js";
 import { Tile } from "./classes/Tile.js";
@@ -34,7 +34,6 @@ Tile.createWallQTree(Map.boundRect);
 //Create empty quadtrees for dynamic object classes:
 Character.createQuadtree(Map.boundRect);
 Bullet.createQuadtree(Map.boundRect);
-ScheduledBullet.createQuadtree(Map.boundRect);
 Pickup.createQuadtree(Map.boundRect);
 
 Bot.startAgentStep();
@@ -202,7 +201,6 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         //reconstruct quadtrees for dynamic objects:
         Character.refreshQuadtree();
         Bullet.refreshQuadtree();
-        ScheduledBullet.refreshQuadtree();
         Pickup.refreshQuadtree();
 
         // random pickup spawn:
@@ -212,7 +210,7 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         }
 
         // random bot spawn:
-        if(Math.random()<0.1 && Object.keys(Bot.list).length<1){
+        if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
             // console.log("bot spawned")
             new Bot();
         }

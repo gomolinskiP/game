@@ -1,6 +1,5 @@
 import { Entity } from "./Entity.js";
 import { Weapon } from "./Weapon.js";
-import { Bullet, ScheduledBullet } from "./Bullet.js";
 import { Pickup } from "./Pickup.js";
 import { Socket } from "./Socket.js";
 import { Sounds } from "./Sounds.js";
@@ -39,7 +38,7 @@ export class Character extends Entity {
     super(x, y);
     this.id = id;
     this.name = username;
-    this.hp = Character.fullHP;
+    this.fullHP = this.hp = Character.fullHP;
     this.score = score;
     // this.socketIDs = [id]; //bots won't have socket ids
 
@@ -153,36 +152,71 @@ export class Character extends Entity {
   }
 
   shoot() {
-    //shooting not allowed on spawn:
-    if (
-      this.isWithinDistance(
-        {
-          x: 0,
-          y: 0,
-        },
-        1600
-      )
-    )
+    if(this.hasShotScheduled){
+      Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
       return;
-    this.needsUpdate = true;
-    if (!this.hasShotScheduled) {
-      this.hasShotScheduled = true;
-      let newBullets = this.weapon.shoot(this.selectedNote);
-      //add to this players scheduled bullet list:
-      this.scheduledBullets = this.scheduledBullets.concat(newBullets);
-      // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
-
-      // setTimeout(()=>{
-      //     this.shootTimeout = false
-      // }, this.shootTimeoutTime)
-    } else {
-      if (this.updatePack) {
-        this.updatePack.push({
-          msg: "To early!",
-          type: "gameMsg",
-        });
-      }
     }
+
+    let timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
+
+    let inaccuracyType;
+    if(timeInaccuracy >= 0){
+      //shot timing perfect or late:
+      inaccuracyType = 'late';
+    }
+    else{
+      //shot timing perfect or early:
+      inaccuracyType = "early";
+      timeInaccuracy = -timeInaccuracy; //we want absolute value for later
+    }
+
+    if(timeInaccuracy > Sounds.maxTimeInaccuracy){
+      Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
+      if(this.shootAgentReward) this.shootAgentReward -= 0.1;
+      return;
+    }
+
+    this.hasShotScheduled = true;
+    if(timeInaccuracy < Sounds.perfectTimeInaccuracy){
+      Socket.emitShootFeedbackMsg(this, 'Perfect timing!', 'good');
+    }
+    else{
+      Socket.emitShootFeedbackMsg(this, 'Timing ' + timeInaccuracy + ' to ' + inaccuracyType, 'ok');
+    }
+
+    this.weapon.shoot(this.selectedNote);
+
+
+    // //shooting not allowed on spawn:
+    // if (
+    //   this.isWithinDistance(
+    //     {
+    //       x: 0,
+    //       y: 0,
+    //     },
+    //     1600
+    //   )
+    // )
+    //   return;
+    // this.needsUpdate = true;
+    // if (!this.hasShotScheduled) {
+    //   this.hasShotScheduled = true;
+    //   let newBullets = this.weapon.shoot(this.selectedNote);
+    //   //add to this players scheduled bullet list:
+    //   this.scheduledBullets = this.scheduledBullets.concat(newBullets);
+    //   // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
+
+    //   // setTimeout(()=>{
+    //   //     this.shootTimeout = false
+    //   // }, this.shootTimeoutTime)
+    // } else {
+    //   if (this.updatePack) {
+    //     this.updatePack.push({
+    //       msg: "To early to shoot!",
+    //       type: "gameMsg",
+    //     });
+    //   }
+    // }
   }
 
   giveWeapon(sound, duration, type) {
@@ -206,10 +240,10 @@ export class Character extends Entity {
     this.selectedNote = note;
   }
 
-  takeDmg(damage, byWho) {
+  takeDmg(damage, attacker) {
     this.hp -= damage;
     if (this.hp <= 0) {
-      this.die(byWho);
+      this.die(attacker);
     }
     this.needsUpdate = true;
   }

@@ -1,14 +1,15 @@
-import { stat } from "fs";
 import { Bullet } from "./Bullet.js";
 import { Character } from "./Character.js";
 import { Map } from "./Map.js";
 import { Pickup } from "./Pickup.js";
 import { WalkAgent } from "./RL.js";
 import { Tile } from "./Tile.js";
+import { Sounds } from "./Sounds.js";
 
 
 export class Bot extends Character {
     static list = {};
+
 
     static stepAll() {
         for (const id in Bot.list) {
@@ -24,67 +25,79 @@ export class Bot extends Character {
         }, 250);
     }
 
+    static metronomeTick(){
+      for (const id in Bot.list) {
+          const bot = Bot.list[id];
+
+        //   bot.shootAgent.step();
+      }
+    }
+
     constructor() {
-        let x = 0;
-        let y = 0;
+        let x;
+        let y;
 
-        // let isPositionForbidden = true;
-        // while(isPositionForbidden){
-        //     x = Map.boundRect.x + Map.boundRect.width*(Math.random());
-        //     y = Map.boundRect.y + Map.boundRect.height*(Math.random());
+        let isPositionForbidden = true;
+        while(isPositionForbidden){
+            x = Map.boundRect.x + Map.boundRect.width*(Math.random());
+            y = Map.boundRect.y + Map.boundRect.height*(Math.random());
 
-        //     //check if random position is colliding a wall or is not on floor
-        //     isPositionForbidden = Tile.checkTilesCollision(x, y, Tile.wallQTree) || !Tile.checkTilesCollision(x, y, Tile.floorQTree)
-        // }
+            //check if random position is colliding a wall or is not on floor
+            isPositionForbidden = Tile.checkTilesCollision(x, y, Tile.wallQTree) || !Tile.checkTilesCollision(x, y, Tile.floorQTree)
+        }
 
         let id = Math.random();
-        let username = `bot${Math.round(id * 1000)}`;
+        let username = `(●'◡'●)`;
         super(id, x, y, username);
 
         // this.randTime = 1000*(Math.random() * 3 + 1)
         // setTimeout(()=>this.setRandDirection(), this.randTime);
 
         this.walkAgent = new WalkAgent(this);
+        // this.shootAgent = new ShootAgent(this);
         this.agentReward = 0;
+        // this.shootAgentReward = 0;
+
+        this.characterType = 'bot';
 
         Bot.list[this.id] = this;
     }
 
-    updatePosition() {
-        super.updatePosition();
+    // updatePosition() {
+    //     super.updatePosition();
 
-        const rect = {
-            x: this.x - 250,
-            y: this.y - 250,
-            width: 500,
-            height: 500,
-        };
+    //     // const rect = {
+    //     //     x: this.x - 250,
+    //     //     y: this.y - 250,
+    //     //     width: 500,
+    //     //     height: 500,
+    //     // };
 
-        const pickupCandidates = Pickup.quadtree.retrieve(rect);
-        let cumulatedDistSq = 0;
-        for (const pickup of pickupCandidates) {
-            if (
-                pickup.x > rect.x &&
-                pickup.x < rect.x + rect.width &&
-                pickup.y > rect.y &&
-                pickup.y < rect.y + rect.height
-            ) {
-                const dx = this.x - pickup.x;
-                const dy = this.y - pickup.y;
-                //cumulated reward for every close pickup
-                const distSq = dx * dx + dy * dy;
+    //     // const pickupCandidates = Pickup.quadtree.retrieve(rect);
+    //     // let cumulatedDistSq = 0;
+    //     // for (const pickup of pickupCandidates) {
+    //     //     if (
+    //     //         pickup.x > rect.x &&
+    //     //         pickup.x < rect.x + rect.width &&
+    //     //         pickup.y > rect.y &&
+    //     //         pickup.y < rect.y + rect.height
+    //     //     ) {
+    //     //         const dx = this.x - pickup.x;
+    //     //         const dy = this.y - pickup.y;
+    //     //         //cumulated reward for every close pickup
+    //     //         const distSq = dx * dx + dy * dy;
 
-                cumulatedDistSq += distSq;
+    //     //         cumulatedDistSq += distSq;
 
-                // this.agentReward += Math.min(1, (1 / dx*dx + dy*dy) * 1e-6);
-            }
-        }
-        if (this.lastCumulatedDistSq) {
-            // this.agentReward +=
-            //     (this.lastCumulatedDistSq - cumulatedDistSq) * 1e-6;
-        }
-        this.lastCumulatedDistSq = cumulatedDistSq;
-    }
+    //     //         // this.agentReward += Math.min(1, (1 / dx*dx + dy*dy) * 1e-6);
+    //     //     }
+    //     // }
+    //     // if (this.lastCumulatedDistSq) {
+    //     //     // this.agentReward +=
+    //     //     //     (this.lastCumulatedDistSq - cumulatedDistSq) * 1e-6;
+    //     // }
+    //     // this.lastCumulatedDistSq = cumulatedDistSq;
+    // }
 
     getGridState(objQuadtree) {
         let resultArray = [];
@@ -156,6 +169,50 @@ export class Bot extends Character {
         // }
     }
 
+    findN_Nearest(N, objQuadtree, objList, maxDist){
+        let nNearest = [];
+        const maxDistSq = maxDist * maxDist * 2;
+
+        let objCandidates = objQuadtree.retrieve({
+            x: this.x - maxDist,
+            y: this.y - maxDist,
+            width: 2 * maxDist,
+            height: 2 * maxDist
+        })
+
+        let minDistSq, nearest;
+        while(nNearest.length<N){
+            minDistSq = maxDistSq;
+            nearest = null;
+            for(const candidate of objCandidates){
+                //skip if found self:
+                if(candidate.id == this.id) continue;
+
+                const distSq = this.getDistSq(candidate);
+                //skip if too far:
+                if(distSq > maxDistSq) continue;
+
+                if(distSq < minDistSq){
+                    minDistSq = distSq;
+                    nearest = candidate;
+                }
+            }
+            if(nearest){
+                //remove the nearest from 
+                objCandidates = objCandidates.filter(c => c!==nearest);
+                console.log('objcandidates length: ',objCandidates.length)
+
+                const obj = objList[nearest.id];
+                nNearest.push(obj);
+            }
+            else{
+                nNearest.push(null);
+            }
+        }
+
+        return nNearest;
+    }
+
     nearestObjDist(objQuadtree, objList) {
         const nearest = this.findNearest(
             objList,
@@ -166,7 +223,7 @@ export class Bot extends Character {
         return Math.sqrt(distSq);
     }
 
-    getEnvironment() {
+    getWalkAgentEnvironment() {
         let state = [];
         // - 9 najbliższych kafelków mapy (x i y);
         // - 1 najbliższy obiekt klasy Pickup (x i y);
@@ -231,8 +288,82 @@ export class Bot extends Character {
         state = state.concat(wallTileGridState);
 
         //bullet:
+        const bulletGridState = this.getGridState(Bullet.quadtree);
+        state = state.concat(bulletGridState);
+
+        const nearestBullet = this.findNearest(
+            Bullet.list,
+            Bullet.quadtree,
+            WalkAgent.maxDist
+        );
+        if (nearestBullet) {
+            const nearestBulletDist = this.getDist(nearestBullet);
+            if (!this.lastNearestBulletDist) {
+                this.lastNearestBulletDist = nearestBulletDist;
+            }
+
+            //reward for getting closer to/further from the nearest pickup (negative if closer, positive if further):
+            const bulletDistDeltaReward = Math.max(
+                -1,
+                Math.min(
+                    1,
+                    (this.lastNearestBulletDist - nearestBulletDist) / 1000
+                )
+            );
+            this.agentReward -= bulletDistDeltaReward;
+
+            const D = this.getDxDy(nearestBullet);
+            const pDx = D.dx,
+                pDy = D.dy;
+
+            if (pDx && pDy) {
+                state.push(pDx / WalkAgent.maxDX, pDy / WalkAgent.maxDY);
+            } else {
+                state.push(1, 1);
+            }
+        } else {
+            state.push(1, 1);
+        }
+
 
         // //character:
+        const characterGridState = this.getGridState(Character.quadtree);
+        state = state.concat(characterGridState);
+
+        const nearestCharacter = this.findNearest(
+            Character.list,
+            Character.quadtree,
+            WalkAgent.maxDist
+        );
+        if (nearestCharacter) {
+            const nearestCharacterDist = this.getDist(nearestCharacter);
+            if (!this.lastNearestCharacterDist) {
+                this.lastNearestCharacterDist = nearestCharacterDist;
+            }
+
+            //reward for getting closer to/further from the nearest pickup (negative if closer, positive if further):
+            const characterDistDeltaReward = Math.max(
+                -1,
+                Math.min(
+                    1,
+                    (this.lastNearestCharacterDist - nearestCharacterDist) / 1000
+                )
+            );
+            this.agentReward -= characterDistDeltaReward;
+
+            const D = this.getDxDy(nearestCharacter);
+            const pDx = D.dx,
+                pDy = D.dy;
+
+            if (pDx && pDy) {
+                state.push(pDx / WalkAgent.maxDX, pDy / WalkAgent.maxDY);
+            } else {
+                state.push(1, 1);
+            }
+        } else {
+            state.push(1, 1);
+        }
+
 
         return state;
     }
@@ -243,6 +374,107 @@ export class Bot extends Character {
         this.pressingDown = move.d;
         this.pressingLeft = move.l;
         this.pressingRight = move.r;
+    }
+
+    getShootAgentEnvironment(){
+        //players, bullets, walls, server time, self-hp, player-hp, self-weapon
+        let state = []
+
+        //self-hp:
+        state.push(this.hp / this.fullHP);
+
+        //3 closest players - dx, dy, hp:
+        const nearestCharacters = this.findN_Nearest(3, Character.quadtree, Character.list, ShootAgent.maxDist);
+        for(const character of nearestCharacters){
+            if(!character){
+                state.push(
+                    1, //instead of normalised dx
+                    1, //instead of normalised dy
+                    -1 //instead of other character normalised HP
+                )
+            }
+            else{
+                const {dx, dy} = this.getDxDy(character);
+                state.push(
+                    dx / ShootAgent.maxDX,
+                    dy / ShootAgent.maxDY,
+                    character.hp / character.fullHP,
+                )
+            }
+        }
+
+        //3 closest bullets - dx, dy, note as number: 
+        const nearestBullets = this.findN_Nearest(3, Bullet.quadtree, Bullet.list, ShootAgent.maxDist);
+        for(const bullet of nearestBullets){
+            if(!bullet){
+                state.push(
+                    1,
+                    1,
+                    -1,
+                )
+            }
+            else{
+                const {dx, dy} = this.getDxDy(bullet);
+                state.push(
+                    dx / ShootAgent.maxDX,
+                    dy / ShootAgent.maxDY,
+                    Sounds.scale.allowedNotes.indexOf(bullet.note) / Sounds.scale.allowedNotes.length
+                )
+            }
+        }
+
+        //wall grid-state:
+
+        //self weapon:
+        const normWeaponDuration = this.weapon.durationInt / 8;
+        const normDurationType = this.weapon.durationType=="normal" ? 0 : 1;
+        state.push(normWeaponDuration, normDurationType);
+
+        //timing:
+        const timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
+        state.push(timeInaccuracy / this.weapon.durationMs);
+
+
+        console.log("shoot agent state", state);
+        return state;
+    }
+
+    setShootAction(move){
+        if(!move.shoot){
+            return;
+        }
+        else{
+            const note = Sounds.scale.allowedNotes[move.key - 1];
+            this.changeSelectedNote(note);
+            this.shoot();
+        }
+    }
+
+    takeDmg(damage, attacker){
+        super.takeDmg(damage, attacker);
+
+        this.shootAgentReward -= damage/1000;
+        if(attacker.shootAgentReward) attacker.shootAgentReward += damage/1000;
+    }
+
+    die(attacker){
+        super.die(attacker);
+
+        this.shootAgentReward -= 1;
+        if (attacker.shootAgentReward)
+            attacker.shootAgentReward += 1;
+    }
+
+    shoot(){
+        super.shoot();
+
+        this.shootAgentReward -= 0.05; //negative reward for just shooting - will be compensated if shot damages other player
+    }
+
+    getShootAgentReward(){
+        const reward = this.shootAgentReward;
+        this.shootAgentReward = 0;
+        return reward;
     }
 
     getReward() {

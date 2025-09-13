@@ -13,7 +13,7 @@ console.log(audioContext);
 
 import { gameLoop, canvas, Graphics } from "./graphics.js";
 
-import { Player, Bullet, Pickup, Tile } from "./classes.js";
+import { Player, Bot, Bullet, Pickup, Tile } from "./classes.js";
 import { Sounds } from "./sounds.js";
 import { addKeyboardListeners } from "./keyboard.js";
 import { chatInit } from "./textChat.js";
@@ -52,6 +52,9 @@ socket.on("init", function (data) {
             case "player":
                 new Player(entity);
                 break;
+            case "bot":
+                new Bot(entity);
+                break;
             case "bullet":
                 new Bullet(entity);
                 break;
@@ -89,6 +92,15 @@ socket.on("update", function (data) {
                     new Player(pack);
                 }
                 break;
+            case "bot":
+                const bt = Player.list[id];
+                if(bt){
+                    bt.update(pack);
+                }
+                else{
+                    new Bot(pack);
+                }
+                break;
             case "bullet":
                 let b = Bullet.list[id];
                 if (b) {
@@ -120,7 +132,7 @@ socket.on("update", function (data) {
                 break;
             case "gameMsg":
                 console.log(pack.msg);
-                Graphics.addGameMsg(pack.msg);
+                Graphics.addGameMsg(pack.msg, pack.rating);
         }
     }
 });
@@ -134,6 +146,7 @@ socket.on("remove", function (data) {
 
         switch (entity.type) {
             case "player":
+            case "bot":
                 if (!Player.list[id]) {
                     console.log(`ERROR NO PLAYER WITH ID=${id}`);
                     continue;
@@ -241,7 +254,7 @@ Tone.Transport.scheduleRepeat((time) => {
 
     const note = `${Sounds.scaleBase}${octave}`;
 
-    console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
+    // console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
     if(Sounds.audioOn == true)
         metronome.triggerAttackRelease(note, "32n", time);
 }, "4n");

@@ -47,7 +47,6 @@ export class Scale {
             newType = "major";
         }
 
-        console.log(`newtype ${newType}`);
         this.setScale(newBase, newType);
     }
 
@@ -104,6 +103,12 @@ export class Scale {
         for (let i = 0; i < transposition; i++) {
             newIndex++;
             if (newIndex > 11) newIndex = newIndex - 12;
+        }
+
+        if (!this.allowedNotes.includes(Scale.notes[newIndex])) {
+            //if transposed note is not allowed within current scale, we take the previous one - it means the chord is not a major third, but a minor third chord
+            newIndex -= 1;
+            if(newIndex<0) newIndex += 12;
         }
         return Scale.notes[newIndex];
     }

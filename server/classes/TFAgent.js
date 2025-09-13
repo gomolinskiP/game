@@ -1,5 +1,24 @@
 import * as tf from "@tensorflow/tfjs-node";
-// import "@tensorflow/tfjs-node";
+import { parentPort, workerData } from "worker_threads";
+
+parentPort.on('message', async(msg)=>{
+    if(!agent) return;
+
+    switch(msg.type){
+        case 'decide':
+            const action = agent.decide(msg.state, msg.botID);
+
+            parentPort.postMessage({
+                type: 'action',
+                action: action,
+                botID: msg.botID
+            })
+            break;
+        case 'remember':
+            await agent.remember(msg.lastState, msg.lastAction, msg.reward, msg.state);
+        }
+    
+})
 
 class ReplayBuffer{
     constructor(size){
@@ -31,12 +50,12 @@ export class DQNAgent{
         gamma = 0.95,
         epsilonStart = 1.0,
         epsilonEnd = 0.1,
-        epsilonDecaySteps = 1e4,
+        epsilonDecaySteps = 1e5,
         learningRate = 0.00025,
         batchSize = 32,
         bufferSize = 50000,
         targetUpdateFreq = 1000,
-        hiddenLayers = [160, 80],
+        hiddenLayers = [256, 128, 32],
     } = {}){
         this.numStates = numStates;
         this.numActions = numActions;
@@ -79,8 +98,10 @@ export class DQNAgent{
         this.targetModel.setWeights(this.model.getWeights());
     }
 
-    decide(state){
+    decide(state, botID){
         this.stepCounter++;
+
+        let action;
 
         this.epsilon = Math.max(
             this.epsilonEnd,
@@ -88,19 +109,31 @@ export class DQNAgent{
         );
 
         if(Math.random() < this.epsilon){
-            return Math.floor(Math.random() * this.numActions);
+            action = Math.floor(Math.random() * this.numActions);
         }
         else{
-            return tf.tidy(()=>{
+            action = tf.tidy(()=>{
                 const stateTensor = tf.tensor2d([state], [1, this.numStates]);
                 const qValues = this.model.predict(stateTensor);
                 return qValues.argMax(-1).dataSync()[0];
             });
         }
+
+        parentPort.postMessage({
+            type: 'action',
+            action: action,
+            botID: botID,
+        })
+
+        return action;
     }
 
-    remember(state, action, reward, nextState){
+    async remember(state, action, reward, nextState){
         this.replayBuffer.add({state, action, reward, nextState});
+
+        if(this.stepCounter % 10){
+            await this.replay();
+        }
     }
 
     async replay(){
@@ -147,11 +180,14 @@ export class DQNAgent{
         // console.log("States sample:", states[0]);
         // console.log("Q before update:", qValuesArray[0]);
         // console.log("Q target:", updatedTensor.toString());
-        const history = await this.model.fit(statesTensor, updatedTensor, {epochs: 1, verbose: 0});
-        const loss = history.history.loss[0];
+        if(!this.isTraining){
+            this.isTraining = true;
+            const history = await this.model.fit(statesTensor, updatedTensor, {epochs: 1, verbose: 0});
+            this.isTraining = false;
+            const loss = history.history.loss[0];
 
-
-        console.log(`Loss: `, loss)
+            console.log(`Loss: `, loss)
+        }
 
         tf.dispose([statesTensor, nextStatesTensor, qValues, qValuesNextTarget, updatedTensor]);
 
@@ -160,4 +196,11 @@ export class DQNAgent{
         }
     }
 }
+
+let agent = null;
+const statesNum = 133;
+const actionsNum = 9;
+(async () => {
+    agent = new DQNAgent(statesNum, actionsNum);
+})();
 

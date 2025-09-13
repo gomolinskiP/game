@@ -2,8 +2,104 @@ import { Socket } from "./clientSocket.js";
 import { setIsInChat, getIsInChat } from "./main.js";
 import { Sounds } from "./sounds.js";
 import { GameUI } from "./gameButtons.js";
+import { gameHeight, gameWidth } from "./graphics.js";
 
 let spacePressed = false;
+
+let canvasClicked;
+const canvas = document.getElementById('ctx');
+canvas.onmousedown = (event)=>{
+    canvasClicked = true;
+}
+canvas.onmouseleave = canvas.onmouseup = ()=>{
+    canvasClicked = false;
+    console.log(`xxx`);
+    lastDir = []
+    Socket.pressingDirection("up", false);
+    Socket.pressingDirection("down", false);
+    Socket.pressingDirection("left", false);
+    Socket.pressingDirection("right", false);
+    
+}
+
+const directions = {
+    N: ['up'],
+    NE: ['up', 'right'],
+    E: ['right'],
+    SE: ['down', 'right'],
+    S: ['down'],
+    SW: ['down', 'left'],
+    W: ['left'],
+    NW: ['up', 'left']
+}
+
+let lastDir = [];
+canvas.addEventListener('mousemove', (event)=>{
+    if(!canvasClicked) return;
+
+    const dx = event.clientX - gameWidth/2;
+    const dy = event.clientY - gameHeight/2;
+
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = angleRad * 180 / Math.PI + 180;
+    const snappedDeg = Math.round(angleDeg / 45) * 45;
+    // console.log(dx, dy);
+    console.log(snappedDeg)
+
+    let dir;
+
+    // Socket.pressingDirection("up", false);
+    // Socket.pressingDirection("down", false);
+    // Socket.pressingDirection("left", false);
+    // Socket.pressingDirection("right", false);
+    switch(snappedDeg){
+        case 0:
+        case 360:
+            dir = "W"
+            break;
+        case 45:
+            dir = "NW"
+            break;
+        case 90:
+            dir = "N"
+            break;
+        case 135:
+            dir = "NE"
+            break;
+        case 180:
+            dir = "E"
+            break;
+        case 225:
+            dir = "SE"
+            break;
+        case 270:
+            dir = "S"
+            break;
+        case 315:
+            dir = "SW"
+            break;
+    }
+
+    if(dir == lastDir) return;
+    console.log(directions[lastDir], directions[dir])
+
+    // for(const key in directions[lastDir]){
+    //     Socket.pressingDirection(key, false)
+    // }
+    Socket.pressingDirection("up", false);
+    Socket.pressingDirection("down", false);
+    Socket.pressingDirection("left", false);
+    Socket.pressingDirection("right", false);
+    for(const key of directions[dir]){
+        Socket.pressingDirection(key, true);
+    }
+
+    lastDir = dir;
+
+
+})
+
+let pressedKeys = {};
 
 export class Keyboard{
     static addNoteKeyboardListener(digit, note){
@@ -12,9 +108,17 @@ export class Keyboard{
 
         addEventListener("keydown", (event)=>{
             if(event.key == `${digit}`){
+                if(pressedKeys[digit]) return;
+                pressedKeys[digit] = true;
                 console.log(`pressed ${digit}`)
                 Socket.noteFire(note);
                 GameUI.setActiveNote(note);
+            }
+        })
+
+        addEventListener("keyup", (event)=>{
+            if(event.key == `${digit}`){
+                pressedKeys[digit] = false;
             }
         })
     }
@@ -40,29 +144,25 @@ export function addKeyboardListeners(socket){
         }
 
         switch(event.key){
-            case "d":
-            case "D":
+            case "ArrowRight":
                 socket.emit('keyPress', {
                     inputId: 'right',
                     state: true
                 });
                 break;
-            case "s":
-            case "S":
+            case "ArrowDown":
                 socket.emit('keyPress', {
                 inputId: 'down',
                 state: true
                 });
                 break;
-            case "a":
-            case "A":
+            case "ArrowLeft":
                 socket.emit('keyPress', {
                 inputId: 'left',
                 state: true
                 });
                 break;
-            case "w":
-            case "W":
+            case "ArrowUp":
                 socket.emit('keyPress', {
                 inputId: 'up',
                 state: true
@@ -94,29 +194,25 @@ export function addKeyboardListeners(socket){
 
     document.onkeyup = function(event){
         switch(event.key){
-            case "d":
-            case "D":
+            case "ArrowRight":
                 socket.emit('keyPress', {
                 inputId: 'right',
                 state: false
                 });
                 break;
-            case "s":
-            case "S":
+            case "ArrowDown":
                 socket.emit('keyPress', {
                 inputId: 'down',
                 state: false
                 });
                 break;
-            case "a":
-            case "A":
+            case "ArrowLeft":
                 socket.emit('keyPress', {
                 inputId: 'left',
                 state: false
                 });
                 break;
-            case "w":
-            case "W":
+            case "ArrowUp":
                 socket.emit('keyPress', {
                 inputId: 'up',
                 state: false

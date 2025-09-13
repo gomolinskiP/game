@@ -46,9 +46,7 @@ export class Entity {
     }
 
     getDistSq(other) {
-        const d = this.getDxDy(other);
-        const dx = d.dx,
-            dy = d.dy;
+        const {dx, dy} = this.getDxDy(other);
 
         return dx * dx + dy * dy;
     }

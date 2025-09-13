@@ -5,182 +5,248 @@ import { Character } from "./Character.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";
 
-export class ScheduledBullet {
-  static list = {};
-  static quadtree;
+// export class ScheduledBullet {
+//   static list = {};
+//   static quadtree;
 
-  static createQuadtree(rect){
-    ScheduledBullet.quadtree = new Quadtree(rect);
-  }
+//   static createQuadtree(rect){
+//     ScheduledBullet.quadtree = new Quadtree(rect);
+//   }
 
-  static refreshQuadtree(){
-    ScheduledBullet.quadtree.clear();
+//   static refreshQuadtree(){
+//     ScheduledBullet.quadtree.clear();
 
-    for (let id in ScheduledBullet.list) {
-      const scheduledBullet = ScheduledBullet.list[id];
-      ScheduledBullet.quadtree.insert({
-        x: scheduledBullet.x - 8,
-        y: scheduledBullet.y - 8,
-        width: 16,
-        height: 16,
-        id: id,
-      });
-    }
-  }
+//     for (let id in ScheduledBullet.list) {
+//       const scheduledBullet = ScheduledBullet.list[id];
+//       ScheduledBullet.quadtree.insert({
+//         x: scheduledBullet.x - 8,
+//         y: scheduledBullet.y - 8,
+//         width: 16,
+//         height: 16,
+//         id: id,
+//       });
+//     }
+//   }
 
-  constructor(parent, note = "onSpawn", durationType, damage) {
-    this.id = Math.random();
-    this.parent = parent;
-    this.x = parent.x;
-    this.y = parent.y;
+//   constructor(parent, note = "onSpawn", durationType, damage) {
+//     this.id = Math.random();
+//     this.parent = parent;
+//     this.x = parent.x;
+//     this.y = parent.y;
 
-    this.sound = parent.weapon.sound;
-    this.duration = parent.weapon.duration;
-    this.durationType = durationType;
-    this.damage = damage;
-    this.note = note;
-    this.spawnInT = this.getSpawnTime();
-    this.durationInMs = this.getTimeFromDuration(
-      this.duration,
-      this.durationType
-    );
-    this.maxTimeInaccuracy = Math.max(100, this.durationInMs / 10);
+//     this.sound = parent.weapon.sound;
+//     this.duration = parent.weapon.duration;
+//     this.durationType = durationType;
+//     this.damage = damage;
+//     this.note = note;
 
-    console.log(this.spawnInT, this.duration, this.durationInMs);
-    if (this.spawnInT > this.durationInMs - this.maxTimeInaccuracy) {
-      //player is late by no more than 200ms TOFIX 1800 is good only for whole notes
-      this.spawn();
-      setTimeout(() => {
-        this.parent.hasShotScheduled = false;
-      }, this.durationInMs - this.maxTimeInaccuracy);
-    } else if (this.spawnInT > this.maxTimeInaccuracy) {
-      //player is too early;
-      this.cancel();
-    } else {
-      //player early but within max inaccuracy:
-      setTimeout(() => {
-        this.spawn();
-      }, this.spawnInT);
+//     this.spawn();
+//     // this.spawnInT = Sounds.getNoteSpawnTime(this.duration);
 
-      setTimeout(() => {
-        this.parent.hasShotScheduled = false;
-      }, this.durationInMs - this.maxTimeInaccuracy);
-    }
+//     // this.timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.duration, this.durationType);
 
-    ScheduledBullet.list[this.id] = this;
-    return this;
-  }
+//     // let timingMessageInfo = "";
+//     // if(Math.abs(this.timeInaccuracy) < 20){
+//     //   // inaccuracy within PERFECT timing
+//     //   timingMessageInfo = 'Perfect timing!';
+//     //   this.spawn();
+//     // }
+//     // else if(Math.abs(this.timeInaccuracy) < 150){
+//     //   // inaccuracy to big to be perfect, but small enough to allow bullet spawn:
+//     //   if(this.timeInaccuracy > 0){
+//     //     // shot fired a bit to late:
+//     //     timingMessageInfo = this.timeInaccuracy + ' ms to late!';
+//     //     this.spawn();
+//     //   }
+//     //   else{
+//     //     //shot fired a bit to early:
+//     //     timingMessageInfo = -this.timeInaccuracy + ' ms to early!';
+//     //     this.spawn();
+//     //   }
+//     // }
+//     // else{
+//     //   timingMessageInfo = 'Your timing is to inaccurate!'
+//     //   this.cancel();
+//     // }
 
-  updatePosition(x, y) {
-    this.x = x;
-    this.y = y;
-  }
+//     //     if (this.parent.updatePack) {
+//     //         this.parent.updatePack.push({
+//     //             msg: timingMessageInfo,
+//     //             type: "gameMsg",
+//     //         });
+//     //     }
 
-  cancel() {
-    let message;
-    if (this.spawnInT < this.durationInMs / 2) {
-      message = "To early!";
-    } else {
-      message = "To late!";
-    }
+    
+//     // if(this.timeInaccuracy >= 0){
+//     //   // player shot to late or perfectly timed
 
-    if (this.parent.updatePack) {
-      this.parent.updatePack.push({
-        msg: message,
-        type: "gameMsg",
-      });
-    }
-    setTimeout(() => {
-      this.parent.hasShotScheduled = false;
-    }, this.spawnInT);
-  }
+//     //   if(this.timeInaccuracy < 20){
+//     //     timingMessageInfo = 'Perfect'
+//     //   }
 
-  spawn() {
-    new Bullet(
-      this.parent,
-      this.parent.lastAngle,
-      this.note,
-      this.durationType,
-      this.damage
-    );
-    this.destroy();
-  }
+//     //   if(this.timeInaccuracy < 100){
+//     //     this.spawn();
 
-  getSpawnTime() {
-    const creationTimeNs = process.hrtime.bigint() - Sounds.startT;
-    const lastTickT = (Sounds.tickNum - 1) * Sounds.beatInterval; //in ms
-    const timeDif = Number(creationTimeNs / BigInt(1e6)) - lastTickT;
+//     //   }
+//     // }
+//     // else{
+//     //   // player shot to early
 
-    let spawnInT;
-    switch (this.duration) {
-      case "1n":
-        spawnInT =
-          (4 - ((Sounds.tickNum - 1) % 4)) * Sounds.beatInterval - timeDif;
-        break;
-      case "2n":
-        spawnInT =
-          (2 - ((Sounds.tickNum - 1) % 2)) * Sounds.beatInterval - timeDif;
-        break;
-      case "4n":
-        spawnInT = Sounds.beatInterval - timeDif;
-        break;
-      case "8n":
-        if (timeDif > Sounds.beatInterval / 2) {
-          spawnInT = Sounds.beatInterval - timeDif;
-        } else {
-          spawnInT = Sounds.beatInterval / 2 - timeDif;
-        }
-        break;
-      case "1n.":
-        spawnInT =
-          (6 - ((Sounds.tickNum - 1) % 6)) * Sounds.beatInterval - timeDif;
-        break;
-      case "2n.":
-        spawnInT =
-          (3 - ((Sounds.tickNum - 1) % 3)) * Sounds.beatInterval - timeDif;
-        break;
-      case "4n.":
-        let quarterInCycle = (Sounds.tickNum - 1) % 3;
-        switch (quarterInCycle) {
-          case 0:
-            spawnInT = (3 * Sounds.beatInterval) / 2 - timeDif;
-            break;
-          case 1:
-            if (timeDif > Sounds.beatInterval / 2) {
-              spawnInT = 2 * Sounds.beatInterval - timeDif;
-            } else {
-              spawnInT = Sounds.beatInterval / 2 - timeDif;
-            }
-            break;
-          case 2:
-            spawnInT = Sounds.beatInterval - timeDif;
-            break;
-        }
-        break;
-    }
-    return spawnInT;
-  }
 
-  getTimeFromDuration(duration, durationType) {
-    let timeMs;
+//     // }
 
-    let durationInt = parseInt(duration.replace("n", "").replace(".", ""));
-    switch (durationType) {
-      case "normal":
-        timeMs = (60000 / 120) * (4 / durationInt);
-        break;
-      case "dotted":
-        timeMs = ((60000 / 120) * (4 / durationInt) * 3) / 2;
-        break;
-    }
+//     // if (this.parent.updatePack) {
+//     //     this.parent.updatePack.push({
+//     //         msg: this.timeInaccuracy,
+//     //         type: "gameMsg",
+//     //     });
+//     // }
 
-    return timeMs;
-  }
+//     // this.spawn();
 
-  destroy() {
-    delete ScheduledBullet.list[this.id];
-  }
-}
+//     // this.durationInMs = this.getTimeFromDuration(
+//     //   this.duration,
+//     //   this.durationType
+//     // );
+//     // this.maxTimeInaccuracy = Math.max(100, this.durationInMs / 10);
+
+//     // console.log(this.spawnInT, this.duration, this.durationInMs);
+//     // if (this.spawnInT > this.durationInMs - this.maxTimeInaccuracy) {
+//     //     //player is late by no more than max innacuracy - spawn immediately
+//     //     this.spawn();
+
+
+//     //     setTimeout(() => {
+//     //         this.parent.hasShotScheduled = false;
+//     //     }, this.durationInMs - this.maxTimeInaccuracy);
+//     // } else if (this.spawnInT > this.maxTimeInaccuracy) {
+//     //   //player is too early;
+//     //   this.cancel();
+//     // } else {
+//     //   //player early but within max inaccuracy:
+//     //   setTimeout(() => {
+//     //     this.spawn();
+//     //   }, this.spawnInT);
+
+//     //   setTimeout(() => {
+//     //     this.parent.hasShotScheduled = false;
+//     //   }, this.durationInMs - this.maxTimeInaccuracy);
+//     // }
+
+//     ScheduledBullet.list[this.id] = this;
+//     return this;
+//   }
+
+//   updatePosition(x, y) {
+//     this.x = x;
+//     this.y = y;
+//   }
+
+//   cancel() {
+//     // let message;
+//     // if (this.spawnInT < this.durationInMs / 2) {
+//     //   message = "To early!";
+//     // } else {
+//     //   message = "To late!";
+//     // }
+
+//     // if (this.parent.updatePack) {
+//     //   this.parent.updatePack.push({
+//     //     msg: message,
+//     //     type: "gameMsg",
+//     //   });
+//     // }
+//     setTimeout(() => {
+//       this.parent.hasShotScheduled = false;
+//     }, this.spawnInT);
+//   }
+
+//   spawn() {
+//     new Bullet(
+//       this.parent,
+//       this.parent.lastAngle,
+//       this.note,
+//       this.durationType,
+//       this.damage
+//     );
+//     this.destroy();
+//   }
+
+//   getSpawnTime() {
+//     const creationTimeNs = process.hrtime.bigint() - Sounds.startT;
+//     const lastTickT = (Sounds.tickNum - 1) * Sounds.beatInterval; //in ms
+//     const timeDif = Number(creationTimeNs / BigInt(1e6)) - lastTickT;
+
+//     let spawnInT;
+//     switch (this.duration) {
+//       case "1n":
+//         spawnInT =
+//           (4 - ((Sounds.tickNum - 1) % 4)) * Sounds.beatInterval - timeDif;
+//         break;
+//       case "2n":
+//         spawnInT =
+//           (2 - ((Sounds.tickNum - 1) % 2)) * Sounds.beatInterval - timeDif;
+//         break;
+//       case "4n":
+//         spawnInT = Sounds.beatInterval - timeDif;
+//         break;
+//       case "8n":
+//         if (timeDif > Sounds.beatInterval / 2) {
+//           spawnInT = Sounds.beatInterval - timeDif;
+//         } else {
+//           spawnInT = Sounds.beatInterval / 2 - timeDif;
+//         }
+//         break;
+//       case "1n.":
+//         spawnInT =
+//           (6 - ((Sounds.tickNum - 1) % 6)) * Sounds.beatInterval - timeDif;
+//         break;
+//       case "2n.":
+//         spawnInT =
+//           (3 - ((Sounds.tickNum - 1) % 3)) * Sounds.beatInterval - timeDif;
+//         break;
+//       case "4n.":
+//         let quarterInCycle = (Sounds.tickNum - 1) % 3;
+//         switch (quarterInCycle) {
+//           case 0:
+//             spawnInT = (3 * Sounds.beatInterval) / 2 - timeDif;
+//             break;
+//           case 1:
+//             if (timeDif > Sounds.beatInterval / 2) {
+//               spawnInT = 2 * Sounds.beatInterval - timeDif;
+//             } else {
+//               spawnInT = Sounds.beatInterval / 2 - timeDif;
+//             }
+//             break;
+//           case 2:
+//             spawnInT = Sounds.beatInterval - timeDif;
+//             break;
+//         }
+//         break;
+//     }
+//     return spawnInT;
+//   }
+
+//   getTimeFromDuration(duration, durationType) {
+//     let timeMs;
+
+//     let durationInt = parseInt(duration.replace("n", "").replace(".", ""));
+//     switch (durationType) {
+//       case "normal":
+//         timeMs = (60000 / 120) * (4 / durationInt);
+//         break;
+//       case "dotted":
+//         timeMs = ((60000 / 120) * (4 / durationInt) * 3) / 2;
+//         break;
+//     }
+
+//     return timeMs;
+//   }
+
+//   destroy() {
+//     delete ScheduledBullet.list[this.id];
+//   }
+// }
 
 export class Bullet extends Entity {
   static list = {};
@@ -205,7 +271,7 @@ export class Bullet extends Entity {
     }
   }
 
-  constructor(parent, angle, note, durationType, damage) {
+  constructor(parent, angle, note, durationMs, damage) {
     super(parent.x, parent.y);
     this.id = Math.random();
     this.parent = parent;
@@ -218,9 +284,10 @@ export class Bullet extends Entity {
     this.spdX = Math.cos((angle / 180) * Math.PI) * this.speed;
     this.spdY = Math.sin((angle / 180) * Math.PI) * this.speed;
 
+    this.note = note;
     this.sound = parent.weapon.sound;
     this.duration = parent.weapon.duration;
-    this.durationType = durationType;
+    this.durationMs = durationMs;
     this.damage = damage;
 
     // switch(note){
@@ -234,42 +301,35 @@ export class Bullet extends Entity {
     //         this.note = note;
     //         break;
     // }
-    if (note == "onSpawn") this.note = parent.selectedNote;
-    else if (note.startsWith("+")) {
-      let transposedNote = Sounds.scale.getTransposed(
-        parent.selectedNote,
-        parseInt(note[1])
-      );
-      if (Sounds.scale.allowedNotes.includes(transposedNote))
-        this.note = transposedNote; //major third
-      else
-        this.note = Sounds.scale.getTransposed(
-          parent.selectedNote,
-          parseInt(note[1] - 1)
-        ); //minor third
-    } else this.note = note;
+
+    //legacy:
+    // if (note == "onSpawn") this.note = parent.selectedNote;
+    // else if (note.startsWith("+")) {
+    //   let transposedNote = Sounds.scale.getTransposed(
+    //     parent.selectedNote,
+    //     parseInt(note[1])
+    //   );
+    //   if (Sounds.scale.allowedNotes.includes(transposedNote))
+    //     this.note = transposedNote; //major third
+    //   else
+    //     this.note = Sounds.scale.getTransposed(
+    //       parent.selectedNote,
+    //       parseInt(note[1] - 1)
+    //     ); //minor third
+    // } else this.note = note;
 
     Bullet.list[this.id] = this;
-
-    let durationTimeout;
-    switch (durationType) {
-      case "normal":
-        durationTimeout =
-          (60000 / 120) * (4 / parseInt(this.duration.replace("n", "")));
-        break;
-      case "dotted":
-        durationTimeout =
-          ((60000 / 120) *
-            (4 / parseInt(this.duration.replace("n", "").replace(".", ""))) *
-            3) /
-          2;
-        break;
-    }
 
     this.timeout = setTimeout(() => {
       // delete itself after timeout??
       this.destroy();
-    }, durationTimeout);
+    }, this.durationMs);
+
+    this.allowNextShotTimeout = setTimeout(()=>{
+      // allow next shot slightly earlier than this bullet destroys itself (after it's duration)
+      this.parent.hasShotScheduled = false;
+    }, this.durationMs * 0.75);
+
     return this;
   }
 
