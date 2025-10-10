@@ -32,10 +32,9 @@ limiter.toDestination();
 // SynthPool.populateAllPools(4)
 
 socket.on("init", function (data) {
-    // console.log("InitPack:", data)
+    console.log("InitPack:", data)
 
     Socket.setSelfID(data.selfId);
-    console.log(data.scale.allowedNotes);
     Sounds.setScale(data.scale.name, data.scale.allowedNotes);
     Sounds.setBPM(data.bpm);
 
@@ -362,7 +361,7 @@ function secondsToPosition(seconds) {
     const bars = Math.floor(totalBeats / beatsPerBar);
     const beatInBar = Math.floor(totalBeats % beatsPerBar);
 
-    const sixteenthSec = beatSec / 4; // 1 beat = 4 szesnastki
+    const sixteenthSec = beatSec / 4; // 1 beat = 4 sixteens
     const sixteenths = ((seconds % beatSec) / sixteenthSec).toFixed(3);
 
     const position = `${bars}:${beatInBar}:${sixteenths}`;

@@ -25,7 +25,7 @@ export class Scale {
     }
 
     setScale(base, type) {
-        console.log(`changing scale to ${base} ${type}`);
+        // console.log(`changing scale to ${base} ${type}`);
         this.base = base;
         this.type = type;
 
@@ -63,7 +63,6 @@ export class Scale {
     }
 
     getAllowedNotes(base, type) {
-        console.log(`type ${type}`);
         let scaleNotes = [];
 
         let isBase = (note) => note == base;

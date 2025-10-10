@@ -89,7 +89,8 @@ export class Pickup extends Entity{
         if(playerId != null){
             playerList[playerId].giveWeapon(this.sound, this.duration, this.type)
             playerList[playerId].addScore(1);
-            playerList[playerId].agentReward += 2;
+            playerList[playerId].agentReward += 10;
+            playerList[playerId].stepsSinceLastPickup = 0;
             // console.log(`givin 10 reward for pickup`)
             this.destroy();
         }

@@ -1,6 +1,10 @@
 import * as tf from "@tensorflow/tfjs-node";
 import { parentPort, workerData } from "worker_threads";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const fs = require('fs');
+
 parentPort.on('message', async(msg)=>{
     if(!agent) return;
 
@@ -15,7 +19,9 @@ parentPort.on('message', async(msg)=>{
             })
             break;
         case 'remember':
-            await agent.remember(msg.lastState, msg.lastAction, msg.reward, msg.state);
+            // console.log('worker gets: ', msg.lastState, msg.lastAction, msg.reward, msg.state);
+            await agent.remember(msg.lastState, msg.lastAction, msg.reward, msg.state, msg.done);
+            
         }
     
 })
@@ -47,15 +53,16 @@ class ReplayBuffer{
 
 export class DQNAgent{
     constructor(numStates, numActions, {
-        gamma = 0.95,
+        gamma = 0.99,
         epsilonStart = 1.0,
         epsilonEnd = 0.1,
-        epsilonDecaySteps = 1e5,
-        learningRate = 0.00025,
-        batchSize = 32,
-        bufferSize = 50000,
+        epsilonDecaySteps = 1e6,
+        learningRate = 0.0005,
+        batchSize = 128,
+        bufferSize = 200000,
         targetUpdateFreq = 1000,
-        hiddenLayers = [256, 128, 32],
+        experienceReplayFreq = 20,
+        hiddenLayers = [256, 128, 64],
     } = {}){
         this.numStates = numStates;
         this.numActions = numActions;
@@ -66,8 +73,10 @@ export class DQNAgent{
         this.learningRate = learningRate;
         this.batchSize = batchSize;
         this.targetUpdateFreq = targetUpdateFreq;
+        this.experienceReplayFreq = experienceReplayFreq;
 
         this.stepCounter = 0;
+        this.rememberCounter = 0;
         this.replayBuffer = new ReplayBuffer(bufferSize);
 
         this.epsilon = epsilonStart;
@@ -119,19 +128,16 @@ export class DQNAgent{
             });
         }
 
-        parentPort.postMessage({
-            type: 'action',
-            action: action,
-            botID: botID,
-        })
-
         return action;
     }
 
-    async remember(state, action, reward, nextState){
-        this.replayBuffer.add({state, action, reward, nextState});
+    async remember(state, action, reward, nextState, done){
+        this.replayBuffer.add({state, action, reward, nextState, done});
 
-        if(this.stepCounter % 10){
+        this.rememberCounter++;
+        if(this.rememberCounter % this.experienceReplayFreq === 0
+            && this.rememberCounter >= 2000
+        ){
             await this.replay();
         }
     }
@@ -158,7 +164,7 @@ export class DQNAgent{
         const qValuesNextArray = qValuesNextTarget.arraySync();
 
         for(let i = 0; i < batch.length; i++){
-            const {action, reward} = batch[i];
+            const {action, reward, done} = batch[i];
 
             const maxNextQ = Math.max(...qValuesNextArray[i]);
             if (!isFinite(maxNextQ)) {
@@ -166,7 +172,7 @@ export class DQNAgent{
         continue;
     }
 
-            const target = reward + (this.gamma * Math.max(...qValuesNextArray[i]));
+            const target = done ? reward : reward + (this.gamma * Math.max(...qValuesNextArray[i]));
 
             if (isFinite(target)) {
                 qValuesArray[i][action] = target;
@@ -177,16 +183,22 @@ export class DQNAgent{
 
         const updatedTensor = tf.tensor2d(qValuesArray, [batch.length, this.numActions]);
 
-        // console.log("States sample:", states[0]);
-        // console.log("Q before update:", qValuesArray[0]);
-        // console.log("Q target:", updatedTensor.toString());
         if(!this.isTraining){
             this.isTraining = true;
             const history = await this.model.fit(statesTensor, updatedTensor, {epochs: 1, verbose: 0});
             this.isTraining = false;
             const loss = history.history.loss[0];
 
-            console.log(`Loss: `, loss)
+            console.log(`Loss: `, loss, ' | Epsilon: ', this.epsilon);
+            fs.writeFileSync(
+                "logs/loss.txt",
+                loss + "\n",
+                {
+                    encoding: "utf8",
+                    flag: "a+",
+                    mode: 0o666,
+                }
+            );
         }
 
         tf.dispose([statesTensor, nextStatesTensor, qValues, qValuesNextTarget, updatedTensor]);
@@ -198,7 +210,7 @@ export class DQNAgent{
 }
 
 let agent = null;
-const statesNum = 133;
+const statesNum = parseInt(workerData.AGENT_STATES_NUM, 10);
 const actionsNum = 9;
 (async () => {
     agent = new DQNAgent(statesNum, actionsNum);

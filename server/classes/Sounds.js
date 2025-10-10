@@ -2,10 +2,12 @@ import { Socket } from "./Socket.js";
 import { Bot } from "./Bot.js";
 import { Scale } from "./Scale.js";
 
+const MS_IN_MIN = 60000;
+
 export class Sounds {
     static scale = new Scale("C", "minor");
     static bpm = 120;
-    static beatInterval = 60000 / Sounds.bpm;
+    static beatInterval = MS_IN_MIN / Sounds.bpm;
 
     static startT;
     static tickNum = 0;
@@ -15,12 +17,11 @@ export class Sounds {
 
     static setBPM(bpm) {
         Sounds.bpm = bpm;
-        Sounds.beatInterval = 60000 / Sounds.bpm;
+        Sounds.beatInterval = MS_IN_MIN / Sounds.bpm;
 
         Sounds.startT = process.hrtime.bigint();
         Sounds.tickNum = 0;
     }
-    
 
     static metronomeTick() {
         if (!Sounds.startT) {
@@ -134,10 +135,10 @@ export class Sounds {
         );
         switch (noteDurationType) {
             case "normal":
-                timeMs = (60000 / 120) * (4 / durationInt);
+                timeMs = Sounds.beatInterval * (4 / durationInt);
                 break;
             case "dotted":
-                timeMs = ((60000 / 120) * (4 / durationInt) * 3) / 2;
+                timeMs = (Sounds.beatInterval * (4 / durationInt) * 3) / 2;
                 break;
         }
 
@@ -152,15 +153,13 @@ export class Sounds {
         );
         const maxTimeInaccuracy = Math.max(100, durationInMs / 10); //max number of milliseconds of innacuracy allowed
 
-        
         let timeInaccuracy;
-        if(spawnInT > durationInMs/2){
+        if (spawnInT > durationInMs / 2) {
             // if the time to perfect timing is larger than half of the duration, we assume the shot was meant for the PREVIOUS perfect time
             // therefore we calculate the inaccuracy as if player was LATE - time inaccuracy is more than 0
 
             timeInaccuracy = durationInMs - spawnInT;
-        }
-        else{
+        } else {
             // if not, we assume the player was earlier than the perfect time
             // EARLY - time inaccuracy is less than 0
 

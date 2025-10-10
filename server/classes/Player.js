@@ -6,8 +6,8 @@ import { Socket } from './Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 
-const loadDistance = 600; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
-const loadUnloadMargin = 1600;
+const loadDistance = 300; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadUnloadMargin = 600;
 const unloadDistance = loadDistance + loadUnloadMargin;
 
 export class Player extends Character{
@@ -246,10 +246,10 @@ export class Player extends Character{
 
     getUpdatePack(){
         const loadRect = {
-            x: this.x - loadDistance,
-            y: this.y - loadDistance,
-            width: loadDistance * 2,
-            height: loadDistance * 2
+            x: this.x - unloadDistance,
+            y: this.y - unloadDistance,
+            width: unloadDistance * 2,
+            height: unloadDistance * 2
         }
 
         //TODO: based on proximity to player:

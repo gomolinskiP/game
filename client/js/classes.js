@@ -147,6 +147,7 @@ export class Player extends Entity{
     }
 
     draw(){
+        if (!Player.list[selfId]) return;
         let x = this.x - Player.list[selfId].x + gameWidth/2;
         let y = this.y - Player.list[selfId].y + gameHeight/2;
 
@@ -369,6 +370,7 @@ export class Pickup extends Entity{
     }
 
     draw(){
+        if (!Player.list[selfId]) return;
         let x = this.x - Player.list[selfId].x + gameWidth/2;
         let y = this.y - Player.list[selfId].y + gameHeight/2;
 

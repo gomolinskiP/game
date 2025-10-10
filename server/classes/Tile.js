@@ -128,6 +128,25 @@ export class Tile {
     return false;
   }
 
+  static checkIfWalkablePosition(x, y){
+    return Tile.checkTilesCollision(x, y, Tile.wallQTree) ||
+        !Tile.checkTilesCollision(x, y, Tile.floorQTree);
+  }
+
+  static getRandomWalkablePos(){
+    let x, y;
+    let isPositionForbidden = true;
+
+    while(isPositionForbidden){
+      x = Map.boundRect.x + Map.boundRect.width * Math.random();
+      y = Map.boundRect.y + Map.boundRect.height * Math.random();
+
+      isPositionForbidden = this.checkIfWalkablePosition(x, y);
+    }
+
+    return {x, y};
+  }
+
   constructor(gid, ortX, ortY, layerId) {
     this.gid = gid;
     this.x = ortX;

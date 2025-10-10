@@ -15,6 +15,7 @@
     "@timohausmann/quadtree-js": "^1.2.6",
     "argon2": "^0.43.1",
     "connect-mongo": "^5.1.0",
+    "dotenv": "^17.2.2",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-session": "^1.18.1",

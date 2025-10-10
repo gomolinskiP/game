@@ -286,6 +286,7 @@ function drawMap(){
 }
 
 function drawHUD(){
+    if (!Player.list[selfId]) return;
      //hp bar:
     ctx.fillStyle = "grey";
     ctx.fillRect(20, 70, 100, 16)
@@ -325,11 +326,12 @@ export function gameLoop(){
     if(!selfId){
         selfId = Socket.selfId;
     }
+    // console.log(Player.list[selfId])
 
     //draw background & map elements:
     ctx.fillStyle = "#363636ff";
     ctx.fillRect(0, 0, gameWidth, gameHeight);
-    drawMap()
+    drawMap();
     
     //draw game objects:
     for(var i in Pickup.list){

@@ -122,9 +122,10 @@ export class Character extends Entity {
         }
       }
       else{
-        // if(this.agentReward){
-          // this.agentReward -= 0.2;
-        // }
+        if(this.agentReward){
+          console.log('negative reward for walking into collision')
+          this.agentReward -= 1;
+        }
       }
     }
 
@@ -172,7 +173,7 @@ export class Character extends Entity {
 
     if(timeInaccuracy > Sounds.maxTimeInaccuracy){
       Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
-      if(this.shootAgentReward) this.shootAgentReward -= 0.1;
+      // if(this.shootAgentReward) this.shootAgentReward -= 0.1;
       return;
     }
 

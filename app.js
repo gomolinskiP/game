@@ -1,9 +1,5 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-
-import {transports} from 'engine.io'
-
-
 import expressSetUp from './server/express.js'
 import webSocketSetUp from './server/socket.js'
 

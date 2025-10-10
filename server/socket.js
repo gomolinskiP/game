@@ -183,7 +183,12 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         });
 
         socket.on("chat", function (msg) {
-            let signedMsg = `<b>${player.name}:</b> ${msg}`;
+            //TODO VALIDATE MSG test:
+            const sanitizedMsg = msg
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            let signedMsg = `<b>${player.name}:</b> ${sanitizedMsg}`;
             for (var i in Socket.list) {
                 var socket = Socket.list[i];
                 socket.emit("chatBroadcast", signedMsg);
@@ -204,13 +209,13 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         Pickup.refreshQuadtree();
 
         // random pickup spawn:
-        if (Math.random() < 0.1 && Object.keys(Pickup.list).length < 500) {
+        if (Math.random() < 0.1 && Object.keys(Pickup.list).length < 0) {
             // console.log("pickup spawned")
             new Pickup();
         }
 
         // random bot spawn:
-        if(Math.random()<0.1 && Object.keys(Bot.list).length<10){
+        if(Math.random()<0.1 && Object.keys(Bot.list).length<40){
             // console.log("bot spawned")
             new Bot();
         }
@@ -219,4 +224,6 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         Bullet.updateAll();
         Player.updateAll();
     }, 1000 / 25);
+
+    console.log("✅ WebSocket ready.");
 }
