@@ -1,6 +1,5 @@
 import Quadtree from "@timohausmann/quadtree-js";
-import { Map } from "./Map.js";
-// import { mapBoundRect } from '../socket.js';
+import { Map } from "../Map.js";
 
 function screenToIso(x, y) {
   return {

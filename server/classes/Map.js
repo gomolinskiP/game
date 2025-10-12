@@ -6,7 +6,7 @@ import { readFile } from "fs/promises";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { Tile } from "./Tile.js";
+import { Tile } from "./game-objects/Tile.js";
 
 export class Map {
   static mapXmin = 0;

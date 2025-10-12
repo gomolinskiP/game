@@ -8,13 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { Socket } from "./classes/Socket.js";
-import { Player } from "./classes/Player.js";
-import { Bot } from "./classes/Bot.js";
-import { Bullet } from "./classes/Bullet.js";
-import { Pickup } from "./classes/Pickup.js";
-import { Character } from "./classes/Character.js";
-import { Tile } from "./classes/Tile.js";
-import { Sounds } from "./classes/Sounds.js";
+import { Player } from "./classes/game-objects/Player.js";
+import { Bot } from "./classes/game-objects/Bot.js";
+import { Bullet } from "./classes/game-objects/Bullet.js";
+import { Pickup } from "./classes/game-objects/Pickup.js";
+import { Character } from "./classes/game-objects/Character.js";
+import { Tile } from "./classes/game-objects/Tile.js";
+import { Sounds } from "./classes/musical/Sounds.js";
 import { Map } from "./classes/Map.js";
 
 //Start server-side metronome ticking:

@@ -1,8 +1,8 @@
 import { Weapon } from './Weapon.js';
 import { Bullet } from './Bullet.js';
 import { Pickup } from './Pickup.js';
-import { Sounds } from './Sounds.js';
-import { Socket } from './Socket.js';
+import { Sounds } from '../musical/Sounds.js';
+import { Socket } from '../Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 

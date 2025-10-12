@@ -1,12 +1,12 @@
-// import { DQNAgent } from "./TFAgent.js";
+// import { DQNAgent } from "./TFWorker.js";
 import { Worker } from "worker_threads";
-import { Bot } from "./Bot.js";
+import { Bot } from "../game-objects/Bot.js";
 
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const fs = require('fs');
 
-const worker = new Worker("./server/classes/TFAgent.js", {
+const worker = new Worker("./server/classes/ai/TFWorker.js", {
     workerData: {
         AGENT_STATES_NUM: parseInt(process.env.AGENT_STATES_NUM, 10),
     },

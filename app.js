@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import expressSetUp from './server/express.js'
-import webSocketSetUp from './server/socket.js'
+import expressSetUp from './server/serverAPI.js'
+import webSocketSetUp from './server/serverWebSocket.js'
 import { unique } from '@tensorflow/tfjs';
 
 

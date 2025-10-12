@@ -1,4 +1,4 @@
-import { Socket } from "./Socket.js";
+import { Socket } from "../Socket.js";
 
 export class Scale {
     static notes = [

@@ -1,6 +1,6 @@
 import { Entity } from "./Entity.js";
 import { Player } from "./Player.js";
-import { Sounds } from "./Sounds.js";
+import { Sounds } from "../musical/Sounds.js";
 import { Character } from "./Character.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";

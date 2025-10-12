@@ -1,5 +1,5 @@
 import { Bullet } from "./Bullet.js";
-import { Sounds } from "./Sounds.js";
+import { Sounds } from "../musical/Sounds.js";
 
 export class Weapon{
     static chordNotes = ["onSpawn", "+4", "+7"]

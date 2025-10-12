@@ -1,8 +1,8 @@
 import { Entity } from "./Entity.js";
 import { Weapon } from "./Weapon.js";
 import { Pickup } from "./Pickup.js";
-import { Socket } from "./Socket.js";
-import { Sounds } from "./Sounds.js";
+import { Socket } from "../Socket.js";
+import { Sounds } from "../musical/Sounds.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";
 

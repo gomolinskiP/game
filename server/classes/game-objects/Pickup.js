@@ -1,7 +1,7 @@
 import { Entity } from './Entity.js';
 import { Character } from './Character.js';
 import { Player } from './Player.js';
-import { Map } from './Map.js';
+import { Map } from '../Map.js';
 import { Tile } from './Tile.js';
 import Quadtree from "@timohausmann/quadtree-js";
 

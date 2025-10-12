@@ -1,10 +1,10 @@
 import { Bullet } from "./Bullet.js";
 import { Character } from "./Character.js";
-import { Map } from "./Map.js";
+import { Map } from "../Map.js";
 import { Pickup } from "./Pickup.js";
-import { WalkAgent } from "./RL.js";
+import { WalkAgent } from "../ai/DQN.js";
 import { Tile } from "./Tile.js";
-import { Sounds } from "./Sounds.js";
+import { Sounds } from "../musical/Sounds.js";
 import { stat } from "fs";
 
 

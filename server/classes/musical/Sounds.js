@@ -1,5 +1,5 @@
-import { Socket } from "./Socket.js";
-import { Bot } from "./Bot.js";
+import { Socket } from "../Socket.js";
+import { Bot } from "../game-objects/Bot.js";
 import { Scale } from "./Scale.js";
 
 const MS_IN_MIN = 60000;
