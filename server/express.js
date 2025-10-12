@@ -34,6 +34,7 @@ export default function expressSetUp(Account){
     //TODO https://stackoverflow.com/questions/11744975/enabling-https-on-express-js
 
     app.use(favicon("client/img/placeholder.png"));
+    app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
     const ses = session({
         secret: process.env.SESSION_SECRET,
@@ -110,7 +111,7 @@ export default function expressSetUp(Account){
             if (!user) {
                 //incorrect username
                 console.log("no such username");
-                res.redirect("/login?err=noUser");
+                return res.redirect("/login?err=noUser");
             }
 
             //check if password is correct:
@@ -121,7 +122,7 @@ export default function expressSetUp(Account){
             if (!isPasswordHashMaching) {
                 //pasword incorrect
                 console.log("incorrect password");
-                res.redirect("/login?err=wrongPass");
+                return res.redirect("/login?err=wrongPass");
             }
 
             //password correct - sign in success
@@ -130,7 +131,7 @@ export default function expressSetUp(Account){
             //create session:
             req.session.user = { username: req.body.username };
 
-            res.redirect("/");
+            return res.redirect("/");
         } catch (err) {
             console.error("Login error", err);
             return res.redirect(`/login?err=${err}`);
@@ -162,6 +163,8 @@ export default function expressSetUp(Account){
     });
 
     app.post("/register", async function (req, postRes) {
+        const isLoadTest = req.headers["x-loadtest"];
+
         const chosenUsername = req.body.username;
         const chosenPassword = req.body.password;
         const repeatedPassword = req.body.repPassword;
@@ -183,26 +186,46 @@ export default function expressSetUp(Account){
             return postRes.redirect("/register?err=passwordMismatch");
         }
 
-        //check if username is already taken:
-        const existingUser = await Account.findOne({
-            username: chosenUsername,
-        });
-
-        if (existingUser) {
-            //acount already exists
-            postRes.redirect("/register?err=usernameTaken");
-        } else {
-            //username is not taken, create account
+        try{
             const passwordHash = await argon2.hash(chosenPassword, {
                 type: argon2.argon2id,
             });
 
-            Account.insertOne({
+            await Account.insertOne({
                 username: chosenUsername,
                 password: passwordHash,
             });
-            postRes.redirect("/register?err=registerSuccess");
+            return postRes.redirect("/register?err=registerSuccess");
         }
+        catch(err){
+            if(err.code === 11000){
+                return postRes.redirect("/register?err=usernameTaken");
+            }
+
+            console.error("Register error: ", err);
+            return postRes.redirect("/register?err=serverError");
+        }
+
+        // //check if username is already taken:
+        // const existingUser = await Account.findOne({
+        //     username: chosenUsername,
+        // });
+
+        // if (existingUser) {
+        //     //acount already exists
+        //     return postRes.redirect("/register?err=usernameTaken");
+        // } else {
+        //     //username is not taken, create account
+        //     const passwordHash = await argon2.hash(chosenPassword, {
+        //         type: argon2.argon2id,
+        //     });
+
+        //     Account.insertOne({
+        //         username: chosenUsername,
+        //         password: passwordHash,
+        //     });
+        //     return postRes.redirect("/register?err=registerSuccess");
+        // }
     });
 
     app.get("/game", checkLoggedIn, function (req, res) {

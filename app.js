@@ -2,6 +2,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import expressSetUp from './server/express.js'
 import webSocketSetUp from './server/socket.js'
+import { unique } from '@tensorflow/tfjs';
 
 
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
@@ -16,8 +17,8 @@ mongoose.connect('mongodb://localhost:27017/mgrGame')
 
 //schema definitions:
 const AccountSchema = new mongoose.Schema({
-    username: String,
-    password: String
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true }
 }, { collection: 'account' });
 
 const ProgressSchema = new mongoose.Schema({
@@ -29,6 +30,8 @@ const ProgressSchema = new mongoose.Schema({
 
 const Account = mongoose.model('account', AccountSchema);
 const Progress = mongoose.model('progress', ProgressSchema);
+
+Account.syncIndexes();
 
 var {serv, ses} = expressSetUp(Account);
 

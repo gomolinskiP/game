@@ -1,0 +1,24 @@
+config:
+  target: "https://localhost:2000"
+  processor: "./nextUser.cjs"
+  phases:
+    - duration: 100
+      arrivalRate: 1
+  defaults:
+    headers:
+      Content-Type: "application/json"
+    https:
+      rejectUnauthorized: false
+      followRedirects: false
+
+scenarios:
+  - name: "Login users"
+    flow:
+      - function: "nextUser"
+      - post:
+          url: "/login"
+          json:
+            username: "{{ username }}"
+            password: "test1234"
+      - think: 10
+

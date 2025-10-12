@@ -215,7 +215,7 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         }
 
         // random bot spawn:
-        if(Math.random()<0.1 && Object.keys(Bot.list).length<40){
+        if(Math.random()<0.1 && Object.keys(Bot.list).length < Number(process.env.BOT_NUM)){
             // console.log("bot spawned")
             new Bot();
         }

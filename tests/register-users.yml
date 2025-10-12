@@ -1,0 +1,26 @@
+config:
+  target: "https://localhost:2000"
+  processor: "./nextUser.cjs"
+  phases:
+    - duration: 100
+      arrivalRate: 1
+  defaults:
+    headers:
+      Content-Type: "application/json"
+    https:
+      rejectUnauthorized: false
+      followRedirects: false
+
+scenarios:
+  - name: "Register users sequentially"
+    flow:
+      - loop:
+          - function: "nextUser"
+          - post:
+              url: "/register"
+              json:
+                username: "{{ username }}"
+                password: "test1234"
+                repPassword: "test1234"
+        count: 100
+

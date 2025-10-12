@@ -1,0 +1,26 @@
+config:
+  target: "https://localhost:2000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+  processor: "./test.cjs"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+    https:
+      ca: ./certs/server.cert
+  cookies: true
+
+scenarios:
+  - name: "Login and play"
+    flow:
+      - post:
+          url: "/login"
+          json:
+            username: "user_{{ $randomNumber(1,1000) }}"
+            password: "test123"
+      #     capture:
+      #       - json: "$"
+      #         as: "loginResponse"
+      #     afterResponse: "storeSessionCookie"
+      # - function: "connectAndPlay"
