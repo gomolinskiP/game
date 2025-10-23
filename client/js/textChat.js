@@ -53,7 +53,6 @@ export function chatInit(socket, canvas, isInChat){
         enterChat();
     }
 
-    //TODO sanitize chat messages, it`s really not secure haha
     socket.on('chatBroadcast', (signedMsg)=>{
         chatContent.innerHTML += signedMsg + "<br>";
         chatContent.scrollTop = chatContent.scrollHeight;

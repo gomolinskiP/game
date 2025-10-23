@@ -35,6 +35,17 @@ export class Pickup extends Entity{
         }
     }
 
+    static randomSpawn(){
+        // random pickup spawn:
+        if (
+            Math.random() < 0.1 &&
+            Object.keys(Pickup.list).length < Number(process.env.PICKUP_NUM)
+        ) {
+            // console.log("pickup spawned")
+            new Pickup();
+        }
+    }
+
     constructor(){
         let x;
         let y;
@@ -66,7 +77,7 @@ export class Pickup extends Entity{
 
         Pickup.list[this.id] = this
         this.timeout = setTimeout(()=>{
-            // delete itself after timeout??
+            // delete itself after timeout:
             this.destroy();
         }, 30000)
 
@@ -83,24 +94,29 @@ export class Pickup extends Entity{
         delete Pickup.list[this.id]
     }
 
-    checkPicked(playerList, socketList){
-        let playerId = this.collidingPlayerId(Character.list, Character.quadtree)
+    checkPicked(){
+        let characterID = this.collidingPlayerId(Character.list, Character.quadtree)
 
-        if(playerId != null){
-            playerList[playerId].giveWeapon(this.sound, this.duration, this.type)
-            playerList[playerId].addScore(1);
-            playerList[playerId].agentReward += 10;
-            playerList[playerId].stepsSinceLastPickup = 0;
-            // console.log(`givin 10 reward for pickup`)
+        if(characterID != null){
+            const character = Character.list[characterID];
+
+            character.giveWeapon(this.sound, this.duration, this.type);
+            character.addScore(1);
+
+            if(character.characterType == "bot"){
+                character.pickupsReward += 10;
+                character.stepsSinceLastPickup = 0;
+                // console.log(`giving 10 reward for pickup`);
+            }
             this.destroy();
         }
     }
 
-    static handleAll(playerList, socketList){
+    static handleAll(){
         for(let i in Pickup.list){
             let pickup = Pickup.list[i]
 
-            pickup.checkPicked(playerList, socketList);
+            pickup.checkPicked();
         }
     }
 }

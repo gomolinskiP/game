@@ -29,28 +29,28 @@ worker.on("message", (msg)=>{
             if(action == bot.lastAction) reward += 0.1;
 
             // console.log("reward: ", reward, ' bot: ', bot.id);
-            WalkAgent.recentRewards.push(reward);
-            if (WalkAgent.recentRewards.length > 1000) {
-                const average = (array) =>
-                    array.reduce((a, b) => a + b) / array.length;
-                console.log(
-                    `AVARAGE over 1000 REWARDS: ${average(
-                        WalkAgent.recentRewards
-                    )}`
-                );
-                fs.writeFileSync(
-                    "logs/rewards.txt",
-                    average(WalkAgent.recentRewards) + "\n",
-                    {
-                        encoding: "utf8",
-                        flag: "a+",
-                        mode: 0o666,
-                    }
-                );
-                // console.log(`epsilon: `, this.walkAgent.epsilon);
+            // WalkAgent.recentRewards.push(reward);
+            // if (WalkAgent.recentRewards.length > 1000) {
+            //     const average = (array) =>
+            //         array.reduce((a, b) => a + b) / array.length;
+            //     console.log(
+            //         `AVARAGE over 1000 REWARDS: ${average(
+            //             WalkAgent.recentRewards
+            //         )}`
+            //     );
+            //     fs.writeFileSync(
+            //         "logs/rewards.txt",
+            //         average(WalkAgent.recentRewards) + "\n",
+            //         {
+            //             encoding: "utf8",
+            //             flag: "a+",
+            //             mode: 0o666,
+            //         }
+            //     );
+            //     // console.log(`epsilon: `, this.walkAgent.epsilon);
 
-                WalkAgent.recentRewards = [];
-            }
+            //     WalkAgent.recentRewards = [];
+            // }
             
             // console.log(
             //     "main sends: ",
@@ -88,10 +88,25 @@ export class WalkAgent {
     static actionsNum = 9; //8-dir + not moving
     static statesNum = process.env.AGENT_STATES_NUM; //31
 
-    static gridDims = 5; //5x5 grid around agent
+    static gridDims = 3; //5x5 grid around agent
     //2:1 grid because of isometric view and proportions:
     static cellW = 400; //grid cell width
     static cellH = 200; //grid cell heigth
+
+    static bigStateGrid = {
+        cellW: 400,
+        cellH: 200,
+    };
+
+    static mediumStateGrid = {
+        cellW: WalkAgent.bigStateGrid.cellW / 3,
+        cellH: WalkAgent.bigStateGrid.cellH / 3,
+    };
+
+    static smallStateGrid = {
+        cellW: WalkAgent.mediumStateGrid.cellW / 3,
+        cellH: WalkAgent.mediumStateGrid.cellH / 3,
+    };
 
     static maxDistSq =
         Math.pow((WalkAgent.gridDims * WalkAgent.cellW) / 2, 2) +

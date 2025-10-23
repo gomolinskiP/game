@@ -45,8 +45,6 @@ export class Sounds {
             serverTime: Date.now(),
         });
 
-        Bot.metronomeTick();
-
         Sounds.tickNum++;
 
         if (Math.random() > 0.99) {

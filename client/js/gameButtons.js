@@ -134,6 +134,22 @@ export class GameUI{
         }, durationMs-100);
     }
 
+    static reorderKeyboardKeys(startNote){
+        //reorders keyboard to make it start from the current scale's base note:
+        const notes = Array.from(document.querySelectorAll("#keyboard .note"));
+        const noteNames = notes.map((n) => n.dataset.note);
+        const startIndex = noteNames.indexOf(startNote);
+        if (startIndex === -1) return;
+
+        const reordered = notes
+            .slice(startIndex)
+            .concat(notes.slice(0, startIndex));
+
+        reordered.forEach((btn, i) => {
+            btn.style.setProperty("--pos", i);
+        });
+    }
+
     static setWeaponType(type){
         weaponTypeLabel.innerText = type;
     }
@@ -153,5 +169,13 @@ export class GameUI{
         setTimeout(()=>{
             bpmLabel.classList.remove(color)
         }, 200)
+    }
+
+    static highlightTimingHelper(){
+        console.log('highlitin')
+        durationLabel.classList.add("red");
+        setTimeout(() => {
+            durationLabel.classList.remove("red");
+        }, 200);
     }
 }

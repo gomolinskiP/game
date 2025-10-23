@@ -91,6 +91,8 @@ export class Character extends Entity {
     ){
       // console.log("---") //TO FIX -- animation does not stop when player stops walking because he stops getting updated!!
       this.needsUpdate = false;
+      this.spdX = 0;
+      this.spdY = 0;
       // if(this.agentReward){
         // this.agentReward -= 0.1;
       // }
@@ -122,10 +124,8 @@ export class Character extends Entity {
         }
       }
       else{
-        if(this.agentReward){
-          console.log('negative reward for walking into collision')
-          this.agentReward -= 1;
-        }
+        // negative rewards for bots walking into collision:
+          this.walkingReward -= 1;
       }
     }
 
@@ -173,7 +173,6 @@ export class Character extends Entity {
 
     if(timeInaccuracy > Sounds.maxTimeInaccuracy){
       Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
-      // if(this.shootAgentReward) this.shootAgentReward -= 0.1;
       return;
     }
 
@@ -238,6 +237,7 @@ export class Character extends Entity {
   }
 
   changeSelectedNote(note) {
+    //TODO check if note is allowed!
     this.selectedNote = note;
   }
 

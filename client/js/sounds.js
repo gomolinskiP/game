@@ -21,15 +21,14 @@ export class Sounds {
     "B",
   ];
 
-  static audioOn = false;
+  static audioOn = true;
 
   static setScale(scaleName, allowedNotes) {
     Sounds.scaleName = scaleName;
     Sounds.scaleBase = scaleName[0];
     Sounds.allowedNotes = allowedNotes;
-    this.setupNoteKeyboard();
-
     GameUI.setScaleLabel(scaleName);
+    GameUI.reorderKeyboardKeys(allowedNotes[0]);
     GameUI.disableDisallowedNoteKeys(allowedNotes);
   }
 
@@ -43,7 +42,7 @@ export class Sounds {
     let digit = 1;
     for (const note of Sounds.allowedNotes) {
       console.log(`allowed note ${note}`);
-      Keyboard.addNoteKeyboardListener(digit, note);
+      Keyboard.addNoteKeyboardListener(digit);
 
       digit++;
     }

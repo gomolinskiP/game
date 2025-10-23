@@ -13,7 +13,6 @@ canvas.onmousedown = (event)=>{
 }
 canvas.onmouseleave = canvas.onmouseup = ()=>{
     canvasClicked = false;
-    console.log(`xxx`);
     lastDir = []
     Socket.pressingDirection("up", false);
     Socket.pressingDirection("down", false);
@@ -43,8 +42,6 @@ canvas.addEventListener('mousemove', (event)=>{
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * 180 / Math.PI + 180;
     const snappedDeg = Math.round(angleDeg / 45) * 45;
-    // console.log(dx, dy);
-    console.log(snappedDeg)
 
     let dir;
 
@@ -81,7 +78,6 @@ canvas.addEventListener('mousemove', (event)=>{
     }
 
     if(dir == lastDir) return;
-    console.log(directions[lastDir], directions[dir])
 
     // for(const key in directions[lastDir]){
     //     Socket.pressingDirection(key, false)
@@ -102,15 +98,16 @@ canvas.addEventListener('mousemove', (event)=>{
 let pressedKeys = {};
 
 export class Keyboard{
-    static addNoteKeyboardListener(digit, note){
+    static addNoteKeyboardListener(digit){
         if(digit>9) return;
-        console.log(`digit ${digit} | note ${note}`)
 
         addEventListener("keydown", (event)=>{
             if(event.key == `${digit}`){
                 if(pressedKeys[digit]) return;
                 pressedKeys[digit] = true;
-                console.log(`pressed ${digit}`)
+
+                const note = Sounds.allowedNotes[digit - 1];
+
                 Socket.noteFire(note);
                 GameUI.setActiveNote(note);
             }

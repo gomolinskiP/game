@@ -31,25 +31,27 @@ export default function expressSetUp(Account){
     };
     // var serv = require("http").Server(app);
     const serv = https.createServer(options, app);
-    //TODO https://stackoverflow.com/questions/11744975/enabling-https-on-express-js
 
     app.use(favicon("client/img/placeholder.png"));
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
+
+    const mongoStore = MongoStore.create({
+        mongoUrl: "mongodb://localhost:27017/mgrGame",
+        collectionName: "sessions",
+        ttl: 60 * 60 * 24, //24 hours
+    });
+
     const ses = session({
         secret: process.env.SESSION_SECRET,
         resave: false,
-        saveUninitialized: false,
+        saveUninitialized: true,
         name: "cookieName",
-        store: MongoStore.create({
-            mongoUrl: "mongodb://localhost:27017/mgrGame",
-            collectionName: "sessions",
-            ttl: 60 * 60 * 24, //24 hours
-        }),
+        store: mongoStore,
         cookie: {
             maxAge: 1000 * 60 * 60 * 24, //24 hours
             httpOnly: true, //do not let JS access the cookie - helps preventing XSS
-            secure: true, //use only HTTPS for cookie sending
+            secure: false, //use only HTTPS for cookie sending
             sameSite: "lax", //prevents CSRF attacks
         },
     });
@@ -131,7 +133,16 @@ export default function expressSetUp(Account){
             //create session:
             req.session.user = { username: req.body.username };
 
-            return res.redirect("/");
+            req.session.save((err)=>{
+                if(err) console.error("Session save error: ", err);
+                console.log(
+                    "LOGIN sessionID:",
+                    req.sessionID,
+                    "user:",
+                    req.session?.user
+                );
+                return res.redirect("/");
+            })
         } catch (err) {
             console.error("Login error", err);
             return res.redirect(`/login?err=${err}`);
@@ -250,6 +261,6 @@ export default function expressSetUp(Account){
     serv.listen(2000);
 
     console.log("✅ HTTPS server started.");
-    return { serv, ses };
+    return { serv, ses, mongoStore };
 }
 

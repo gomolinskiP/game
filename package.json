@@ -20,6 +20,7 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
+    "mongodb": "^6.20.0",
     "mongoose": "^8.17.0",
     "reinforce-js": "^1.5.1",
     "serve-favicon": "^2.5.0",

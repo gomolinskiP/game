@@ -17,6 +17,9 @@ import { Tile } from "./classes/game-objects/Tile.js";
 import { Sounds } from "./classes/musical/Sounds.js";
 import { Map } from "./classes/Map.js";
 
+import cookie from "cookie";
+import signature from "cookie-signature";
+
 //Start server-side metronome ticking:
 Sounds.metronomeTick();
 
@@ -38,7 +41,7 @@ Pickup.createQuadtree(Map.boundRect);
 
 Bot.startAgentStep();
 
-export default async function webSocketSetUp(serv, ses, Progress) {
+export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
     //socket.io:
 
     var io = require("socket.io")(serv, {
@@ -51,9 +54,84 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         allowEIO3: true,
     });
 
-    io.use((socket, next) => {
-        ses(socket.request, {}, next);
+    io.engine.use((req, res, next) => {
+        console.log("SOCKET handshake cookies:", req.headers.cookie);
+        console.log("SOCKET handshake sessionID:", req.sessionID);
+        console.log("SOCKET handshake session obj:", req.session);
+        next();
     });
+
+    //for Artillery tests:
+
+    // To jest TWÓJ middleware sesyjny:
+    io.engine.use((req, res, next) => {
+        ses(req, {}, next);
+    });
+
+    // A to specjalny parser dla cookie z Artillery:
+    io.use((socket, next) => {
+        try {
+            const rawCookie = socket.request.headers.cookie;
+            if (!rawCookie) {
+                console.error("❌ No cookie in socket handshake headers");
+                return next(new Error("No cookie in handshake"));
+            }
+
+            const cookies = cookie.parse(rawCookie);
+            const raw = cookies["cookieName"];
+            if (!raw) {
+                console.error(
+                    "❌ No cookieName found in cookie string:",
+                    cookies
+                );
+                return next(new Error("Session cookie not found"));
+            }
+
+            // raw wygląda np. jak: s%3AOjoWC8BRLSV1NnJr6J92_UqLlB75hZYT.yqkWGFShI%2BTDAZesD55Mqan9qKUXGoBLP%2B%2FmGzD%2BjF0
+            const decoded = decodeURIComponent(raw); // usuń %3A i %2B
+            if (!decoded.startsWith("s:")) {
+                console.error("❌ Cookie missing s: prefix", decoded);
+                return next(new Error("Malformed session cookie"));
+            }
+
+            const signedPart = decoded.slice(2); // usuwa "s:"
+            const unsigned = signature.unsign(
+                signedPart,
+                process.env.SESSION_SECRET
+            );
+
+            if (!unsigned) {
+                console.error("❌ Cookie signature invalid");
+                return next(new Error("Bad cookie signature"));
+            }
+
+            // zapisz ID w socket.request
+            socket.request.sessionID = unsigned;
+
+            // spróbuj wczytać sesję z MongoStore:
+            mongoStore.get(unsigned, (err, sessionObj) => {
+                if (err) {
+                    console.error("❌ Error reading session:", err);
+                    return next(err);
+                }
+                if (!sessionObj) {
+                    console.error("❌ No session found for ID", unsigned);
+                    return next(new Error("Session not found"));
+                }
+
+                console.log("✅ Session found for", unsigned, sessionObj);
+                socket.request.session = sessionObj;
+                next();
+            });
+        } catch (err) {
+            console.error("❌ Exception in socket auth middleware", err);
+            next(err);
+        }
+    });
+
+    // io.use((socket, next) => {
+    //     ses(socket.request, {}, next);
+    // });
 
     //user connects to the game subpage:
     io.sockets.on("connection", async function (socket) {
@@ -64,6 +142,7 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         let player = null;
 
         //get username from logged session:
+        console.log(socket.request.session);
         let username = socket.request.session?.user?.username;
         if (username == undefined) {
             console.log("ERROR: username is undefined");
@@ -208,19 +287,12 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         Bullet.refreshQuadtree();
         Pickup.refreshQuadtree();
 
-        // random pickup spawn:
-        if (Math.random() < 0.1 && Object.keys(Pickup.list).length < 0) {
-            // console.log("pickup spawned")
-            new Pickup();
-        }
+        //chance for random Pickup & Bot spawn:
+        Pickup.randomSpawn();
+        Bot.randomSpawn();
 
-        // random bot spawn:
-        if(Math.random()<0.1 && Object.keys(Bot.list).length < Number(process.env.BOT_NUM)){
-            // console.log("bot spawned")
-            new Bot();
-        }
-
-        Pickup.handleAll(Character.list, Socket.list);
+        //handle & update all game objects:
+        Pickup.handleAll();
         Bullet.updateAll();
         Player.updateAll();
     }, 1000 / 25);

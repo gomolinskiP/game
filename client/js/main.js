@@ -15,7 +15,7 @@ import { gameLoop, canvas, Graphics } from "./graphics.js";
 
 import { Player, Bot, Bullet, Pickup, Tile } from "./classes.js";
 import { Sounds } from "./sounds.js";
-import { addKeyboardListeners } from "./keyboard.js";
+import { addKeyboardListeners, Keyboard } from "./keyboard.js";
 import { chatInit } from "./textChat.js";
 import { GameUI } from "./gameButtons.js";
 import { Socket } from "./clientSocket.js";
@@ -28,6 +28,7 @@ export const limiter = new Tone.Compressor(-0.1, 20);
 
 limiter.toDestination();
 
+
 //create synths beforehand and store them in a synth pool:
 // SynthPool.populateAllPools(4)
 
@@ -36,6 +37,7 @@ socket.on("init", function (data) {
 
     Socket.setSelfID(data.selfId);
     Sounds.setScale(data.scale.name, data.scale.allowedNotes);
+    Sounds.setupNoteKeyboard();
     Sounds.setBPM(data.bpm);
 
     GameUI.setActiveNote(data.selectedNote);
@@ -126,11 +128,13 @@ socket.on("update", function (data) {
             case "weapon":
                 console.log(pack);
                 if (pack.weaponType) GameUI.setWeaponType(pack.weaponType);
-                if (pack.duration) GameUI.setDurationLabel(pack.duration);
+                if (pack.duration){
+                    GameUI.setDurationLabel(pack.duration);
+                    timingHelperID = newTimingHelper(pack.duration, timingHelperID);
+                }
                 if (pack.sound) GameUI.setSoundLabel(pack.sound);
                 break;
             case "gameMsg":
-                console.log(pack.msg);
                 Graphics.addGameMsg(pack.msg, pack.rating);
         }
     }
@@ -257,6 +261,28 @@ Tone.Transport.scheduleRepeat((time) => {
     if(Sounds.audioOn == true)
         metronome.triggerAttackRelease(note, "32n", time);
 }, "4n");
+
+
+
+
+let timingHelperID = Tone.Transport.scheduleRepeat((time) => {
+    GameUI.highlightTimingHelper();
+}, "1n");
+//TODO not always in sync with server timing validation!!!
+function newTimingHelper(newDuration, timingHelperID){
+    Tone.Transport.clear(timingHelperID);
+    const nextBarTime = Tone.Transport.nextSubdivision("1n");
+    console.log(nextBarTime)
+
+    const newTimingHelperID = Tone.Transport.scheduleRepeat(
+        (time) => {
+            GameUI.highlightTimingHelper();
+        },
+        newDuration,
+        0
+    );
+    return newTimingHelperID;
+}
 
 let tickNum = 0;
 socket.on("tick2", (data) => {

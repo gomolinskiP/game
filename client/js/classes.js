@@ -83,22 +83,6 @@ export class Player extends Entity{
         this.hp = initPack.hp;
         this.score = initPack.score;
         this.synthTimeout = false;
-        this.footstepSyn = new Tone.NoiseSynth(Player.synOptions);
-        this.pan3d = new Tone.Panner3D();
-        if(Player.list[selfId]){
-            this.pan3d.setPosition(
-                (this.x - Player.list[selfId].x)*0.1,
-                (this.y - Player.list[selfId].y)*0.1,
-                0
-            );
-        }
-        this.pan3d.distanceModel = "linear";
-        this.footstepVolume = new Tone.Volume(-9);
-        this.footstepSyn.connect(this.footstepVolume);
-        this.footstepVolume.connect(this.pan3d);
-
-        // this.bulletSounds = new SoundPool(7);
-
 
         this.direction = this.updateDirection(initPack.direction);
         this.idleAnimFrame = 2;
@@ -119,26 +103,10 @@ export class Player extends Entity{
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
-            if(Player.list[selfId]){
-                this.pan3d.setPosition(
-                    (this.x - Player.list[selfId].x)*0.1,
-                    (this.y - Player.list[selfId].y)*0.1,
-                    0
-                );
-            }
 
             this.lastMovedTime = Date.now();
             
             this.animFrame += 1;
-
-            
-            if(!this.synthTimeout && Tone.context.state == "running" && Sounds.audioOn){
-                this.synthTimeout = true;
-                this.footstepSyn.triggerAttackRelease("128n");
-                setTimeout(()=>{
-                    this.synthTimeout = false;
-                }, 250);
-            }
         }
     }
 
@@ -233,12 +201,20 @@ export class Bot extends Player{
     }
 }
 
+//TODO: change the sound names on server side!!!
+const soundNames = {
+    Synth: "piano",
+    DuoSynth: "guitar"
+}
+
 export class Bullet extends Entity{
     static list = {};
 
     constructor(initPack){
         super(initPack);
+        console.log('bullet pack: ', initPack)
         this.parent = Player.list[initPack.parentId];
+        this.sound = initPack.sound;
         this.hasSoundSlot = false;
         this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
         if(this.soundSlot){
@@ -247,6 +223,8 @@ export class Bullet extends Entity{
             this.pan3D = this.soundSlot.pan3D;
             this.sampler = this.soundSlot.sampler;
             this.soundSlot.occupierId = this.id;
+
+            this.sampler.setSound(this.sound);
         }
 
         this.note = initPack.note;
@@ -554,7 +532,7 @@ class SoundPool{
 
 class SoundSlot{
     constructor(){
-        this.sampler = new Sampler("../audio/banjo.wav");
+        this.sampler = new Sampler("../audio/piano.wav");
         this.pan3D = new Tone.Panner3D();
         this.sampler.pitchShift.connect(this.pan3D);
         this.pan3D.connect(limiter);
@@ -565,20 +543,30 @@ class SoundSlot{
     
 }
 
+//preload sound buffers:
+const buffers = {
+        piano: await new Tone.Buffer("../audio/piano.wav"),
+        guitar: await new Tone.Buffer("../audio/guitar.wav")
+    }
+
 class Sampler{
     constructor(sampleSrc){
-        this.samplePlayer = new Tone.Player(sampleSrc)
-        this.samplePlayer.playbackRate = 0.1;
+        this.samplePlayer = new Tone.Player()
+        this.samplePlayer.playbackRate = 1;
         this.pitchShift = new Tone.PitchShift()
 
         this.samplePlayer.connect(this.pitchShift);
+    }
+
+    setSound(sound){
+        this.samplePlayer._buffer = buffers[soundNames[sound]];
     }
 
     play(note){
         const shift = Sounds.notes.indexOf(note);
         console.log(note, shift)
 
-        this.pitchShift.pitch = shift + 48;
+        this.pitchShift.pitch = shift + 0;
         this.samplePlayer.start();
     }
 
@@ -591,3 +579,4 @@ class Sampler{
         this.pitchShift.dispose();
     }
 }
+

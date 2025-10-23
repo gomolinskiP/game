@@ -33,7 +33,7 @@ const Progress = mongoose.model('progress', ProgressSchema);
 
 Account.syncIndexes();
 
-var {serv, ses} = expressSetUp(Account);
+var {serv, ses, mongoStore} = expressSetUp(Account);
 
-webSocketSetUp(serv, ses, Progress);
+webSocketSetUp(serv, ses, mongoStore, Progress);
 

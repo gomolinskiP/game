@@ -107,7 +107,7 @@ export class DQNAgent{
         this.targetModel.setWeights(this.model.getWeights());
     }
 
-    decide(state, botID){
+    decide(state){
         this.stepCounter++;
 
         let action;

@@ -2,14 +2,15 @@ config:
   target: "https://localhost:2000"
   processor: "./nextUser.cjs"
   phases:
-    - duration: 100
+    - duration: 1
       arrivalRate: 1
   defaults:
     headers:
       Content-Type: "application/json"
     https:
       rejectUnauthorized: false
-      followRedirects: false
+      followRedirects: true
+    cookie: true
 
 scenarios:
   - name: "Login users"
@@ -20,5 +21,10 @@ scenarios:
           json:
             username: "{{ username }}"
             password: "test1234"
-      - think: 10
+          afterResponse: "storeSessionCookie"
+      - think: 1
+
+      - function: "connectSocket"
+      - think: 100
+
 

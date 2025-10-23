@@ -302,19 +302,89 @@ function drawHUD(){
 }
 
 function drawAgentGrid(player){
-    const x = player.x - Player.list[selfId].x + gameWidth/2;
+    console.log(selfId);
+    if(!selfId) return;
+    const x = player.x - Player.list[selfId].x + gameWidth / 2;
     const y = player.y - Player.list[selfId].y + gameHeight / 2;
 
-    const gridDims = 5;
-    const cellH = 100;
-    const cellW = 200;
+    let gridDims = 3;
+    let cellH = 200;
+    let cellW = 400;
 
     for(let i = 0; i < gridDims; i++){
         for(let j = 0; j < gridDims; j++){
             const cellX = x - gridDims*cellW/2 + j*cellW;
             const cellY = y - gridDims*cellH/2 + i*cellH;
 
+
             ctx.fillStyle = `#${(3*i)%9}000${(3*j)%9}044`;
+            for (let id in Pickup.list) {
+                const pickup = Pickup.list[id];
+                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
+                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+                if (
+                    px > cellX &&
+                    px < cellX + cellW &&
+                    py > cellY &&
+                    py < cellY + cellH
+                ) {
+                    ctx.fillStyle = `#00ff0044`;
+                }
+            }
+            ctx.fillRect(cellX, cellY, cellW, cellH);
+            // ctx.stroke();
+        }
+    }
+
+    cellH = cellH/3;
+    cellW = cellW/3;
+
+    for (let i = 0; i < gridDims; i++) {
+        for (let j = 0; j < gridDims; j++) {
+            const cellX = x - (gridDims * cellW) / 2 + j * cellW;
+            const cellY = y - (gridDims * cellH) / 2 + i * cellH;
+
+            ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
+            for (let id in Pickup.list) {
+                const pickup = Pickup.list[id];
+                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
+                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+                if (
+                    px > cellX &&
+                    px < cellX + cellW &&
+                    py > cellY &&
+                    py < cellY + cellH
+                ) {
+                    ctx.fillStyle = `#00ff0044`;
+                }
+            }
+            ctx.fillRect(cellX, cellY, cellW, cellH);
+            // ctx.stroke();
+        }
+    }
+
+    cellH = cellH / 3;
+    cellW = cellW / 3;
+
+    for (let i = 0; i < gridDims; i++) {
+        for (let j = 0; j < gridDims; j++) {
+            const cellX = x - (gridDims * cellW) / 2 + j * cellW;
+            const cellY = y - (gridDims * cellH) / 2 + i * cellH;
+
+            ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
+            for (let id in Pickup.list) {
+                const pickup = Pickup.list[id];
+                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
+                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+                if (
+                    px > cellX &&
+                    px < cellX + cellW &&
+                    py > cellY &&
+                    py < cellY + cellH
+                ) {
+                    ctx.fillStyle = `#00ff0044`;
+                }
+            }
             ctx.fillRect(cellX, cellY, cellW, cellH);
             // ctx.stroke();
         }
@@ -397,8 +467,6 @@ export function gameLoop(){
 
         msg.y -= 1;
         if(msg.fontSize > 2) msg.fontSize -= 0.05;
-
-        console.log(msg.text, msg.x, msg.y)
     }
     drawHUD();
 
