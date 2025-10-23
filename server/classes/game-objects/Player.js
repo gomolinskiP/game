@@ -6,7 +6,7 @@ import { Socket } from '../Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 
-const loadDistance = 1200; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadDistance = 800; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
 const loadUnloadMargin = 0;
 const unloadDistance = loadDistance + loadUnloadMargin;
 

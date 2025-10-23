@@ -38,7 +38,7 @@ export class Pickup extends Entity{
     static randomSpawn(){
         // random pickup spawn:
         if (
-            Math.random() < 0.1 &&
+            Math.random() < 0.3 &&
             Object.keys(Pickup.list).length < Number(process.env.PICKUP_NUM)
         ) {
             // console.log("pickup spawned")

@@ -56,7 +56,7 @@ export class DQNAgent{
         gamma = 0.99,
         epsilonStart = 1.0,
         epsilonEnd = 0.1,
-        epsilonDecaySteps = 1e6,
+        epsilonDecaySteps = 2e6,
         learningRate = 0.0005,
         batchSize = 128,
         bufferSize = 200000,

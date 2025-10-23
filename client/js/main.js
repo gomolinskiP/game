@@ -23,10 +23,11 @@ import { Socket } from "./clientSocket.js";
 const socket = Socket.clientSocket;
 
 export const limiter = new Tone.Compressor(-0.1, 20);
-// const reverb = new Tone.Reverb();
+const reverb = new Tone.Reverb();
 // const delay = new Tone.FeedbackDelay("1n", 0.2);
 
-limiter.toDestination();
+limiter.connect(reverb);
+reverb.toDestination();
 
 
 //create synths beforehand and store them in a synth pool:

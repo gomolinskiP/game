@@ -1,5 +1,6 @@
 import Quadtree from "@timohausmann/quadtree-js";
 import { Map } from "../Map.js";
+import { v4 as uuidv4 } from "uuid";
 
 function screenToIso(x, y) {
   return {
@@ -163,7 +164,7 @@ export class Tile {
     this.width = 32;
     this.height = 32;
 
-    this.id = Math.random();
+    this.id = uuidv4();
     Tile.list[this.id] = this;
     // Tile.qTree.insert({
     //     x: this.ortX,

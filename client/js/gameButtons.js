@@ -13,6 +13,9 @@ const durationLabel = document.querySelector("#durationLabel");
 const soundLabel = document.querySelector("#sound-label");
 const audioOnLabel = document.querySelector("#audio-on-label");
 
+const hpLabel = document.querySelector("#hp");
+const scoreLabel = document.querySelector("#score");
+
 audioOnLabel.onclick = ()=>{
     if(Sounds.audioOn == false){
         Sounds.audioOn = true;
@@ -172,10 +175,14 @@ export class GameUI{
     }
 
     static highlightTimingHelper(){
-        console.log('highlitin')
         durationLabel.classList.add("red");
         setTimeout(() => {
             durationLabel.classList.remove("red");
         }, 200);
+    }
+
+    static setHPLabel(hp){
+        hpLabel.innerText = `HP: ${hp}`
+        hpLabel.style.setProperty("--percent", `${Math.round((hp/1000)*100)}%`)
     }
 }

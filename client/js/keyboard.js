@@ -2,7 +2,7 @@ import { Socket } from "./clientSocket.js";
 import { setIsInChat, getIsInChat } from "./main.js";
 import { Sounds } from "./sounds.js";
 import { GameUI } from "./gameButtons.js";
-import { gameHeight, gameWidth } from "./graphics.js";
+import { gameHeight, gameWidth, Graphics } from "./graphics.js";
 
 let spacePressed = false;
 
@@ -36,8 +36,8 @@ let lastDir = [];
 canvas.addEventListener('mousemove', (event)=>{
     if(!canvasClicked) return;
 
-    const dx = event.clientX - gameWidth/2;
-    const dy = event.clientY - gameHeight/2;
+    const dx = event.clientX - window.innerWidth/2;
+    const dy = event.clientY - window.innerHeight/2;
 
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * 180 / Math.PI + 180;
@@ -185,6 +185,14 @@ export function addKeyboardListeners(socket){
                 chatInput.focus();
                 chatInput.placeholder = "press ENTER to leave chat"
                 event.preventDefault();
+                break;
+            case "+":
+            case "=":
+                Graphics.changeZoomLevel('up');
+                break;
+            case "-":
+            case "_":
+                Graphics.changeZoomLevel('down');
                 break;
         }
     }

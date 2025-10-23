@@ -2,6 +2,7 @@ import { limiter } from './main.js'
 import { Img, gameWidth, gameHeight, drawBuffer, tileImages } from './graphics.js';
 import { Socket } from './clientSocket.js'
 import { Sounds } from './sounds.js';
+import { GameUI } from './gameButtons.js';
 
 let selfId = null;
 
@@ -81,6 +82,7 @@ export class Player extends Entity{
         super(initPack);
         this.name = initPack.name;
         this.hp = initPack.hp;
+        if(this.id == Socket.selfId) GameUI.setHPLabel(this.hp);
         this.score = initPack.score;
         this.synthTimeout = false;
 
@@ -89,6 +91,7 @@ export class Player extends Entity{
         this.imageAnim = Img.playerAnim;
         this.image = this.imageAnim[this.direction][this.idleAnimFrame];
         this.animFrame = 1 * 2;
+        this.hueRot = Math.round(360 * Math.random())
 
         if(!SoundPool.globalSoundPool){
             SoundPool.globalSoundPool = new SoundPool(MAX_BULLET_SOUNDS);
@@ -99,6 +102,7 @@ export class Player extends Entity{
 
     update(pack){
         this.hp = pack.hp;
+        if (this.id == Socket.selfId) GameUI.setHPLabel(this.hp);
         this.score = pack.score;
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
@@ -126,14 +130,15 @@ export class Player extends Entity{
 
         //player image:
         drawBuffer.push({
-                    type: "image",
-                    img: this.image,
-                    x: x-32,
-                    y: y-32,
-                    sortY: y+32,
-                    w: 64,
-                    h: 64,
-        })
+            type: "image",
+            img: this.image,
+            x: x - 32,
+            y: y - 32,
+            sortY: y + 32,
+            w: 64,
+            h: 64,
+            hueRot: this.hueRot,
+        });
         this.image = this.imageAnim[this.direction][parseInt(this.animFrame/2%3)]
 
         //player nametag:
@@ -204,8 +209,14 @@ export class Bot extends Player{
 //TODO: change the sound names on server side!!!
 const soundNames = {
     Synth: "piano",
-    DuoSynth: "guitar"
-}
+    DuoSynth: "guitar",
+    AMSynth: "clarinet",
+    FMSynth: "flute",
+    MembraneSynth: "harp",
+    MetalSynth: "organ",
+    MonoSynth: "trumpet",
+    PolySynth: "violin"
+};
 
 export class Bullet extends Entity{
     static list = {};
@@ -391,6 +402,9 @@ export class Tile{
             shiftSortY = 64 * this.layerId;
         }
 
+        if(!img) console.error('no img', this.gid)
+        // else console.log(this.gid)
+
         drawBuffer.push({
             type: 'image',
             img: img,
@@ -545,9 +559,15 @@ class SoundSlot{
 
 //preload sound buffers:
 const buffers = {
-        piano: await new Tone.Buffer("../audio/piano.wav"),
-        guitar: await new Tone.Buffer("../audio/guitar.wav")
-    }
+    piano: await new Tone.Buffer("../audio/piano.wav"),
+    guitar: await new Tone.Buffer("../audio/guitar.wav"),
+    clarinet: await new Tone.Buffer("../audio/clarinet.mp3"),
+    flute: await new Tone.Buffer("../audio/flute.mp3"),
+    harp: await new Tone.Buffer("../audio/harp.mp3"),
+    organ: await new Tone.Buffer("../audio/organ.mp3"),
+    trumpet: await new Tone.Buffer("../audio/trumpet.mp3"),
+    violin: await new Tone.Buffer("../audio/violin.mp3"),
+};
 
 class Sampler{
     constructor(sampleSrc){

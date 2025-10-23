@@ -77,9 +77,9 @@ export class Bot extends Character {
     }
 
     static agentStepTime_ms = 250; //time between next dqn agent steps
-    static startPosResetTime_ms = 180000; //time after start position is resetted to current position (for dqn map exploration implementation)
+    // static startPosResetTime_ms = 600000; //time after start position is resetted to current position (for dqn map exploration implementation)
     static moveDistGoal = 4000; //max distance from start position, that reaching gives reward and resets start position
-    static startPosResetFreq = Bot.startPosResetTime_ms / Bot.agentStepTime_ms; //number of steps between resetting starting position
+    // static startPosResetFreq = Bot.startPosResetTime_ms / Bot.agentStepTime_ms; //number of steps between resetting starting position
 
     constructor() {
         const { x, y } = Tile.getRandomWalkablePos();
@@ -94,12 +94,13 @@ export class Bot extends Character {
         this.walkAgent = new WalkAgent(this);
         this.walkingReward = 0; //rewards regarding walking itself
         this.pickupsReward = 0; //rewards regarding collecting pickups
-        this.stepsSinceLastPickup = 0;
+        this.stepsSinceLastPickup = 100000000;
         this.combatReward = 0;
 
         this.agentStepCount = 0;
 
-        this.setAgentStartPos(x, y);
+        this.startX = this.x;
+        this.startY = this.y;
 
         this.isLearningCycleDone = false;
 
@@ -422,20 +423,20 @@ export class Bot extends Character {
         this.pressingDown = move.d;
         this.pressingLeft = move.l;
         this.pressingRight = move.r;
-
-        this.agentStepCount += 1;
-        if (this.agentStepCount % Bot.startPosResetFreq === 0) {
-            this.setAgentStartPos(this.x, this.y);
-        }
     }
 
     startNewLearningCycle() {
         this.isLearningCycleDone = false;
     }
 
-    setAgentStartPos(x, y) {
-        this.startX = x;
-        this.startY = y;
+    driftStartPos(){
+        this.startX += 2 * Math.sign(this.x - this.startX);
+        this.startY += 2 * Math.sign(this.y - this.startY);
+
+        // console.log(
+        //     'startPos: ', this.startX, this.startY,
+        //     'pos: ', this.x, this.y
+        // )
     }
 
     takeDmg(damage, attacker) {
@@ -473,12 +474,18 @@ export class Bot extends Character {
 
         //add reward for being far from starting position:
         const distTraveled = this.getDist({ x: this.startX, y: this.startY });
+        this.driftStartPos();
         if (distTraveled > Bot.moveDistGoal) {
-            this.setAgentStartPos(this.x, this.y);
             this.agentStepCount = 0;
-            this.walkingReward += 2;
+            this.walkingReward += 10;
         }
-        const walkFarReward = 10 * (distTraveled / Bot.moveDistGoal);
+        const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5);
+        // console.log(
+        //     "normalised dist: ",
+        //     distTraveled / Bot.moveDistGoal - 0.5,
+        //     'walkFarReward: ',
+        //     walkFarReward
+        // );
         this.walkingReward += walkFarReward;
 
         const reward = this.walkingReward + this.pickupsReward;

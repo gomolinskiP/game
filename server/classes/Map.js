@@ -19,7 +19,7 @@ export class Map {
   static boundRect = {};
 
   static async loadMapData() {
-    const filePath = resolve(__dirname, "../../client/map3.json");
+    const filePath = resolve(__dirname, "../../client/map5.json");
     const jsonData = JSON.parse(await readFile(filePath, "utf-8"));
 
     Map.mapData = jsonData;
@@ -123,6 +123,7 @@ export class Map {
 
       let tileArr = Map.loadLayerTiles(layer);
       for (const tile of tileArr) {
+        if (tile.gid == 2147483750) tile.gid = 102;
         new Tile(tile.gid, tile.x, tile.y - tile.wallOffset, layerId);
       }
     }

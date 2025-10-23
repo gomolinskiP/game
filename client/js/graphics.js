@@ -14,6 +14,18 @@ var ctx = canvas.getContext("2d");
 export class Graphics{
     static gameMessages = [];
 
+    static gameZoom = 0.5;
+    static changeZoomLevel(dir){
+        if (dir == "up" && Graphics.gameZoom < 1) {
+            Graphics.gameZoom += 0.01;
+            canvasResize();
+        } else if (dir == "down" && Graphics.gameZoom > 0.2) {
+            Graphics.gameZoom -= 0.01;
+            canvasResize();
+        }
+        console.log(Graphics.gameZoom)
+    }
+
     static addGameMsg(msg, rating){
         if(Graphics.gameMessages.length > 10) Graphics.gameMessages.shift();
 
@@ -49,8 +61,9 @@ export class Graphics{
 canvasResize()
 
 function canvasResize() {
-    gameWidth = window.innerWidth;
-    gameHeight = window.innerHeight;
+    gameWidth = window.innerWidth / Graphics.gameZoom;
+    gameHeight = window.innerHeight / Graphics.gameZoom;
+    canvas.style.scale = Graphics.gameZoom;
     canvas.width = gameWidth;
     canvas.height = gameHeight;
 };
@@ -121,7 +134,7 @@ let tiles = []
 export let tileImages;
 
 //get map data:
-fetch("../map3.json")
+fetch("../map5.json")
     .then(res=>res.json())
     .then(async data=>{
         mapData = data;
@@ -174,7 +187,8 @@ async function loadUsedTiles(mapData){
         if(!usedGIDs.has(globalID)) continue;
 
         const img = new Image();
-        img.src = `../img/${tile.image}`;
+        img.src = `../${tile.image}`;
+        console.log(img.src)
 
         await new Promise(res => (img.onload = res));
         tileImages[globalID] = img;
@@ -393,6 +407,7 @@ function drawAgentGrid(player){
 
 //game Loop:
 export function gameLoop(){
+    const startT = performance.now();
     if(!selfId){
         selfId = Socket.selfId;
     }
@@ -415,7 +430,7 @@ export function gameLoop(){
     for(var i in Bullet.list){
         Bullet.list[i].draw();
     }
-
+    
     //sort and draw drawBuffer:
     drawBuffer.sort((a, b) => {
         let aY = a.sortY;
@@ -429,12 +444,17 @@ export function gameLoop(){
         // }
             return aY - bY - 0.01
     })
-
+    
     for(let obj of drawBuffer){
         switch(obj.type){
             case 'image':
                 ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
+                if(obj.hueRot){
+                    ctx.filter = `hue-rotate(${obj.hueRot}deg)`;
+                }
+                if(obj.img) ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
+                ctx.filter = 'none';
+                // ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
                 // if(obj.layerId>0) ctx.fillRect(obj.x,obj.sortY,3,3);
                 break;
             case 'text':
@@ -482,12 +502,14 @@ export function gameLoop(){
         }
     }
 
-    //draw agent environment grid:
+    // draw agent environment grid:
     // for(const id in Player.list){
     //     const player = Player.list[id];
 
     //     drawAgentGrid(player);
     // }
 
+    const endT = performance.now();
+    console.log("frameT", endT - startT);
     requestAnimationFrame(gameLoop)
 }

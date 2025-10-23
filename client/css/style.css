@@ -406,7 +406,54 @@ a:hover{
     background-color: #00daaa;
 }
 
+#top-left-ui{
+    position: absolute;
+    top: 80px;
+    left: 10px;
+    padding: 4px;
 
+    background-color: transparent;
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
+    border: 1px solid black;
+}
+
+
+#hp{
+    --percent: 100%;
+    background: linear-gradient(90deg, #ff0000 var(--percent), transparent var(--percent));
+
+    padding: 4px;
+
+    background-color: transparent;
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
+    border: 1px solid black;
+
+    font-weight: bold;
+    width: 200px;
+    color: white;
+}
+
+@keyframes scoreAnim {
+    from {
+        scale: 0.99;
+    }
+    to {
+        scale: 1.01;
+    }
+}
+
+#score{
+    --percent: 100%;
+    background: #00daaa;
+
+    padding: 4px;
+
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
+    border: 1px solid black;
+
+    font-weight: bold;
+    width: 200px;
+}
 
 #bottom-left-ui{
     position: absolute;
