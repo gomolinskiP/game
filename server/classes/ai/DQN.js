@@ -9,6 +9,7 @@ const fs = require('fs');
 const worker = new Worker("./server/classes/ai/TFWorker.js", {
     workerData: {
         AGENT_STATES_NUM: parseInt(process.env.AGENT_STATES_NUM, 10),
+        AGENT_ACTIONS_NUM: parseInt(process.env.AGENT_ACTIONS_NUM, 10),
     },
 });
 
@@ -90,8 +91,8 @@ export class WalkAgent {
 
     static gridDims = 3; //5x5 grid around agent
     //2:1 grid because of isometric view and proportions:
-    static cellW = 400; //grid cell width
-    static cellH = 200; //grid cell heigth
+    // static cellW = 400; //grid cell width
+    // static cellH = 200; //grid cell heigth
 
     static bigStateGrid = {
         cellW: 400,
@@ -109,24 +110,35 @@ export class WalkAgent {
     };
 
     static maxDistSq =
-        Math.pow((WalkAgent.gridDims * WalkAgent.cellW) / 2, 2) +
-        Math.pow((WalkAgent.gridDims * WalkAgent.cellH) / 2, 2);
-    static maxDX = (WalkAgent.gridDims * WalkAgent.cellW) / 2;
-    static maxDY = (WalkAgent.gridDims * WalkAgent.cellH) / 2;
+        Math.pow((WalkAgent.gridDims * WalkAgent.bigStateGrid.cellW) / 2, 2) +
+        Math.pow((WalkAgent.gridDims * WalkAgent.bigStateGrid.cellH) / 2, 2);
+    static maxDX = (WalkAgent.gridDims * WalkAgent.bigStateGrid.cellW) / 2;
+    static maxDY = (WalkAgent.gridDims * WalkAgent.bigStateGrid.cellH) / 2;
     static maxDist = Math.sqrt(WalkAgent.maxDistSq);
 
     static recentRewards = [];
 
     static moves = [
-        { u: false, d: false, l: false, r: false }, //idle
-        { u: true, d: false, l: false, r: false }, //N
-        { u: true, d: false, l: false, r: true }, //NE
-        { u: false, d: false, l: false, r: true }, //E
-        { u: false, d: true, l: false, r: true }, //SE
-        { u: false, d: true, l: false, r: false }, //S
-        { u: false, d: true, l: true, r: false }, //SW
-        { u: false, d: false, l: true, r: false }, //W
-        { u: true, d: false, l: true, r: false }, //NW
+        { u: false, d: false, l: false, r: false, att: false }, //idle
+        { u: true, d: false, l: false, r: false, att: false }, //N
+        { u: true, d: false, l: false, r: true, att: false }, //NE
+        { u: false, d: false, l: false, r: true, att: false }, //E
+        { u: false, d: true, l: false, r: true, att: false }, //SE
+        { u: false, d: true, l: false, r: false, att: false }, //S
+        { u: false, d: true, l: true, r: false, att: false }, //SW
+        { u: false, d: false, l: true, r: false, att: false }, //W
+        { u: true, d: false, l: true, r: false, att: false }, //NW
+        { u: false, d: false, l: false, r: false, att: true }, //idle & shoot
+        { u: true, d: false, l: false, r: false, att: true }, //N & shoot
+        { u: true, d: false, l: false, r: true, att: true }, //NE & shoot
+        { u: false, d: false, l: false, r: true, att: true }, //E & shoot
+        { u: false, d: true, l: false, r: true, att: true }, //SE & shoot
+        { u: false, d: true, l: false, r: false, att: true }, //S & shoot
+        { u: false, d: true, l: true, r: false, att: true }, //SW & shoot
+        { u: false, d: false, l: true, r: false, att: true }, //W & shoot
+        { u: true, d: false, l: true, r: false, att: true }, //NW & shoot
+        { u: false, d: false, l: false, r: false, att: false, changeWeaponDuration: "shorter" }, //idle & change to shorter weapon duration
+        { u: false, d: false, l: false, r: false, att: false, changeWeaponDuration: "longer" }, //idle & change to longer weapon duration
     ];
 
     constructor(bot) {
@@ -150,6 +162,12 @@ export class WalkAgent {
             reward: reward,
             state: state,
             done: done,
+        });
+    }
+
+    static requestWorkerLogLoss(){
+        worker.postMessage({
+            type: "logLossAndEps"
         });
     }
 

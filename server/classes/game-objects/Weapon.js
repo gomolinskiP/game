@@ -1,76 +1,102 @@
 import { Bullet } from "./Bullet.js";
 import { Sounds } from "../musical/Sounds.js";
 
-export class Weapon{
-    static chordNotes = ["onSpawn", "+4", "+7"]
+export class Weapon {
+    static chordNotes = [0, 4, 7];
+    static allowedDurations = ["1n", "1n.", "2n", "2n.", "4n", "4n.", "8n"];
+    static allowedSounds = [
+        "AMSynth",
+        "DuoSynth",
+        "FMSynth",
+        "MembraneSynth",
+        "MetalSynth",
+        "MonoSynth",
+        "PolySynth",
+        "Synth",
+    ];
+    static allwedTypes = [
+        "normal",
+        "random",
+        "chord",
+        "arp-up",
+        "arp-down",
+        "arp-alt",
+    ];
 
-    constructor(sound, duration, type, wielder){
+    constructor(sound, duration, type, wielder) {
         this.sound = sound;
         this.wielder = wielder;
-        
+
         this.setType(type);
-        this.setDuration(duration)
+        this.setDuration(duration);
     }
 
-    change(requestedChange){
+    change(requestedChange) {
         const type = requestedChange.type;
         const code = requestedChange.code;
 
-        switch(type){
-            case 'sound':
+        switch (type) {
+            case "sound":
                 this.setSound(code);
                 break;
-            case 'type':
+            case "type":
                 this.setType(code);
                 break;
-            case 'duration':
+            case "duration":
                 this.setDuration(code);
                 break;
             default:
-                console.log(`unknown change type ${type} during requested weapon change`);
+                console.log(
+                    `unknown change type ${type} during requested weapon change`
+                );
                 break;
         }
     }
 
-    setSound(sound){
+    setSound(sound) {
         this.sound = sound;
 
-        if(!this.wielder.updatePack) return;
+        if (!this.wielder.updatePack) return;
         this.wielder.updatePack.push({
             sound: this.sound,
             type: "weapon",
-        })
+        });
     }
 
-    setType(type){
+    setType(type) {
         this.type = type;
         this.shootCount = 0;
 
-        if(!this.wielder.updatePack) return;
+        if (!this.wielder.updatePack) return;
         this.wielder.updatePack.push({
             weaponType: this.type,
             type: "weapon",
-        })
+        });
     }
 
-    setDuration(duration){
+    setDuration(duration) {
         this.duration = duration;
 
         // determine note duration type: normal, dotted or triplet (triplets not yet implemented)?
-        if(this.duration.includes(".")) this.durationType = "dotted";
+        if (this.duration.includes(".")) this.durationType = "dotted";
         else this.durationType = "normal";
 
-        this.durationMs = Sounds.getTimeFromDuration(this.duration, this.durationType);
+        this.durationMs = Sounds.getTimeFromDuration(
+            this.duration,
+            this.durationType
+        );
 
-        const durationInt = parseInt(duration.replace("n", "").replace(".", ""))
+        const durationInt = parseInt(
+            duration.replace("n", "").replace(".", "")
+        );
         this.durationInt = durationInt;
         //update weapon damage depending on duration:
-        switch(this.durationType){
+        switch (this.durationType) {
             case "normal":
-                this.damage = 200/durationInt;
+                this.damage = 200 / durationInt;
                 break;
             case "dotted":
-                this.damage = (3/2)*200/durationInt;
+                this.damage = ((3 / 2) * 200) / durationInt;
                 break;
             default:
                 this.damage = 1;
@@ -79,28 +105,33 @@ export class Weapon{
 
         this.shootCount = 0;
 
-        if(!this.wielder.updatePack) return;
+        if (!this.wielder.updatePack) return;
         this.wielder.updatePack.push({
             duration: this.duration,
             type: "weapon",
-        })
+        });
     }
 
-    shoot(note){
+    shoot(note) {
         const parent = this.wielder;
         const angle = this.wielder.lastAngle;
         const damage = this.damage;
         const durationMs = this.durationMs;
 
-        switch(this.type){
-            case 'normal':
-                new Bullet(parent, angle, note, durationMs, damage)
+        switch (this.type) {
+            case "normal":
+                new Bullet(parent, angle, note, durationMs, damage);
                 break;
-            case 'random':
-                let randNote = Sounds.scale.allowedNotes[Math.floor(Math.random()*Sounds.scale.allowedNotes.length)]
+            case "random":
+                let randNote =
+                    Sounds.scale.allowedNotes[
+                        Math.floor(
+                            Math.random() * Sounds.scale.allowedNotes.length
+                        )
+                    ];
                 new Bullet(parent, angle, randNote, durationMs, damage);
                 break;
-            case 'chord':
+            case "chord":
                 new Bullet(parent, angle, note, durationMs, damage / 3);
                 new Bullet(
                     parent,
@@ -117,31 +148,31 @@ export class Weapon{
                     damage / 3
                 );
                 break;
-            case 'arp-up':
-                new Bullet(parent,  angle, this.getAscendingArpNote(this.shootCount, Weapon.chordNotes), this.durationMs, damage)
-                this.shootCount += 1;
-                break;
-            case 'arp-down':
+            case "arp-up":
                 new Bullet(
                     parent,
                     angle,
-                    this.getDescendingArpNote(
-                        this.shootCount,
-                        Weapon.chordNotes
-                    ),
+                    this.getAscendingArpNote(note, this.shootCount),
+                    this.durationMs,
+                    damage
+                );
+                this.shootCount += 1;
+                break;
+            case "arp-down":
+                new Bullet(
+                    parent,
+                    angle,
+                    this.getDescendingArpNote(note, this.shootCount),
                     durationMs,
                     damage
                 );
                 this.shootCount += 1;
                 break;
-            case 'arp-alt':
+            case "arp-alt":
                 new Bullet(
                     parent,
                     angle,
-                    this.getAlternatingArpNote(
-                        this.shootCount,
-                        Weapon.chordNotes
-                    ),
+                    this.getAlternatingArpNote(note, this.shootCount),
                     durationMs,
                     damage
                 );
@@ -150,25 +181,35 @@ export class Weapon{
         }
     }
 
-    getAscendingArpNote(count, notes){
-        return notes[count % notes.length]
+    getAscendingArpNote(note, count) {
+        return Sounds.scale.getTransposed(
+            note,
+            Weapon.chordNotes[count % Weapon.chordNotes.length]
+        );
+        return notes[count % notes.length];
     }
 
-    getDescendingArpNote(count, notes){
-        const length = notes.length;
+    getDescendingArpNote(note, count) {
+        const length = Weapon.chordNotes.length;
+        return Sounds.scale.getTransposed(
+            note,
+            Weapon.chordNotes[length - 1 - (count % length)]
+        );
 
-        return notes[length - 1 - count % length]
+        return notes[length - 1 - (count % length)];
     }
 
-    getAlternatingArpNote(count, notes){
-        const length = notes.length;
-        
-        const cycleLen = 2*(length-1);
-        const cyclePos = count % cycleLen
+    getAlternatingArpNote(note, count) {
+        const length = Weapon.chordNotes.length;
+
+        const cycleLen = 2 * (length - 1);
+        const cyclePos = count % cycleLen;
 
         let index;
-        if(cyclePos < length) index = cyclePos;
+        if (cyclePos < length) index = cyclePos;
         else index = cycleLen - cyclePos;
+
+        return Sounds.scale.getTransposed(note, Weapon.chordNotes[index]);
 
         return notes[index];
     }

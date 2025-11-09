@@ -1,5 +1,6 @@
 import { Bullet } from "./Bullet.js";
 import { Character } from "./Character.js";
+import { Weapon } from "./Weapon.js";
 import { Map } from "../Map.js";
 import { Pickup } from "./Pickup.js";
 import { WalkAgent } from "../ai/DQN.js";
@@ -13,7 +14,7 @@ const fs = require("fs");
 
 
 const average = (array) => array.reduce((a, b) => a + b) / array.length;
-const AvgOfNum = 1000;
+const AvgOfNum = 10000;
 class AvgRewardLogger {
     constructor(logFilePath){
         this.logFilePath = logFilePath;
@@ -28,9 +29,10 @@ class AvgRewardLogger {
     }
 
     logAvg(){
+        const avg = average(this.recentRewards);
         fs.writeFileSync(
             this.logFilePath,
-            average(this.recentRewards) + "\n",
+            avg + "\n",
             {
                 encoding: "utf8",
                 flag: "a+",
@@ -38,6 +40,23 @@ class AvgRewardLogger {
             }
         );
 
+        if (this.logFilePath == "logs/walking_rewards.txt"){
+            //so we log loss only once per all the reward types
+            WalkAgent.requestWorkerLogLoss();
+        }
+        if (this.logFilePath == "logs/rewards.txt") {
+            const varr =
+                this.recentRewards.reduce(
+                    (a, b) => a + (b - avg) * (b - avg),
+                    0
+                ) / this.recentRewards.length;
+
+            fs.writeFileSync("logs/rewards_varr.txt", avg + "\n", {
+                encoding: "utf8",
+                flag: "a+",
+                mode: 0o666,
+            });
+        }
         this.recentRewards = [];
     }
 }
@@ -121,7 +140,7 @@ export class Bot extends Character {
                 const cellX = this.x - (gridDims * cellW) / 2 + j * cellW;
                 const cellY = this.y - (gridDims * cellH) / 2 + i * cellH;
 
-                let isObjInCell = 0;
+                let isObjInCell = -1;
 
                 const objCandidates = objQuadtree.retrieve({
                     x: cellX,
@@ -131,6 +150,8 @@ export class Bot extends Character {
                 });
 
                 for (const candidate of objCandidates) {
+                    if(candidate.parentID == this.id) continue; //(for bullets) skip if bot is bullet's parent
+                    if(candidate.id == this.id) continue; //(for characters) skip if self
                     if (
                         candidate.x + candidate.width > cellX &&
                         candidate.x < cellX + cellW &&
@@ -138,7 +159,8 @@ export class Bot extends Character {
                         candidate.y < cellY + cellH
                     ) {
                         //object of quadtree is in the cell [i][j]
-                        isObjInCell = 1;
+                        if(candidate.hp) isObjInCell = candidate.hp / Character.fullHP;
+                        else isObjInCell = 1;
                     }
                 }
 
@@ -306,6 +328,11 @@ export class Bot extends Character {
         //self normalised HP:
         state.push(this.hp / this.fullHP);
 
+        //self- weapon duration normalised to <-1, 1>:
+        state.push(
+            2*(Weapon.allowedDurations.indexOf(this.weapon.duration) / (Weapon.allowedDurations.length - 1)) - 1
+        );
+
         //add pickup grid state to RL state (is pickup in one of the cells around agent? 0/1):
         const pickupGridState = this.getGridState(Pickup.quadtree);
         state = state.concat(pickupGridState);
@@ -341,11 +368,9 @@ export class Bot extends Character {
             // console.log('nearestPickupReward', nearestPickupReward);
             this.pickupsReward += nearestPickupReward;
 
-            const D = this.getDxDy(nearestPickup);
-            const pDx = D.dx,
-                pDy = D.dy;
+            const {dx, dy} = this.getDxDy(nearestPickup);
 
-            state.push(pDx / WalkAgent.maxDX, pDy / WalkAgent.maxDY);
+            state.push(dx / WalkAgent.maxDX, dy / WalkAgent.maxDY);
         } else {
             state.push(2, 2);
         }
@@ -370,6 +395,14 @@ export class Bot extends Character {
                 state.push(w_dx / WalkAgent.maxDist, w_dy / WalkAgent.maxDist);
             }
         }
+
+        //character grid-state:
+        const characterGridState = this.getGridState(Character.quadtree);
+        state = state.concat(characterGridState);
+
+        //bullet grid-state:
+        const bulletGridState = this.getGridState(Bullet.quadtree);
+        state = state.concat(bulletGridState);
 
         // //character grid-state
         // const characterGridState = this.getGridState(Character.quadtree);
@@ -414,6 +447,7 @@ export class Bot extends Character {
         //     }
         // }
 
+        // console.log(state.toString(), "\n\n")
         return state;
     }
 
@@ -423,13 +457,58 @@ export class Bot extends Character {
         this.pressingDown = move.d;
         this.pressingLeft = move.l;
         this.pressingRight = move.r;
+
+        if(move.att) this.shoot();
+        if(move.changeWeaponDuration){
+            // console.log(`setting ${move.changeWeaponDuration} weapon duration`);
+            this.changeWeaponDuration(move.changeWeaponDuration);
+        }
+
+        this.agentStepCount += 1;
     }
+
+    changeWeaponDuration(direction){
+        const currentDuration = this.weapon.duration;
+        const durationIndex = Weapon.allowedDurations.indexOf(currentDuration);
+
+        let newDurationIndex;
+
+        switch(direction){
+            case "shorter":
+                if(durationIndex < Weapon.allowedDurations.length - 1){
+                    newDurationIndex = durationIndex + 1;
+                }
+                else{
+                    // console.log('duration cannot be shorter!!');
+                    this.combatReward -= 0.5;
+                    return;
+                }
+                break;
+            case "longer":
+                if(durationIndex > 0){
+                    newDurationIndex = durationIndex - 1;
+                }
+                else{
+                    // console.log('duration cannot be longer!!');
+                    this.combatReward -= 0.5;
+                    return;
+                }
+                break;
+        }
+        
+        const newDuration = Weapon.allowedDurations[newDurationIndex];
+        this.weapon.setDuration(newDuration)
+        // console.log(currentDuration, durationIndex, newDurationIndex, newDuration);
+    }
+
 
     startNewLearningCycle() {
         this.isLearningCycleDone = false;
     }
 
     driftStartPos(){
+        //slowly moves starting position to current bot position,
+        //used to encourage map exploration
         this.startX += 2 * Math.sign(this.x - this.startX);
         this.startY += 2 * Math.sign(this.y - this.startY);
 
@@ -442,13 +521,22 @@ export class Bot extends Character {
     takeDmg(damage, attacker) {
         super.takeDmg(damage, attacker);
 
-        this.combatReward -= (10 * damage) / this.fullHP;
+        const dmgReward =  25 * (damage / this.fullHP);
+        // console.log('dmgReward', dmgReward);
+        this.combatReward -= dmgReward;
+        attacker.combatReward += dmgReward;
     }
 
     die(attacker) {
         super.die(attacker);
-        this.combatReward -= 100;
+        this.combatReward -= 50;
+        attacker.combatReward += 50;
         this.isLearningCycleDone = true;
+
+        // console.log('bot died');
+
+        this.stepsSinceLastPickup = 100000000;
+        this.agentStepCount = 0;
 
         const { x, y } = Tile.getRandomWalkablePos();
         this.x = x;
@@ -457,6 +545,14 @@ export class Bot extends Character {
 
     shoot() {
         super.shoot();
+
+        const noteIndex = Math.round(Math.random() * (Sounds.scale.allowedNotes.length - 1));
+        this.changeSelectedNote(noteIndex);
+
+        //small negative reward for just shooting - will be positively compensated (4x) if the shot damages other enemy
+        const shotReward = -10 * (this.weapon.damage / this.fullHP);
+        this.combatReward += shotReward;
+        // console.log('shooting reward: ', shotReward)
 
         // this.shootAgentReward -= 0.05; //negative reward for just shooting - will be compensated if shot damages other player
     }
@@ -476,7 +572,6 @@ export class Bot extends Character {
         const distTraveled = this.getDist({ x: this.startX, y: this.startY });
         this.driftStartPos();
         if (distTraveled > Bot.moveDistGoal) {
-            this.agentStepCount = 0;
             this.walkingReward += 10;
         }
         const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5);
@@ -488,7 +583,19 @@ export class Bot extends Character {
         // );
         this.walkingReward += walkFarReward;
 
-        const reward = this.walkingReward + this.pickupsReward;
+        if(this.walkedIntoCollision){
+            this.walkingReward -= 1;
+            this.walkedIntoCollision = false;
+        }
+
+        const stillAliveReward = Math.min(
+            Math.exp(this.agentStepCount / 1000) - 1,
+            3
+        );
+        this.combatReward += stillAliveReward;
+        // console.log('stillAliveReward: ', stillAliveReward)
+
+        const reward = this.walkingReward + this.pickupsReward + this.combatReward;
         // fs.writeFileSync(
         //     "logs/rewards_specific.txt",
         //     "reward: " +

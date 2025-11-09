@@ -6,9 +6,7 @@ import { Sounds } from "../musical/Sounds.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";
 
-const loadDistance = 100; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
-const loadUnloadMargin = 50;
-const unloadDistance = loadDistance + loadUnloadMargin;
+const BOT_TRAINING = Boolean(process.env.BOT_TRAINING);
 
 export class Character extends Entity {
   static list = {};
@@ -30,6 +28,7 @@ export class Character extends Entity {
         width: 64,
         height: 64,
         id: id,
+        hp: character.hp
       });
     }
   }
@@ -39,6 +38,8 @@ export class Character extends Entity {
     this.id = id;
     this.name = username;
     this.fullHP = this.hp = Character.fullHP;
+    this.framesSinceDamage = 0;
+
     this.score = score;
     // this.socketIDs = [id]; //bots won't have socket ids
 
@@ -57,8 +58,12 @@ export class Character extends Entity {
 
     this.selectedNote = Sounds.scale.base;
 
-    if (weapon == null) weapon = new Weapon("Synth", "1n", "normal", this);
-    this.giveWeapon(weapon.sound, weapon.duration, "normal");
+    if (weapon == null) weapon = new Weapon(
+      Weapon.allowedSounds[Math.floor(Math.random()*Weapon.allowedSounds.length)],
+      Weapon.allowedDurations[Math.floor(Math.random()*Weapon.allowedDurations.length)],
+      Weapon.allwedTypes[Math.floor(Math.random()*Weapon.allwedTypes.length)],
+      this);
+    this.giveWeapon(weapon.sound, weapon.duration, weapon.type);
 
     this.scheduledBullets = [];
 
@@ -98,10 +103,10 @@ export class Character extends Entity {
       // }
       }
     else {
-      this.dirY *= 50 / 100; //SCALER if map image is in perspective
+      // this.dirY *= 50 / 100; //SCALER if map image is in perspective
       this.lastAngle = (Math.atan2(this.dirY, this.dirX) * 180) / Math.PI;
       this.spdX = Math.cos((this.lastAngle / 180) * Math.PI) * this.speed;
-      this.spdY = Math.sin((this.lastAngle / 180) * Math.PI) * this.speed;
+      this.spdY = Math.sin((this.lastAngle / 180) * Math.PI) * this.speed / 2;
 
       //check collision with collisionLayer:
       let newX = this.x + this.spdX;
@@ -124,8 +129,10 @@ export class Character extends Entity {
         }
       }
       else{
-        // negative rewards for bots walking into collision:
-          this.walkingReward -= 1;
+          // negative rewards for bots walking into collision:
+          if (this.characterType == "bot"){ 
+            this.walkedIntoCollision = true;
+          }
       }
     }
 
@@ -150,9 +157,19 @@ export class Character extends Entity {
     //         // }, this.shootTimeoutTime)
     //     }
     // }
+
+
+    this.framesSinceDamage += 1;
+    if (this.framesSinceDamage > 100) this.heal(1);
   }
 
   shoot() {
+    if(BOT_TRAINING){
+      //skip timing validation for bot training:
+      this.weapon.shoot(this.selectedNote);
+      return;
+    }
+
     if(this.hasShotScheduled){
       Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
       return;
@@ -243,6 +260,7 @@ export class Character extends Entity {
 
   takeDmg(damage, attacker) {
     this.hp -= damage;
+    this.framesSinceDamage = 0;
     if (this.hp <= 0) {
       this.die(attacker);
     }
@@ -254,6 +272,7 @@ export class Character extends Entity {
     if (this.hp > Character.fullHP) {
       this.hp = Character.fullHP;
     }
+    this.needsUpdate = true;
   }
 
   die(byWho) {
