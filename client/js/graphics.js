@@ -450,10 +450,10 @@ export function gameLoop(){
             case 'image':
                 ctx.imageSmoothingEnabled = false;
                 if(obj.hueRot){
-                    ctx.filter = `hue-rotate(${obj.hueRot}deg)`;
+                    // ctx.filter = `hue-rotate(${obj.hueRot}deg)`;
                 }
                 if(obj.img) ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
-                ctx.filter = 'none';
+                // ctx.filter = 'none';
                 // ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
                 // if(obj.layerId>0) ctx.fillRect(obj.x,obj.sortY,3,3);
                 break;
@@ -510,6 +510,6 @@ export function gameLoop(){
     // }
 
     const endT = performance.now();
-    console.log("frameT", endT - startT);
+    // console.log("frameT", endT - startT);
     requestAnimationFrame(gameLoop)
 }

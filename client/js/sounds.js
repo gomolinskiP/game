@@ -22,6 +22,7 @@ export class Sounds {
   ];
 
   static audioOn = true;
+  static metronomeSoundOn = false; //TODO add toggle
 
   static setScale(scaleName, allowedNotes) {
     Sounds.scaleName = scaleName;
@@ -41,7 +42,7 @@ export class Sounds {
   static setupNoteKeyboard() {
     let digit = 1;
     for (const note of Sounds.allowedNotes) {
-      console.log(`allowed note ${note}`);
+      // console.log(`allowed note ${note}`);
       Keyboard.addNoteKeyboardListener(digit);
 
       digit++;

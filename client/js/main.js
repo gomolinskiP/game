@@ -23,7 +23,13 @@ import { Socket } from "./clientSocket.js";
 const socket = Socket.clientSocket;
 
 export const limiter = new Tone.Compressor(-0.1, 20);
-const reverb = new Tone.Reverb();
+const reverb = new Tone.Reverb(
+    {
+        decay: 0.9,
+        preDelay: 0.03,
+        wet: 0.5
+    }
+);
 // const delay = new Tone.FeedbackDelay("1n", 0.2);
 
 limiter.connect(reverb);
@@ -204,7 +210,7 @@ let beatCounter = 0;
 
 const metronome = new Tone.Synth();
 let metrVol = new Tone.Volume(-26);
-metronome.chain(metrVol, Tone.Destination);
+metronome.chain(metrVol, reverb, Tone.Destination);
 
 socket.on("scaleChange", (newScale) => {
     Sounds.setScale(newScale.name, newScale.allowedNotes);
@@ -259,7 +265,7 @@ Tone.Transport.scheduleRepeat((time) => {
     const note = `${Sounds.scaleBase}${octave}`;
 
     // console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
-    if(Sounds.audioOn == true)
+    if(Sounds.audioOn == true && Sounds.metronomeSoundOn)
         metronome.triggerAttackRelease(note, "32n", time);
 }, "4n");
 
@@ -318,7 +324,6 @@ socket.on("tick2", (data) => {
 });
 
 function fixTransport(miliseconds) {
-    //TODO compare positions (not seconds) & make bpm faster or slower
     const baseBPM = 120;
 
     const desiredSeconds = miliseconds / 1000;

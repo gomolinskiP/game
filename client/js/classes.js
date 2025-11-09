@@ -47,14 +47,14 @@ export class Entity{
 
     static getDistanceSq(id){
         //returns distance squared between client's player and entity with given ID
-        console.log(`get distancesq id=${id}`)
+        // console.log(`get distancesq id=${id}`)
         const entity = Entity.list[id];
-        console.log(entity.x)
+        // console.log(entity.x)
         const dx = entity.x - Player.list[selfId].x;
         const dy = entity.y - Player.list[selfId].y 
         const distSq = dx*dx + dy*dy;
 
-        console.log(`dist sq ${distSq}`)
+        // console.log(`dist sq ${distSq}`)
         return distSq;
     }
 
@@ -64,19 +64,29 @@ export class Entity{
             y: this.y
         }
     }
+
+    requestSoundSlot(){
+        if(!this.sound) return;
+        if(this.hasSoundSlot) return;
+
+        this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
+        if (this.soundSlot) {
+            this.hasSoundSlot = true;
+            this.soundSlot.occupierId = this.id;
+            this.pan3D = this.soundSlot.pan3D;
+            this.sampler = this.soundSlot.sampler;
+
+            this.sampler.setSound(this.sound);
+            return true;
+        }
+        else return false;
+    }
 }
 
 export class Player extends Entity{
     static list = {};
-    static synOptions = {
-    noise:{
-        type: "pink"
-    },
-    envelope:{
-        attack: 0.35,
-        decay: 0.15,
-    }
-}
+
+    static stepSoundTimeoutMS = 300;
 
     constructor(initPack){
         super(initPack);
@@ -97,6 +107,11 @@ export class Player extends Entity{
             SoundPool.globalSoundPool = new SoundPool(MAX_BULLET_SOUNDS);
         }
 
+        this.sound = "steps";
+        this.stepSoundTimeout = false;
+        this.hasSoundSlot = false;
+        this.requestSoundSlot();
+
         Player.list[this.id] = this;
     }
 
@@ -111,11 +126,36 @@ export class Player extends Entity{
             this.lastMovedTime = Date.now();
             
             this.animFrame += 1;
+
+            if(!this.hasSoundSlot){
+                this.requestSoundSlot();
+                console.log('player requested footstep sound slot')
+            }
+
+            if(this.hasSoundSlot && !this.stepSoundTimeout){
+                this.stepSoundTimeout = true;
+                this.pan3D.setPosition(
+                    (this.x - Player.list[selfId].x) * 0.05,
+                    (this.y - Player.list[selfId].y) * 0.05,
+                    0
+                );
+
+                const footStepNote = Sounds.allowedNotes[Math.floor(Math.random() * Sounds.allowedNotes.length)];
+                this.sampler.play(footStepNote);
+
+                setTimeout(()=>{
+                    this.stepSoundTimeout = false;
+                }, Player.stepSoundTimeoutMS);
+            }
         }
     }
 
     destroy(){
         // this.bulletSounds.disposeAll();
+        if (this.hasSoundSlot) {
+            this.sampler.stop();
+            this.soundSlot.free = true;
+        }
     }
 
     draw(){
@@ -168,6 +208,7 @@ export class Player extends Entity{
 
     updateDirection(direction){
         let angle = Math.round(direction)
+        // console.log(angle);
 
         switch(angle){
             case 0:
@@ -178,13 +219,13 @@ export class Player extends Entity{
                 return 's';
             case -90:
                 return 'n';
-            case 27:
+            case 45:
                 return 'se';
-            case -27:
+            case -45:
                 return 'ne';
-            case 153:
+            case 135:
                 return 'sw';
-            case -153:
+            case -135:
                 return 'nw';
         }
 
@@ -215,7 +256,8 @@ const soundNames = {
     MembraneSynth: "harp",
     MetalSynth: "organ",
     MonoSynth: "trumpet",
-    PolySynth: "violin"
+    PolySynth: "violin",
+    steps: "steps",
 };
 
 export class Bullet extends Entity{
@@ -223,7 +265,7 @@ export class Bullet extends Entity{
 
     constructor(initPack){
         super(initPack);
-        console.log('bullet pack: ', initPack)
+        // console.log('bullet pack: ', initPack)
         this.parent = Player.list[initPack.parentId];
         this.sound = initPack.sound;
         this.hasSoundSlot = false;
@@ -233,7 +275,6 @@ export class Bullet extends Entity{
             this.soundSlot.occupierId = this.id;
             this.pan3D = this.soundSlot.pan3D;
             this.sampler = this.soundSlot.sampler;
-            this.soundSlot.occupierId = this.id;
 
             this.sampler.setSound(this.sound);
         }
@@ -483,9 +524,7 @@ export class Tile{
 //         }
 //     }
 
-//     //TODO: some synths create a lot of audio nodes! - if we create a lot of them the AudioContext is overloaded
-//     //it would be better to render synth sounds as samples to Tone.Player
-// }
+
 
 const MAX_BULLET_SOUNDS = 16;
 class SoundPool{
@@ -516,7 +555,7 @@ class SoundPool{
             let furthestSlot = undefined;
             for(let slot of this.pool){
                 const occupierDistSq = Entity.getDistanceSq(slot.occupierId);
-                console.log(demandingEntityDistSq, occupierDistSq)
+                // console.log(demandingEntityDistSq, occupierDistSq)
 
                 if(occupierDistSq>maxDistSq){
                     maxDistSq = occupierDistSq;
@@ -567,6 +606,7 @@ const buffers = {
     organ: await new Tone.Buffer("../audio/organ.mp3"),
     trumpet: await new Tone.Buffer("../audio/trumpet.mp3"),
     violin: await new Tone.Buffer("../audio/violin.mp3"),
+    steps: await new Tone.Buffer("../audio/steps.mp3"),
 };
 
 class Sampler{
@@ -584,7 +624,7 @@ class Sampler{
 
     play(note){
         const shift = Sounds.notes.indexOf(note);
-        console.log(note, shift)
+        // console.log(note, shift)
 
         this.pitchShift.pitch = shift + 0;
         this.samplePlayer.start();
