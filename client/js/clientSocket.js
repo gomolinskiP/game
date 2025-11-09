@@ -28,4 +28,9 @@ export class Socket {
     console.log(note)
     Socket.clientSocket.emit("noteFire", note);
   }
+
+  static respawn(){
+    console.log("respawn")
+    Socket.clientSocket.emit("respawn");
+  }
 }

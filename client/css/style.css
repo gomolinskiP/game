@@ -259,6 +259,7 @@ a:hover{
 
 
     padding: 0 10px;
+    border: 1px solid black;
 
     position: absolute;
     right: 10px;
@@ -368,7 +369,7 @@ a:hover{
 .game-button-popup{
     display: none;
     position: absolute;
-    bottom: 130px;
+    bottom: 140px;
     left: 0;
     width: 100%;
 
@@ -408,7 +409,7 @@ a:hover{
 
 #top-left-ui{
     position: absolute;
-    top: 80px;
+    top: 60px;
     left: 10px;
     padding: 4px;
 
@@ -453,6 +454,23 @@ a:hover{
 
     font-weight: bold;
     width: 200px;
+}
+
+#death-message-container{
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    padding: 10px;
+
+    background-color: transparent;
+    backdrop-filter: blur(5px) saturate(2) contrast(0.8);
+    border: 1px solid black;
+}
+
+#respawn-btn{
+    margin-top: 10px;
+    font-size: medium;
 }
 
 #bottom-left-ui{

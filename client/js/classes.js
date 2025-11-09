@@ -92,8 +92,11 @@ export class Player extends Entity{
         super(initPack);
         this.name = initPack.name;
         this.hp = initPack.hp;
-        if(this.id == Socket.selfId) GameUI.setHPLabel(this.hp);
         this.score = initPack.score;
+        if (this.id == Socket.selfId) {
+            GameUI.setHPLabel(this.hp);
+            GameUI.setScoreLabel(this.score);
+        }
         this.synthTimeout = false;
 
         this.direction = this.updateDirection(initPack.direction);
@@ -117,8 +120,12 @@ export class Player extends Entity{
 
     update(pack){
         this.hp = pack.hp;
-        if (this.id == Socket.selfId) GameUI.setHPLabel(this.hp);
         this.score = pack.score;
+        if (this.id == Socket.selfId){
+            GameUI.setHPLabel(this.hp);
+            GameUI.setScoreLabel(this.score);
+        }
+    
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
             super.update(pack);
@@ -626,11 +633,13 @@ class Sampler{
         const shift = Sounds.notes.indexOf(note);
         // console.log(note, shift)
 
+        this.samplePlayer.stop();
         this.pitchShift.pitch = shift + 0;
         this.samplePlayer.start();
     }
 
     stop(){
+        //TODO error if sampler is not playing:
         this.samplePlayer.stop();
     }
 

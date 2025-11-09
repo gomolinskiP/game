@@ -16,6 +16,14 @@ const audioOnLabel = document.querySelector("#audio-on-label");
 const hpLabel = document.querySelector("#hp");
 const scoreLabel = document.querySelector("#score");
 
+const deathMessage = document.querySelector("#death-message");
+const deathMessageContainer = document.getElementById("death-message-container");
+const respawnBtn = document.querySelector("#respawn-btn");
+
+respawnBtn.onclick = ()=>{
+    Socket.respawn();
+}
+
 audioOnLabel.onclick = ()=>{
     if(Sounds.audioOn == false){
         Sounds.audioOn = true;
@@ -96,48 +104,48 @@ noteBTNs.forEach((item)=>{
 
 
 //game UI exports class:
-export class GameUI{
-    static setScaleLabel(scaleName){
+export class GameUI {
+    static setScaleLabel(scaleName) {
         scaleLabel.innerText = scaleName;
     }
 
-    static setBPMLabel(bpm){
+    static setBPMLabel(bpm) {
         bpmLabel.innerText = bpm;
     }
 
-    static disableDisallowedNoteKeys(allowedNotes){
+    static disableDisallowedNoteKeys(allowedNotes) {
         //disable not allowed note keys on piano keyboard
-        noteBTNs.forEach((btn)=>{
-                btn.disabled = true;
-        })
+        noteBTNs.forEach((btn) => {
+            btn.disabled = true;
+        });
 
         //allow only matching notes:
-        for(let note of allowedNotes){
+        for (let note of allowedNotes) {
             document.querySelector(`[data-note="${note}"]`).disabled = false;
         }
     }
 
-    static setActiveNote(note){
+    static setActiveNote(note) {
         //remove active class for all:
-        noteBTNs.forEach((btn)=>{
-            btn.classList.remove("active")
-        })
+        noteBTNs.forEach((btn) => {
+            btn.classList.remove("active");
+        });
 
         //add active class for matching keyboard key button:
-        document.querySelector(`[data-note="${note}"]`).classList.add('active');
+        document.querySelector(`[data-note="${note}"]`).classList.add("active");
     }
 
-    static highlightPlayedNote(note, duration){
+    static highlightPlayedNote(note, duration) {
         const playedNoteBTN = document.querySelector(`[data-note="${note}"]`);
         const durationMs = Sounds.toneDurationToMs(duration);
 
-        playedNoteBTN.classList.add('played');
-        setTimeout(()=>{
-            playedNoteBTN.classList.remove('played')
-        }, durationMs-100);
+        playedNoteBTN.classList.add("played");
+        setTimeout(() => {
+            playedNoteBTN.classList.remove("played");
+        }, durationMs - 100);
     }
 
-    static reorderKeyboardKeys(startNote){
+    static reorderKeyboardKeys(startNote) {
         //reorders keyboard to make it start from the current scale's base note:
         const notes = Array.from(document.querySelectorAll("#keyboard .note"));
         const noteNames = notes.map((n) => n.dataset.note);
@@ -153,36 +161,54 @@ export class GameUI{
         });
     }
 
-    static setWeaponType(type){
+    static setWeaponType(type) {
         weaponTypeLabel.innerText = type;
     }
 
-    static setDurationLabel(duration){
+    static setDurationLabel(duration) {
         durationLabel.innerText = duration;
     }
-    
-    static setSoundLabel(sound){
+
+    static setSoundLabel(sound) {
         soundLabel.innerText = sound;
     }
 
-    static highlightMetronome(color){
-        if(bpmLabel.matches(':hover')) return;
-        bpmLabel.classList.add(color)
+    static highlightMetronome(color) {
+        if (bpmLabel.matches(":hover")) return;
+        bpmLabel.classList.add(color);
 
-        setTimeout(()=>{
-            bpmLabel.classList.remove(color)
-        }, 200)
+        setTimeout(() => {
+            bpmLabel.classList.remove(color);
+        }, 200);
     }
 
-    static highlightTimingHelper(){
+    static highlightTimingHelper() {
         durationLabel.classList.add("red");
         setTimeout(() => {
             durationLabel.classList.remove("red");
         }, 200);
     }
 
-    static setHPLabel(hp){
-        hpLabel.innerText = `HP: ${hp}`
-        hpLabel.style.setProperty("--percent", `${Math.round((hp/1000)*100)}%`)
+    static setHPLabel(hp) {
+        hpLabel.innerText = `HP: ${Math.floor(hp)} / 1000`;
+        hpLabel.style.setProperty(
+            "--percent",
+            `${Math.round((hp / 1000) * 100)}%`
+        );
+    }
+
+    static setScoreLabel(score) {
+        scoreLabel.innerText = `Score: ${Math.floor(score)}`;
+    }
+
+    static showDeathMessage(info) {
+        deathMessage.innerText = "You were killed by " + info.killer;
+        deathMessageContainer.style.display = "block";
+        canvas.style.filter = "saturate(0)";
+    }
+
+    static hideDeathMessage() {
+        deathMessageContainer.style.display = "none";
+        canvas.style.filter = "saturate(1)";
     }
 }

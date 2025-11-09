@@ -24,10 +24,9 @@ export class Entity {
             let other = objList[candidate.id];
             if (!other) continue;
             if (other === this) continue;
+            if(other.isDead) continue;
 
-            const dx = this.x - other.x;
-            const dy = this.y - other.y;
-            const distSq = dx * dx + dy * dy;
+            const distSq = this.getDistSq(other);
 
             if (distSq < minDistSq) {
                 minDistSq = distSq;
@@ -40,7 +39,7 @@ export class Entity {
 
     getDxDy(other){
         const dx = this.x - other.x,
-            dy = this.y - other.y; 
+            dy = (this.y - other.y) * 2; 
 
         return {dx, dy};
     }

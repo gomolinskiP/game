@@ -19,6 +19,7 @@ import { Map } from "./classes/Map.js";
 
 import cookie from "cookie";
 import signature from "cookie-signature";
+import { AdminCommand } from "./classes/AdminCommand.js";
 
 //Start server-side metronome ticking:
 Sounds.metronomeTick();
@@ -40,6 +41,8 @@ Bullet.createQuadtree(Map.boundRect);
 Pickup.createQuadtree(Map.boundRect);
 
 Bot.startAgentStep();
+
+export const gameUpdateTickTimeMs = 1000 / 25;
 
 export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
     //socket.io:
@@ -138,7 +141,6 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
         //save new socket in socket list:
         socket.id = new Socket(socket).id;
         console.log(`Socket connection: id=${socket.id}...`);
-
         let player = null;
 
         //get username from logged session:
@@ -262,7 +264,20 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
         });
 
         socket.on("chat", function (msg) {
-            //TODO VALIDATE MSG test:
+            //Allows to authorize as admin while knowing secret password:
+            if(msg.includes(`!pw${process.env.ADMIN_PASSWORD}`)){
+                player.isAdmin = true;
+                console.log(player.name, ' autorized as admin');
+                return;
+            }
+
+            //If authorized as admin allows to execute admin commands:
+            if(msg[0] == "!" && player.isAdmin){
+                AdminCommand.get(msg);
+                return;
+            }
+
+            //replace < and > to prevent HTML/JS code injection:
             const sanitizedMsg = msg
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
@@ -278,6 +293,12 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             // console.log(change)
             player.weapon.change(change);
         });
+
+        socket.on("respawn", ()=>{
+            if(!player.isDead) return;
+            player.spawn();
+            socket.emit("respawned");
+        })
     });
 
     //main loop:
@@ -295,7 +316,7 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
         Pickup.handleAll();
         Bullet.updateAll();
         Player.updateAll();
-    }, 1000 / 25);
+    }, gameUpdateTickTimeMs);
 
     console.log("✅ WebSocket ready.");
 }

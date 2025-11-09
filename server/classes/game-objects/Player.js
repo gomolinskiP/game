@@ -6,7 +6,7 @@ import { Socket } from '../Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 
-const loadDistance = 800; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadDistance = 1200; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
 const loadUnloadMargin = 0;
 const unloadDistance = loadDistance + loadUnloadMargin;
 
@@ -252,7 +252,6 @@ export class Player extends Character{
             height: unloadDistance * 2
         }
 
-        //TODO: based on proximity to player:
         let charactersToUpdate = Character.quadtree.retrieve(loadRect)
 
         for(const c of charactersToUpdate){
@@ -379,8 +378,8 @@ export class Player extends Character{
     }
 
     addToRemovePack(id, type){
+        //skip if player was not aware of object with given id:
         if(!this.knownObjIDs.includes(id)){
-            // console.log(`${id} (${type}) is not known to ${this.name}`)
             return;
         }
 
@@ -474,5 +473,14 @@ export class Player extends Character{
             socket.emit('remove', this.removePack);
             this.removePack = [];
         }
+    }
+
+    die(byWho){
+        super.die(byWho);
+
+        this.updatePack.push({
+            type: "death",
+            killer: byWho.name
+        })
     }
 }

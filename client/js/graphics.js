@@ -27,7 +27,7 @@ export class Graphics{
     }
 
     static addGameMsg(msg, rating){
-        if(Graphics.gameMessages.length > 10) Graphics.gameMessages.shift();
+        if(Graphics.gameMessages.length > 0) Graphics.gameMessages.shift();
 
         let msgColor;
         switch(rating){
@@ -411,7 +411,7 @@ export function gameLoop(){
     if(!selfId){
         selfId = Socket.selfId;
     }
-    // console.log(Player.list[selfId])
+    // console.log(Player.list[selfId].x, Player.list[selfId].y);
 
     //draw background & map elements:
     ctx.fillStyle = "#363636ff";
@@ -488,7 +488,7 @@ export function gameLoop(){
         msg.y -= 1;
         if(msg.fontSize > 2) msg.fontSize -= 0.05;
     }
-    drawHUD();
+    // drawHUD();
 
     // for(let tile of tiles){
     //     drawIsometricRect(tile.x, tile.y, tile.w, tile.h)

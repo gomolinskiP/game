@@ -72,6 +72,8 @@ export class Bot extends Character {
     static stepAll() {
         for (const id in Bot.list) {
             const bot = Bot.list[id];
+
+            if(bot.isDead) continue; //skip for dead bots
             // if (Math.random() > 0.9) bot.shoot();
             bot.walkAgent.step();
             bot.stepsSinceLastPickup++;
@@ -97,8 +99,7 @@ export class Bot extends Character {
 
     static agentStepTime_ms = 250; //time between next dqn agent steps
     // static startPosResetTime_ms = 600000; //time after start position is resetted to current position (for dqn map exploration implementation)
-    static moveDistGoal = 4000; //max distance from start position, that reaching gives reward and resets start position
-    // static startPosResetFreq = Bot.startPosResetTime_ms / Bot.agentStepTime_ms; //number of steps between resetting starting position
+    static moveDistGoal = 2000; //max distance from start position, that reaching gives reward and resets start position
 
     constructor() {
         const { x, y } = Tile.getRandomWalkablePos();
@@ -108,7 +109,6 @@ export class Bot extends Character {
         let id = Math.random();
         let username = `(●'◡'●)`;
         super(id, x, y, username);
-        this.speed = 15;
 
         this.walkAgent = new WalkAgent(this);
         this.walkingReward = 0; //rewards regarding walking itself
@@ -183,71 +183,7 @@ export class Bot extends Character {
             this._getGridState(WalkAgent.smallStateGrid, objQuadtree)
         );
 
-        // const gridDims = WalkAgent.gridDims,
-        //     cellW = WalkAgent.cellW,
-        //     cellH = WalkAgent.cellH;
-        // const maxDistSq = WalkAgent.maxDistSq;
-        // const maxDX = WalkAgent.maxDX,
-        //     maxDY = WalkAgent.maxDY;
-
-        // let minDX = maxDX,
-        //     minDY = maxDY,
-        //     minDistSq = maxDistSq;
-
-        // for (let i = 0; i < gridDims; i++) {
-        //     for (let j = 0; j < gridDims; j++) {
-        //         const cellX = this.x - (gridDims * cellW) / 2 + j * cellW;
-        //         const cellY = this.y - (gridDims * cellH) / 2 + i * cellH;
-
-        //         let isObjInCell = 0;
-
-        //         const objCandidates = objQuadtree.retrieve({
-        //             x: cellX,
-        //             y: cellY,
-        //             width: cellW,
-        //             height: cellH,
-        //         });
-
-        //         for (const candidate of objCandidates) {
-        //             if (
-        //                 candidate.x + candidate.width > cellX &&
-        //                 candidate.x < cellX + cellW &&
-        //                 candidate.y + candidate.height > cellY &&
-        //                 candidate.y < cellY + cellH
-        //             ) {
-        //                 //object of quadtree is in the cell [i][j]
-        //                 isObjInCell = 1;
-        //                 const dx = this.x - candidate.x + candidate.width / 2;
-        //                 const dy = this.y - candidate.y + candidate.height / 2;
-        //                 const distSq = dx * dx + dy * dy;
-
-        //                 if (distSq < minDistSq) {
-        //                     minDistSq = distSq;
-        //                     minDX = dx;
-        //                     minDY = dy;
-        //                 }
-        //             }
-        //         }
-
-        //         resultArray.push(isObjInCell);
-        //     }
-        // }
         return resultArray;
-
-        // resultArray.push(minDX / maxDX, minDY / maxDY);
-
-        // if (!this.lastMinDistSq) this.lastMinDistSq = minDistSq;
-        // else {
-        //     // give agent reward:
-        //     this.agentReward += Math.max(
-        //         -1,
-        //         Math.min(
-        //             1,
-        //             (Math.sqrt(this.lastMinDistSq) - Math.sqrt(minDistSq)) / 10
-        //         )
-        //     );
-        //     this.lastMinDistSq = minDistSq;
-        // }
     }
 
     findN_Nearest(N, objQuadtree, objList, maxDist) {
@@ -521,7 +457,7 @@ export class Bot extends Character {
     takeDmg(damage, attacker) {
         super.takeDmg(damage, attacker);
 
-        const dmgReward =  25 * (damage / this.fullHP);
+        const dmgReward =  40 * (damage / this.fullHP);
         // console.log('dmgReward', dmgReward);
         this.combatReward -= dmgReward;
         attacker.combatReward += dmgReward;
@@ -533,7 +469,15 @@ export class Bot extends Character {
         attacker.combatReward += 50;
         this.isLearningCycleDone = true;
 
-        // console.log('bot died');
+        //random respawn time between 1s and 4s:
+        const respawnTimeMs = Math.random() * 3000 + 1000;
+        setTimeout(()=>{
+            this.spawn();
+        }, respawnTimeMs);
+    }
+
+    spawn(){
+        super.spawn();
 
         this.stepsSinceLastPickup = 100000000;
         this.agentStepCount = 0;
@@ -542,16 +486,17 @@ export class Bot extends Character {
         this.x = x;
         this.y = y;
     }
+    
 
     shoot() {
         super.shoot();
 
         const noteIndex = Math.round(Math.random() * (Sounds.scale.allowedNotes.length - 1));
-        this.changeSelectedNote(noteIndex);
+        this.changeSelectedNote(Sounds.scale.allowedNotes[noteIndex]);
 
         //small negative reward for just shooting - will be positively compensated (4x) if the shot damages other enemy
-        const shotReward = -10 * (this.weapon.damage / this.fullHP);
-        this.combatReward += shotReward;
+        // const shotReward = -10 * (this.weapon.damage / this.fullHP);
+        // this.combatReward += shotReward;
         // console.log('shooting reward: ', shotReward)
 
         // this.shootAgentReward -= 0.05; //negative reward for just shooting - will be compensated if shot damages other player

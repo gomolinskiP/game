@@ -26,6 +26,7 @@ export class Weapon {
     constructor(sound, duration, type, wielder) {
         this.sound = sound;
         this.wielder = wielder;
+        this.damage = 250;
 
         this.setType(type);
         this.setDuration(duration);
@@ -91,17 +92,18 @@ export class Weapon {
         );
         this.durationInt = durationInt;
         //update weapon damage depending on duration:
-        switch (this.durationType) {
-            case "normal":
-                this.damage = 200 / durationInt;
-                break;
-            case "dotted":
-                this.damage = ((3 / 2) * 200) / durationInt;
-                break;
-            default:
-                this.damage = 1;
-                break;
-        }
+        // switch (this.durationType) {
+        //     case "normal":
+        //         this.damage = 250 / durationInt;
+        //         break;
+        //     case "dotted":
+        //         this.damage = ((3 / 2) * 250) / durationInt;
+        //         break;
+        //     default:
+        //         this.damage = 1;
+        //         console.warn("Unsupported duration type while setting new duration: ", duration);
+        //         break;
+        // }
 
         this.shootCount = 0;
 
@@ -117,6 +119,10 @@ export class Weapon {
         const angle = this.wielder.lastAngle;
         const damage = this.damage;
         const durationMs = this.durationMs;
+
+        if(parent.characterType == 'bot'){
+            parent.combatReward -= 5;
+        }
 
         switch (this.type) {
             case "normal":

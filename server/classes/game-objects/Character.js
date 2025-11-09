@@ -73,6 +73,8 @@ export class Character extends Entity {
   }
 
   updatePosition() {
+    if(this.isDead) return;
+
     if (this.pressingUp) {
       this.dirY = -1;
     } else if (this.pressingDown) {
@@ -94,19 +96,14 @@ export class Character extends Entity {
       !this.pressingLeft &&
       !this.pressingRight
     ){
-      // console.log("---") //TO FIX -- animation does not stop when player stops walking because he stops getting updated!!
       this.needsUpdate = false;
       this.spdX = 0;
       this.spdY = 0;
-      // if(this.agentReward){
-        // this.agentReward -= 0.1;
-      // }
       }
     else {
-      // this.dirY *= 50 / 100; //SCALER if map image is in perspective
       this.lastAngle = (Math.atan2(this.dirY, this.dirX) * 180) / Math.PI;
       this.spdX = Math.cos((this.lastAngle / 180) * Math.PI) * this.speed;
-      this.spdY = Math.sin((this.lastAngle / 180) * Math.PI) * this.speed / 2;
+      this.spdY = Math.sin((this.lastAngle / 180) * Math.PI) * this.speed / 2; // /2 because the map is isometric and we account for perspective
 
       //check collision with collisionLayer:
       let newX = this.x + this.spdX;
@@ -118,10 +115,6 @@ export class Character extends Entity {
       ) {
         this.x = newX;
         this.y = newY;
-
-        // if(this.agentReward){
-          // this.agentReward += 0.5;
-        // }
 
         //update all scheduledBullets positions:
         for (const scheduledBullet of this.scheduledBullets) {
@@ -136,43 +129,37 @@ export class Character extends Entity {
       }
     }
 
-    //shooting:
-    // if(this.pressingSpace){
-    //     //shooting not allowed on spawn:
-    //     if(this.isWithinDistance({
-    //         x: 0,
-    //         y: 0
-    //     }, 1600)) return;
-    //     this.needsUpdate = true;
-    //     if(!this.hasShotScheduled){
-
-    //         this.hasShotScheduled = true;
-    //         let newBullets = this.weapon.shoot(this.selectedNote);
-    //         //add to this players scheduled bullet list:
-    //         this.scheduledBullets = this.scheduledBullets.concat(newBullets);
-    //         // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
-
-    //         // setTimeout(()=>{
-    //         //     this.shootTimeout = false
-    //         // }, this.shootTimeoutTime)
-    //     }
-    // }
-
-
+    //slowly heal if was not damaged for some time:
     this.framesSinceDamage += 1;
-    if (this.framesSinceDamage > 100) this.heal(1);
+    if (this.framesSinceDamage > 100 && this.framesSinceDamage%10==0) this.heal(1);
   }
 
   shoot() {
-    if(BOT_TRAINING){
-      //skip timing validation for bot training:
-      this.weapon.shoot(this.selectedNote);
+    if(this.isDead) return;
+
+    //shooting not allowed on spawn:
+    if(this.isWithinDistance(
+      { x: 0, y: 0 },
+      1000
+    )){
+      Socket.emitShootFeedbackMsg(
+          this,
+          "Shooting notes is not allowed near spawn area!",
+          "bad"
+      );
       return;
     }
-
+    
     if(this.hasShotScheduled){
       Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
       return;
+    }
+
+    if (BOT_TRAINING) {
+        //skip timing validation for bot training:
+        this.weapon.shoot(this.selectedNote);
+        this.hasShotScheduled = true;
+        return;
     }
 
     let timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
@@ -250,6 +237,7 @@ export class Character extends Entity {
   }
 
   addScore(points) {
+    if (this.isDead) return;
     this.score += points;
   }
 
@@ -259,15 +247,18 @@ export class Character extends Entity {
   }
 
   takeDmg(damage, attacker) {
+    if (this.isDead) return;
     this.hp -= damage;
     this.framesSinceDamage = 0;
     if (this.hp <= 0) {
       this.die(attacker);
+      this.hp = 0;
     }
     this.needsUpdate = true;
   }
 
   heal(hpAmount) {
+    if (this.isDead) return;
     this.hp += hpAmount;
     if (this.hp > Character.fullHP) {
       this.hp = Character.fullHP;
@@ -282,9 +273,17 @@ export class Character extends Entity {
       var socket = Socket.list[i];
       socket.emit("chatBroadcast", killMsg);
     }
-    this.hp = Character.fullHP;
-    this.x = 0 + 250 * Math.random();
-    this.y = 0 + 120 * Math.random();
-    this.needsUpdate = true;
+
+    this.isDead = true;
+  }
+
+  spawn(){
+      //respawn:
+      this.hp = Character.fullHP;
+      this.x = 0 + 250 * Math.random();
+      this.y = 0 + 120 * Math.random();
+      this.needsUpdate = true;
+
+      this.isDead = false;
   }
 }

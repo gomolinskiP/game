@@ -143,6 +143,11 @@ socket.on("update", function (data) {
                 break;
             case "gameMsg":
                 Graphics.addGameMsg(pack.msg, pack.rating);
+                break;
+            case "death":
+                console.log('death', pack);
+                GameUI.showDeathMessage(pack);
+                break;
         }
     }
 });
@@ -200,6 +205,10 @@ canvas.onblur = () => {
 socket.on("redirect", (destination) => {
     window.location.href = destination;
 });
+
+socket.on("respawned", ()=>{
+    GameUI.hideDeathMessage();
+})
 
 let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
