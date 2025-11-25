@@ -1,4 +1,3 @@
-// import { weaponChange, noteChange } from "./main.js";
 import { Socket } from "./clientSocket.js";
 import { Sounds } from "./sounds.js";
 
@@ -33,6 +32,14 @@ audioOnLabel.onclick = ()=>{
     else{
         Sounds.audioOn = false;
         audioOnLabel.innerText = '🔇'
+    }
+}
+
+bpmLabel.onclick = ()=>{
+    if (Sounds.metronomeSoundOn == false) {
+        Sounds.metronomeSoundOn = true;
+    } else {
+        Sounds.metronomeSoundOn = false;
     }
 }
 
@@ -189,6 +196,16 @@ export class GameUI {
         }, 200);
     }
 
+    static startDurationTimeoutHighlight(duration){
+        const durationMs = Sounds.toneDurationToMs(duration);
+
+        durationLabel.style.animation = "none";
+
+        void durationLabel.offsetWidth;
+
+        durationLabel.style.animation = "durationTimeout " + durationMs + "ms linear forwards"
+    };
+
     static setHPLabel(hp) {
         hpLabel.innerText = `HP: ${Math.floor(hp)} / 1000`;
         hpLabel.style.setProperty(
@@ -202,7 +219,7 @@ export class GameUI {
     }
 
     static showDeathMessage(info) {
-        deathMessage.innerText = "You were killed by " + info.killer;
+        deathMessage.innerText = "You were killed by " + info.killer + " who stole " + info.scoreStolen + " of your score...";
         deathMessageContainer.style.display = "block";
         canvas.style.filter = "saturate(0)";
     }

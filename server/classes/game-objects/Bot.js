@@ -9,6 +9,7 @@ import { Sounds } from "../musical/Sounds.js";
 import { stat } from "fs";
 
 import { createRequire } from "module";
+import { Entity } from "./Entity.js";
 const require = createRequire(import.meta.url);
 const fs = require("fs");
 
@@ -159,8 +160,17 @@ export class Bot extends Character {
                         candidate.y < cellY + cellH
                     ) {
                         //object of quadtree is in the cell [i][j]
-                        if(candidate.hp) isObjInCell = candidate.hp / Character.fullHP;
+                        if(candidate.hp) {
+                            //object is alive & has HealthPoints
+
+                            //skip if they are in non-pvp area:
+                            if(Entity.isInNonPVPArea(candidate.x, candidate.y)) continue;
+
+                            //normalised other player's HP in cell:
+                            isObjInCell = candidate.hp / Character.fullHP;
+                        }
                         else isObjInCell = 1;
+                        //if object is not another player cell state is just 1
                     }
                 }
 
@@ -181,6 +191,9 @@ export class Bot extends Character {
         );
         resultArray = resultArray.concat(
             this._getGridState(WalkAgent.smallStateGrid, objQuadtree)
+        );
+        resultArray = resultArray.concat(
+            this._getGridState(WalkAgent.extraSmallStateGrid, objQuadtree)
         );
 
         return resultArray;
@@ -269,9 +282,19 @@ export class Bot extends Character {
             2*(Weapon.allowedDurations.indexOf(this.weapon.duration) / (Weapon.allowedDurations.length - 1)) - 1
         );
 
+        //self-info about being in non-PVP area:
+        state.push(Number(this.isInNonPVPArea()));
+        // console.log("is in non pvp?: ", state.slice(-1).toString());
+
+
+        //Is shooting on cooldown state:
+        state.push(Number(this.hasShotScheduled));
+
         //add pickup grid state to RL state (is pickup in one of the cells around agent? 0/1):
         const pickupGridState = this.getGridState(Pickup.quadtree);
         state = state.concat(pickupGridState);
+        // console.log("pickup grid state: ", state.slice(-36).toString());
+
 
         const nearestPickup = this.findNearest(
             Pickup.list,
@@ -304,7 +327,7 @@ export class Bot extends Character {
             // console.log('nearestPickupReward', nearestPickupReward);
             this.pickupsReward += nearestPickupReward;
 
-            const {dx, dy} = this.getDxDy(nearestPickup);
+            let {dx, dy} = this.getDxDy(nearestPickup);
 
             state.push(dx / WalkAgent.maxDX, dy / WalkAgent.maxDY);
         } else {
@@ -339,6 +362,30 @@ export class Bot extends Character {
         //bullet grid-state:
         const bulletGridState = this.getGridState(Bullet.quadtree);
         state = state.concat(bulletGridState);
+
+        // console.log("bullet grid state: ", state.slice(-36).toString());
+
+        //3 own bullets' distances & normalised bullets' time to live:
+        for(let i = 0; i < 3; i++){
+            const ownBulletID = this.ownBulletsIDs[i];
+
+            if(ownBulletID == undefined){
+                state.push(2, 2);
+                state.push(-1);
+            }
+            else{
+                const bullet = Bullet.list[ownBulletID];
+
+                let {dx, dy} = this.getDxDy(bullet);
+                state.push(dx / WalkAgent.maxDist, dy / WalkAgent.maxDist);
+
+                const bulletTimeLeft = (bullet.durationMs - (Date.now() - bullet.creationTime)) / bullet.durationMs;
+                state.push(bulletTimeLeft);
+            }
+        }
+
+        // console.log('own bullet distances & ttl: ', state.slice(-8).toString());
+
 
         // //character grid-state
         // const characterGridState = this.getGridState(Character.quadtree);
@@ -384,6 +431,7 @@ export class Bot extends Character {
         // }
 
         // console.log(state.toString(), "\n\n")
+
         return state;
     }
 
@@ -518,6 +566,8 @@ export class Bot extends Character {
         this.driftStartPos();
         if (distTraveled > Bot.moveDistGoal) {
             this.walkingReward += 10;
+            this.startX = this.x;
+            this.startY = this.y;
         }
         const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5);
         // console.log(
@@ -533,12 +583,12 @@ export class Bot extends Character {
             this.walkedIntoCollision = false;
         }
 
-        const stillAliveReward = Math.min(
-            Math.exp(this.agentStepCount / 1000) - 1,
-            3
-        );
-        this.combatReward += stillAliveReward;
-        // console.log('stillAliveReward: ', stillAliveReward)
+        // const stillAliveReward = Math.min(
+        //     Math.exp(this.agentStepCount / 1000) - 1,
+        //     3
+        // );
+        // this.combatReward += stillAliveReward;
+        // // console.log('stillAliveReward: ', stillAliveReward)
 
         const reward = this.walkingReward + this.pickupsReward + this.combatReward;
         // fs.writeFileSync(

@@ -1,6 +1,8 @@
+
 export class Socket {
   static clientSocket = io();
   static selfId = null;
+  static gameLoaded = false;
 
   static setSelfID(id) {
     Socket.selfId = id;
@@ -25,8 +27,9 @@ export class Socket {
   }
 
   static noteFire(note) {
+    //TODO should just pass the number of allowed note to prevent different notes
     console.log(note)
-    Socket.clientSocket.emit("noteFire", note);
+    Socket.clientSocket.emit("noteFire", {note: note, time: Date.now()});
   }
 
   static respawn(){
@@ -34,3 +37,5 @@ export class Socket {
     Socket.clientSocket.emit("respawn");
   }
 }
+
+// TextChat.chatInit();

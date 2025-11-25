@@ -27,6 +27,7 @@ export class Tile {
 
   static floorQTree;
   static wallQTree;
+  static noPVPfloorQTree;
 
   static createQuadtree(rect){
     Tile.quadtree = new Quadtree(rect);
@@ -45,6 +46,7 @@ export class Tile {
 
   static createFloorQTree(rect){
     Tile.floorQTree = new Quadtree(rect);
+    Tile.noPVPfloorQTree = new Quadtree(rect);
 
     const floorLayer = Map.loadLayer(Map.mapData, "floor");
     const floorTiles = Map.loadLayerTiles(floorLayer);
@@ -58,6 +60,18 @@ export class Tile {
         isoX: tile.isoX,
         isoY: tile.isoY,
       });
+
+      //201 is the gid for yellow floor tile (special for non-PVP area):
+      if (tile.gid == 201){
+        Tile.noPVPfloorQTree.insert({
+            x: tile.x,
+            y: tile.y,
+            width: 64,
+            height: 64,
+            isoX: tile.isoX,
+            isoY: tile.isoY,
+        });
+      }
     }
   }
 

@@ -5,9 +5,14 @@ import { Scale } from "./Scale.js";
 const MS_IN_MIN = 60000;
 
 export class Sounds {
-    static scale = new Scale("C", "minor");
-    static bpm = 120;
+    static scale = new Scale("C", "major");
+    static bpm = 90;
     static beatInterval = MS_IN_MIN / Sounds.bpm;
+
+    static bpmChangePending = false;
+    static targetBPM = this.bpm;
+    static minBPM = 90;
+    static maxBPM = 180;
 
     static startT;
     static tickNum = 0;
@@ -15,12 +20,29 @@ export class Sounds {
     static maxTimeInaccuracy = 150; //in ms
     static perfectTimeInaccuracy = 25; //in ms
 
+    static lastDesiredT = -Sounds.beatInterval;
+
     static setBPM(bpm) {
         Sounds.bpm = bpm;
         Sounds.beatInterval = MS_IN_MIN / Sounds.bpm;
 
-        Sounds.startT = process.hrtime.bigint();
-        Sounds.tickNum = 0;
+        // Sounds.startT = process.hrtime.bigint();
+        // Sounds.tickNum = 0;
+    }
+
+    static setTargetBMP(targetBPM){
+        Sounds.bpmChangePending = true;
+        Sounds.targetBPM = targetBPM;
+    }
+
+    //TODO TOFIX changing bpm not good even on server!!
+    static changeBPM(newBPM){
+        // Sounds.startT = undefined;
+        // Sounds.tickNum = 0;
+        Sounds.bpm = newBPM;
+        Sounds.beatInterval = MS_IN_MIN / Sounds.bpm;
+
+        Socket.emitToAll("bpmChange", Sounds.bpm);
     }
 
     static metronomeTick() {
@@ -29,37 +51,90 @@ export class Sounds {
         }
 
         const nowT = process.hrtime.bigint(); //ns
+        const nowT_ms = Number(nowT / BigInt(1e6));
         const deltaT = nowT - Sounds.startT; //ns
-        const desiredT = Sounds.tickNum * Sounds.beatInterval; //ms
+        // const desiredT = Sounds.tickNum * Sounds.beatInterval; //ms
+        const desiredT = Sounds.lastDesiredT + Sounds.beatInterval; //ms
+        Sounds.lastDesiredT = desiredT;
 
         //compensate for clock drift:
         const compensateT = Number(deltaT / BigInt(1e6)) - desiredT;
         //next tick in compensated time
         const nextTickT = Math.max(0, Sounds.beatInterval - compensateT);
 
-        // console.log(`tick: ${Sounds.tickNum} | t: ${(nowT - startT)/BigInt(1e6)} ms | desiredT: ${desiredT} | err: ${(nowT - startT)/BigInt(1e6) - BigInt(desiredT)}`)
+        const err = Number(
+            (nowT - Sounds.startT) / BigInt(1e6) - BigInt(Math.round(desiredT))
+        );
+
+        console.log(
+            `tick: ${Sounds.tickNum} | t: ${
+                (nowT - Sounds.startT) / BigInt(1e6)
+            } ms | desiredT: ${desiredT} | err: ${
+                (nowT - Sounds.startT) / BigInt(1e6) -
+                BigInt(Math.round(desiredT))
+            }`
+        );
 
         //emit metronome signal:
-        Socket.emitToAll("tick2", {
+        Socket.emitToAll("tick", {
             tick: Sounds.tickNum,
-            serverTime: Date.now(),
+            tickT: Date.now() - err,
         });
 
-        Sounds.tickNum++;
+        //full bar:
+        if (this.tickNum % 4 == 0) {
+            //slowly change bpm
+            if (this.bpmChangePending) {
+                const changeDir = Math.sign(this.targetBPM - this.bpm);
 
-        if (Math.random() > 0.99) {
-            if (Math.random() > 0.5) {
-                Sounds.scale.changeToRelative();
-            }
-
-            if (Math.random() > 0.5) {
-                if (Math.random() > 0.5) {
-                    Sounds.scale.changeToDominant();
-                } else {
-                    Sounds.scale.changeToSubdominant();
+                switch (changeDir) {
+                    case 0:
+                        this.bpmChangePending = false;
+                        break;
+                    case -1:
+                        Sounds.changeBPM(Sounds.bpm - 1);
+                        break;
+                    case 1:
+                        Sounds.changeBPM(Sounds.bpm + 1);
+                        break;
                 }
             }
+
+            //random scale change:
+            if (Math.random() > 0.9) {
+                if (Math.random() > 0.5) {
+                    Sounds.scale.changeToRelative();
+                }
+
+                if (Math.random() > 0.5) {
+                    if (Math.random() > 0.5) {
+                        Sounds.scale.changeToDominant();
+                    } else {
+                        Sounds.scale.changeToSubdominant();
+                    }
+                }
+            }
+
+            //random bpm change:
+            if (
+                Math.random() > 0.95 &&
+                !Sounds.bpmChangePending &&
+                this.tickNum % 64 == 0
+            ) {
+                //random new BPM is rounded to multiple of 5:
+                const newBPM =
+                    Sounds.minBPM +
+                    Math.round(
+                        (Math.random() * (Sounds.maxBPM - Sounds.minBPM)) / 5
+                    ) *
+                        5;
+
+                Sounds.setTargetBMP(newBPM);
+                console.log("change bpm to", newBPM);
+            }
         }
+
+        Sounds.tickNum++;
 
         setTimeout(() => {
             Sounds.metronomeTick();
@@ -125,9 +200,17 @@ export class Sounds {
         return spawnInT;
     }
 
-    static getTimeFromDuration(noteDuration, noteDurationType) {
-        let timeMs;
+    static getTimeFromDuration(noteDuration) {
+        let noteDurationType;
+        if(noteDuration.includes(".")){
+            noteDurationType = "dotted";
+        }
+        else{
+            noteDurationType = "normal";
+        }
 
+
+        let timeMs;
         let durationInt = parseInt(
             noteDuration.replace("n", "").replace(".", "")
         );
@@ -145,10 +228,7 @@ export class Sounds {
 
     static evaluateNoteTimingAccuracy(noteDuration, noteDurationType) {
         const spawnInT = Sounds.getNoteSpawnTime(noteDuration); //in how many milliseconds should the bullet spawn
-        const durationInMs = Sounds.getTimeFromDuration(
-            noteDuration,
-            noteDurationType
-        );
+        const durationInMs = Sounds.getTimeFromDuration(noteDuration);
         const maxTimeInaccuracy = Math.max(100, durationInMs / 10); //max number of milliseconds of innacuracy allowed
 
         let timeInaccuracy;
@@ -195,5 +275,33 @@ export class Sounds {
         //         this.parent.hasShotScheduled = false;
         //     }, durationInMs - maxTimeInaccuracy);
         // }
+    }
+
+    static evaluateNoteTimingAccuracy2(shootT){
+        //TODO:
+        const utcT = Date.now();
+        const delay = utcT - shootT;
+
+        const nowT_ns = process.hrtime.bigint(); //ns
+        const deltaT_ns = nowT_ns - Sounds.startT; //ns
+        const deltaT_ms = Number(deltaT_ns / BigInt(1e6));
+
+        //times from startT:
+        const lastTickT = Sounds.lastDesiredT;
+        const nextTickT = lastTickT + Sounds.beatInterval;
+
+        const errFromLast = deltaT_ms - lastTickT - delay;
+        const errToNext = nextTickT - deltaT_ms + delay;
+
+        
+
+        console.log(
+            "t from last tick",
+            errFromLast,
+            "t to next tick",
+            errToNext,
+            "delay:",
+            delay
+        );
     }
 }

@@ -21,6 +21,7 @@ export class Socket {
 
   constructor(socket) {
     this.id = Math.random();
+    this.initialized = false;
 
     Socket.list[this.id] = socket;
     return this;

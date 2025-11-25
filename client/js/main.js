@@ -1,39 +1,24 @@
-let isInChat = false;
-export function setIsInChat(state) {
-    isInChat = state;
-}
-export function getIsInChat() {
-    return isInChat;
-}
-
-const audioContext = Tone.getContext();
-console.log(audioContext);
+// const audioContext = Tone.getContext();
+// console.log(audioContext);
 
 // game:
 
-import { gameLoop, canvas, Graphics } from "./graphics.js";
+import { Graphics } from "./graphics.js";
 
 import { Player, Bot, Bullet, Pickup, Tile } from "./classes.js";
-import { Sounds } from "./sounds.js";
+import { Sounds, ClockSync } from "./sounds.js";
 import { addKeyboardListeners, Keyboard } from "./keyboard.js";
-import { chatInit } from "./textChat.js";
+// import { chatInit } from "./textChat.js";
 import { GameUI } from "./gameButtons.js";
 import { Socket } from "./clientSocket.js";
+import { TextChat } from "./textChat.js"
 
 const socket = Socket.clientSocket;
 
-export const limiter = new Tone.Compressor(-0.1, 20);
-const reverb = new Tone.Reverb(
-    {
-        decay: 0.9,
-        preDelay: 0.03,
-        wet: 0.5
-    }
-);
-// const delay = new Tone.FeedbackDelay("1n", 0.2);
 
-limiter.connect(reverb);
-reverb.toDestination();
+
+Tile.loadMapData();
+let gameLoaded = false;
 
 
 //create synths beforehand and store them in a synth pool:
@@ -77,10 +62,13 @@ socket.on("init", function (data) {
         }
     }
 
+    socket.emit("initialized");
+
     //start the game loop:
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(Graphics.gameLoop);
     addKeyboardListeners(socket);
-    chatInit(socket, canvas, isInChat);
+    TextChat.chatInit(socket);
+    // chatInit(socket, Graphics.canvas, isInChat);
 });
 
 socket.on("update", function (data) {
@@ -137,7 +125,7 @@ socket.on("update", function (data) {
                 if (pack.weaponType) GameUI.setWeaponType(pack.weaponType);
                 if (pack.duration){
                     GameUI.setDurationLabel(pack.duration);
-                    timingHelperID = newTimingHelper(pack.duration, timingHelperID);
+                    // timingHelperID = newTimingHelper(pack.duration, timingHelperID);
                 }
                 if (pack.sound) GameUI.setSoundLabel(pack.sound);
                 break;
@@ -198,7 +186,7 @@ socket.on("remove", function (data) {
     }
 });
 
-canvas.onblur = () => {
+Graphics.canvas.onblur = () => {
     // alert("x")
 };
 
@@ -210,201 +198,71 @@ socket.on("respawned", ()=>{
     GameUI.hideDeathMessage();
 })
 
-let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+socket.on("bpmChange", (newBPM)=>{
+    Sounds.setBPM(newBPM);
+})
 
-let timeSig = 4;
-Tone.Transport.bpm.value = 120;
-Tone.Transport.timeSignature = timeSig;
-let beatCounter = 0;
 
-const metronome = new Tone.Synth();
-let metrVol = new Tone.Volume(-26);
-metronome.chain(metrVol, reverb, Tone.Destination);
+//delay  : (t1 - t0) + (t3 - t2)
+//offset : (t1 - t3 + t2 - t0) / 2
+//rtt    : t3 - t0
+
+
+//PING:
+function measurePing() {
+    const t0 = Date.now();
+    socket.emit("pingCheck", t0);
+}
+
+socket.on("pongCheck", (data) => {
+    const t3 = Date.now();
+
+    const t0 = data.t0;
+    const t1 = data.t1;
+    const t2 = data.t2;
+    
+
+    const latency = t3 - t0;
+    const delay = (t1 - t0) + (t3 - t2);
+    const offset = (t1 - t3 + t2 - t0) / 2;
+
+    console.log("Ping:", latency, "ms | " , "Delay:", delay, "ms | ", "Offset:", offset, "ms.");
+    ClockSync.addToBuffer(offset, delay);
+    ClockSync.rtt = latency;
+    ClockSync.delay = delay;
+});
+
+setInterval(measurePing, 5000);
 
 socket.on("scaleChange", (newScale) => {
     Sounds.setScale(newScale.name, newScale.allowedNotes);
 });
 
-// socket.on("tick", (data)=>{
-//     if(!Sounds.scaleBase) return;
-//     let clientNow = Date.now()
-//     // console.log(data.now, data.tick, data.now - clientNow)
-
-//     if(Tone.Transport.state != 'started') Tone.Transport.start();
-//     else{
-//         let pitch;
-//         let color;
-//         if(data.tick%8 == 0){
-//             pitch = `${Sounds.scaleBase}6`
-//             color = 'green';
-//         }
-//         else{
-//             pitch = `${Sounds.scaleBase}5`
-//             color = 'red';
-//         }
-
-//         console.log(Tone.Transport.seconds)
-//         console.log(Tone.Transport.position)
-//         GameUI.highlightMetronome(color);
-//         if(Tone.context.state !== "running" || !Sounds.audioOn) return;
-//         Tone.Transport.scheduleOnce((time)=>{
-//             metronome.triggerAttackRelease(pitch, "32n", time)
-//         }, Tone.Transport.toSeconds())
-//     }
-// })
-
-let beatInterval = 60000 / 120;
-let firstTickT;
-let firstTickNum;
-
-Tone.Transport.scheduleRepeat((time) => {
-    const [bar, beat, subbeat] = Tone.Transport.position.split(":").map(Number);
-    let octave;
-    let metronomeHighlight;
-    if (beat % 4 == 0) {
-        octave = 6;
-        metronomeHighlight = "green";
-    } else {
-        octave = 5;
-        metronomeHighlight = "red";
-    }
-
-    GameUI.highlightMetronome(metronomeHighlight);
-
-    const note = `${Sounds.scaleBase}${octave}`;
-
-    // console.log(`metronome: ${Tone.Transport.position} tick: ${tickNum}`);
-    if(Sounds.audioOn == true && Sounds.metronomeSoundOn)
-        metronome.triggerAttackRelease(note, "32n", time);
-}, "4n");
 
 
 
 
-let timingHelperID = Tone.Transport.scheduleRepeat((time) => {
-    GameUI.highlightTimingHelper();
-}, "1n");
+
+
+// let timingHelperID = Tone.Transport.scheduleRepeat((time) => {
+//     GameUI.highlightTimingHelper();
+// }, "1n");
 //TODO not always in sync with server timing validation!!!
-function newTimingHelper(newDuration, timingHelperID){
-    Tone.Transport.clear(timingHelperID);
-    const nextBarTime = Tone.Transport.nextSubdivision("1n");
-    console.log(nextBarTime)
+// function newTimingHelper(newDuration, timingHelperID){
+//     Tone.Transport.clear(timingHelperID);
+//     const nextBarTime = Tone.Transport.nextSubdivision("1n");
+//     console.log(nextBarTime)
 
-    const newTimingHelperID = Tone.Transport.scheduleRepeat(
-        (time) => {
-            GameUI.highlightTimingHelper();
-        },
-        newDuration,
-        0
-    );
-    return newTimingHelperID;
-}
+//     const newTimingHelperID = Tone.Transport.scheduleRepeat(
+//         (time) => {
+//             GameUI.highlightTimingHelper();
+//         },
+//         newDuration,
+//         0
+//     );
+//     return newTimingHelperID;
+// }
 
-let tickNum = 0;
-socket.on("tick2", (data) => {
-    //cannot start transport until audio context is running:
-    if (Tone.context.state !== "running") return;
+socket.on("tick", Sounds.handleMetronomeTick);
 
-    tickNum = data.tick;
-    const clientTime = Date.now();
-    const serverTime = data.serverTime;
 
-    const timeDelay = clientTime - serverTime;
-
-    if (!firstTickT) {
-        if (tickNum % 4 != 0) return; //want to start on first beat
-        firstTickT = clientTime - timeDelay;
-        firstTickNum = tickNum;
-
-        console.log(`starting transport | ticknum: ${tickNum}`);
-        Tone.Transport.start("+0", `${-timeDelay / 1000}`);
-    } else {
-        const deltaT = clientTime - firstTickT;
-        const localTickNum = tickNum - firstTickNum;
-
-        const desiredDeltaT = localTickNum * beatInterval;
-        const err = deltaT - desiredDeltaT;
-
-        fixTransport(desiredDeltaT);
-
-        // console.log(`tickN: ${localTickNum} | tickDelay ${timeDelay} | deltaT: ${deltaT} | desiredDeltaT: ${desiredDeltaT} | err ${err}`);
-        // console.log(Tone.Transport.seconds, Tone.Transport.position, `${Math.round(Tone.Transport.seconds*1000 - desiredDeltaT)}`)
-    }
-});
-
-function fixTransport(miliseconds) {
-    const baseBPM = 120;
-
-    const desiredSeconds = miliseconds / 1000;
-    const desiredPosition = secondsToPosition(desiredSeconds);
-
-    const tPosition = Tone.Transport.position;
-
-    const error =
-        positionToSeconds(desiredPosition) - positionToSeconds(tPosition);
-
-    // console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
-
-    if (Math.abs(error) < 0.1) {
-        Tone.Transport.bpm.value = baseBPM;
-        return;
-    }
-
-    const correction = Math.max(0.5, Math.min(2, 1 + error));
-
-    Tone.Transport.bpm.value = baseBPM * correction;
-    // console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
-
-    // const baseBPM = 120;
-    // const seconds = miliseconds/1000;
-    // const tPosition = Tone.Transport.position;
-    // const desiredPosition = secondsToPosition(seconds);
-    // console.log(tPosition, desiredPosition)
-
-    // if(tPosition>desiredPosition){
-    //     //Tone transport is too early!
-
-    //     Tone.Transport.bpm.value = Tone.Transport.bpm.value * 0.99;
-    // }
-
-    // if(tPosition<desiredPosition){
-    //     //Tone transport is late
-    //     Tone.Transport.bpm.value = Tone.Transport.bpm.value * 1.01;
-    // }
-    // console.log(`bpm changer: ${Tone.Transport.bpm.value}`)
-
-    //     const error = seconds - Tone.Transport.seconds
-    //     console.log(`fixTransport transportError: ${error}`)
-
-    //     if(Math.abs(error)<0.1){
-    //         Tone.Transport.bpm.value = baseBPM;
-    //         return;
-    //     }
-
-    //     Tone.Transport.bpm.value = baseBPM * error;
-    //     console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
-}
-
-function positionToSeconds(position) {
-    const beatsPerBar = 4;
-    const bpm = 120;
-    const [bars, beats, sixteenths] = position.split(":").map(Number);
-    const beatSec = 60 / bpm;
-    const totalBeats = bars * beatsPerBar + beats + sixteenths / 4;
-    return totalBeats * beatSec;
-}
-
-function secondsToPosition(seconds) {
-    const beatSec = 60 / 120;
-    const totalBeats = seconds / beatSec;
-
-    const beatsPerBar = 4; // np. 4/4
-    const bars = Math.floor(totalBeats / beatsPerBar);
-    const beatInBar = Math.floor(totalBeats % beatsPerBar);
-
-    const sixteenthSec = beatSec / 4; // 1 beat = 4 sixteens
-    const sixteenths = ((seconds % beatSec) / sixteenthSec).toFixed(3);
-
-    const position = `${bars}:${beatInBar}:${sixteenths}`;
-    return position;
-}

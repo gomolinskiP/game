@@ -503,6 +503,29 @@ a:hover{
     color: black;
 }
 
+@property --percent {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@keyframes durationTimeout{
+    from {--percent: 100%;}
+    to {--percent: 0%;}
+}
+
+#durationLabel{
+    --percent: 0%;
+    --timeoutColor: #00daaa;
+    --bgColor: #00000088;
+    background: linear-gradient(90deg, var(--timeoutColor) var(--percent), var(--bgColor) var(--percent));
+}
+
+.game-button:hover>#durationLabel{
+    --bgColor: black;
+    --timeoutColor: #a68700;
+}
+
 #keyboard{
     display: flex;
     flex-wrap: nowrap;

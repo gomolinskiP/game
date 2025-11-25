@@ -8,137 +8,151 @@
     <link href="css/style.css" rel="stylesheet">
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" defer></script> 
     <script src="https://unpkg.com/tone" defer></script> 
-    <script src="js/main.js" type="module" defer>
-    </script>
+    <script src="js/main.js" type="module" defer></script>
+    <script src="js/preStartup.js" type="module" defer></script>
 </head>
 <body>
     <%- include('./partials/gameHeader.ejs') %>
-
-    <div id="game">
-        <canvas id="ctx"></canvas>
+    <div id="not-loaded">
+        <div id="main">
+            <div id="pageContent">
+                <h1>Loading</h1>
+                    Please wait, while the game is loading
+                    <p id="dots-anim" style="display: inline; position: absolute; translate: 0 -1em;">.</p> <br>
+                    Note that by starting the game, you also allow it to play audio. <br><br>
+                <button id="start-game-btn" class="ui-button"> Start </button>
+            </div>
+        </div>        
     </div>
 
-    <div id="death-message-container">
-        <div id="death-message">You have been destroyed by .....</div>
-        <button id="respawn-btn">Respawn</button>
-    </div>
-
-    <div id="top-left-ui">
-        <div id="hp">
-            HP
-        </div>
-        <div id="score">
-            SCORE
-        </div>
-    </div>
-
-    <div id="chat">
-        <div id="chat-content"></div>
-        <div id="chat-input-wrapper">
-            <input type="text" id="chat-input" placeholder="press T to start typing">
-            <button id="chat-send-btn">&RightArrow;send</button>
-        </div>
-        <label id="chat-label" for="chat-input">chat&UpArrow;</label>
-    </div>
-
-    <div id="bottom-left-ui" onsubmit="return false">
-        <div id="weapon-buttons">
-            <div class="game-button">
-                <div id="sound-label" class="game-button-label">SOUND</div>
-                <div id="sound-popup" class="game-button-popup" data-type="sound">
-                    This is your currently chosen sound.
-                    <br><br>
-
-                    <b>Change to:</b>
-                    <ul>
-                        <li data-code="Synth">Synth</li>
-                        <li data-code="DuoSynth">DuoSynth</li>
-                        <li data-code="MonoSynth">MonoSynth</li>
-                        <li data-code="PolySynth">PolySynth</li>
-                        <li data-code="FMSynth">FMSynth</li>
-                        <li data-code="AMSynth">AMSynth</li>
-                        <li data-code="MetalSynth">MetalSynth</li>
-                        <li data-code="MembraneSynth">MembraneSynth</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="game-button">
-                <div id="weaponTypeLabel" class="game-button-label">WEAPON TYPE</div>
-                <div id="weapon-type-popup" class="game-button-popup" data-type="type">
-                    This is your chosen weapon type.
-                    <br><br>
-
-                    <b>Change to:</b>
-                    <ul>
-                        <li data-code="normal">single note</li>
-                        <li data-code="random">random note</li>
-                        <li data-code="chord">triad chord</li>
-                        <li data-code="arp-up">ascending arpeggio</li>
-                        <li data-code="arp-down">descending arpeggio</li>
-                        <li data-code="arp-alt">alternating arpeggio</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="game-button">
-                <div id="durationLabel" class="game-button-label">DURATION</div>
-                <div id="duration-popup" class="game-button-popup" data-type="duration">
-                    This is your chosen note duration.
-                    <br><br>
-                    <b>Change to:</b>
-                    <ul>
-                        <li data-code="1n">whole note</li>
-                        <li data-code="2n">half note</li>
-                        <li data-code="4n">quarter note</li>
-                        <li data-code="8n">eighth note</li>
-                        <li data-code="1n.">dotted whole note</li>
-                        <li data-code="2n.">dotted half note</li>
-                        <li data-code="4n.">dotted quarter note</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <br>
-
-        <div id="keyboard">
-            <button class="note" data-note="C">C</button>
-            <button class="note blk" data-note="C#">C#</button>
-            <button class="note" data-note="D">D</button>
-            <button class="note blk" data-note="D#">D#</button>
-            <button class="note" data-note="E">E</button>
-            <button class="note" data-note="F">F</button>
-            <button class="note blk" data-note="F#">F#</button>
-            <button class="note" data-note="G">G</button>
-            <button class="note blk" data-note="G#">G#</button>
-            <button class="note" data-note="A">A</button>
-            <button class="note blk" data-note="A#">A#</button>
-            <button class="note" data-note="B">B</button>
+    <div id="loaded" style="display: none;">
+        <div id="game">
+            <canvas id="ctx"></canvas>
         </div>
 
-        <br><br>
-        <div id="sounds-info-buttons">
-            <div class="game-button">
-                <div id="audio-on-label" class="game-button-label">🔇</div>
-                <div id="scale-popup" class="game-button-popup">
-                    Turn the sound on or off.
+        <div id="death-message-container">
+            <div id="death-message">You have been destroyed by .....</div>
+            <button id="respawn-btn">Respawn</button>
+        </div>
+
+        <div id="top-left-ui">
+            <div id="hp">
+                HP
+            </div>
+            <div id="score">
+                SCORE
+            </div>
+        </div>
+
+        <div id="chat">
+            <div id="chat-content"></div>
+            <div id="chat-input-wrapper">
+                <input type="text" id="chat-input" placeholder="press T to start typing">
+                <button id="chat-send-btn">&RightArrow;send</button>
+            </div>
+            <label id="chat-label" for="chat-input">chat&UpArrow;</label>
+        </div>
+
+        <div id="bottom-left-ui" onsubmit="return false">
+            <div id="weapon-buttons">
+                <div class="game-button">
+                    <div id="sound-label" class="game-button-label">SOUND</div>
+                    <div id="sound-popup" class="game-button-popup" data-type="sound">
+                        This is your currently chosen sound.
+                        <br><br>
+
+                        <b>Change to:</b>
+                        <ul>
+                            <li data-code="Synth">Synth</li>
+                            <li data-code="DuoSynth">DuoSynth</li>
+                            <li data-code="MonoSynth">MonoSynth</li>
+                            <li data-code="PolySynth">PolySynth</li>
+                            <li data-code="FMSynth">FMSynth</li>
+                            <li data-code="AMSynth">AMSynth</li>
+                            <li data-code="MetalSynth">MetalSynth</li>
+                            <li data-code="MembraneSynth">MembraneSynth</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="game-button">
+                    <div id="weaponTypeLabel" class="game-button-label">WEAPON TYPE</div>
+                    <div id="weapon-type-popup" class="game-button-popup" data-type="type">
+                        This is your chosen weapon type.
+                        <br><br>
+
+                        <b>Change to:</b>
+                        <ul>
+                            <li data-code="normal">single note</li>
+                            <li data-code="random">random note</li>
+                            <li data-code="chord">triad chord</li>
+                            <li data-code="arp-up">ascending arpeggio</li>
+                            <li data-code="arp-down">descending arpeggio</li>
+                            <li data-code="arp-alt">alternating arpeggio</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="game-button">
+                    <div id="durationLabel" class="game-button-label">DURATION</div>
+                    <div id="duration-popup" class="game-button-popup" data-type="duration">
+                        This is your chosen note duration.
+                        <br><br>
+                        <b>Change to:</b>
+                        <ul>
+                            <li data-code="1n">whole note</li>
+                            <li data-code="2n">half note</li>
+                            <li data-code="4n">quarter note</li>
+                            <li data-code="8n">eighth note</li>
+                            <li data-code="1n.">dotted whole note</li>
+                            <li data-code="2n.">dotted half note</li>
+                            <li data-code="4n.">dotted quarter note</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-            <div class="game-button">
-                <div id="scaleLabel" class="game-button-label">SCALE NAME</div>
-                <div id="scale-popup" class="game-button-popup">
-                    This is the current <b>musical scale</b>.<br><br>
+            <br>
 
-                    The scale dictates allowed notes, so the ones that are available on the piano keyboard below &DownArrow;
-                </div>
+            <div id="keyboard">
+                <button class="note" data-note="C">C</button>
+                <button class="note blk" data-note="C#">C#</button>
+                <button class="note" data-note="D">D</button>
+                <button class="note blk" data-note="D#">D#</button>
+                <button class="note" data-note="E">E</button>
+                <button class="note" data-note="F">F</button>
+                <button class="note blk" data-note="F#">F#</button>
+                <button class="note" data-note="G">G</button>
+                <button class="note blk" data-note="G#">G#</button>
+                <button class="note" data-note="A">A</button>
+                <button class="note blk" data-note="A#">A#</button>
+                <button class="note" data-note="B">B</button>
             </div>
 
-            <div class="game-button">
-                <div id="bpm-label" class="game-button-label">BPM</div>
-                <div id="bpm-popup" class="game-button-popup">
-                    This is the current <b>BPM</b>.<br><br>
+            <br><br>
+            <div id="sounds-info-buttons">
+                <div class="game-button">
+                    <div id="audio-on-label" class="game-button-label">🔇</div>
+                    <div id="scale-popup" class="game-button-popup">
+                        Turn the sound on or off.
+                    </div>
+                </div>
+                <div class="game-button">
+                    <div id="scaleLabel" class="game-button-label">SCALE NAME</div>
+                    <div id="scale-popup" class="game-button-popup">
+                        This is the current <b>musical scale</b>.<br><br>
 
-                    BPM stands for Beats Per Minute.
+                        The scale dictates allowed notes, so the ones that are available on the piano keyboard below &DownArrow;
+                    </div>
+                </div>
+
+                <div class="game-button">
+                    <div id="bpm-label" class="game-button-label">BPM</div>
+                    <div id="bpm-popup" class="game-button-popup">
+                        This is the current <b>BPM</b>.<br><br>
+
+                        BPM stands for Beats Per Minute.<br>
+                        <i>(Click this button to turn the metronome sound on or off.)</i>
+                    </div>
                 </div>
             </div>
         </div>

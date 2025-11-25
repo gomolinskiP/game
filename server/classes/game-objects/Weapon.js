@@ -78,33 +78,6 @@ export class Weapon {
     setDuration(duration) {
         this.duration = duration;
 
-        // determine note duration type: normal, dotted or triplet (triplets not yet implemented)?
-        if (this.duration.includes(".")) this.durationType = "dotted";
-        else this.durationType = "normal";
-
-        this.durationMs = Sounds.getTimeFromDuration(
-            this.duration,
-            this.durationType
-        );
-
-        const durationInt = parseInt(
-            duration.replace("n", "").replace(".", "")
-        );
-        this.durationInt = durationInt;
-        //update weapon damage depending on duration:
-        // switch (this.durationType) {
-        //     case "normal":
-        //         this.damage = 250 / durationInt;
-        //         break;
-        //     case "dotted":
-        //         this.damage = ((3 / 2) * 250) / durationInt;
-        //         break;
-        //     default:
-        //         this.damage = 1;
-        //         console.warn("Unsupported duration type while setting new duration: ", duration);
-        //         break;
-        // }
-
         this.shootCount = 0;
 
         if (!this.wielder.updatePack) return;
@@ -118,7 +91,8 @@ export class Weapon {
         const parent = this.wielder;
         const angle = this.wielder.lastAngle;
         const damage = this.damage;
-        const durationMs = this.durationMs;
+        // const durationMs = this.durationMs;
+        const duration = this.duration;
 
         if(parent.characterType == 'bot'){
             parent.combatReward -= 5;
@@ -126,7 +100,7 @@ export class Weapon {
 
         switch (this.type) {
             case "normal":
-                new Bullet(parent, angle, note, durationMs, damage);
+                new Bullet(parent, angle, note, duration, damage);
                 break;
             case "random":
                 let randNote =
@@ -135,22 +109,22 @@ export class Weapon {
                             Math.random() * Sounds.scale.allowedNotes.length
                         )
                     ];
-                new Bullet(parent, angle, randNote, durationMs, damage);
+                new Bullet(parent, angle, randNote, duration, damage);
                 break;
             case "chord":
-                new Bullet(parent, angle, note, durationMs, damage / 3);
+                new Bullet(parent, angle, note, duration, damage / 3);
                 new Bullet(
                     parent,
                     angle,
                     Sounds.scale.getTransposed(note, 4),
-                    durationMs,
+                    duration,
                     damage / 3
                 );
                 new Bullet(
                     parent,
                     angle,
                     Sounds.scale.getTransposed(note, 7),
-                    durationMs,
+                    duration,
                     damage / 3
                 );
                 break;
@@ -159,7 +133,7 @@ export class Weapon {
                     parent,
                     angle,
                     this.getAscendingArpNote(note, this.shootCount),
-                    this.durationMs,
+                    duration,
                     damage
                 );
                 this.shootCount += 1;
@@ -169,7 +143,7 @@ export class Weapon {
                     parent,
                     angle,
                     this.getDescendingArpNote(note, this.shootCount),
-                    durationMs,
+                    duration,
                     damage
                 );
                 this.shootCount += 1;
@@ -179,7 +153,7 @@ export class Weapon {
                     parent,
                     angle,
                     this.getAlternatingArpNote(note, this.shootCount),
-                    durationMs,
+                    duration,
                     damage
                 );
                 this.shootCount += 1;

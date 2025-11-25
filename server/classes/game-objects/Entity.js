@@ -1,4 +1,5 @@
 import { sqrt } from "@tensorflow/tfjs";
+import { Tile } from "./Tile.js";
 
 export class Entity {
     static list = {};
@@ -24,7 +25,7 @@ export class Entity {
             let other = objList[candidate.id];
             if (!other) continue;
             if (other === this) continue;
-            if(other.isDead) continue;
+            if (other.isDead) continue;
 
             const distSq = this.getDistSq(other);
 
@@ -37,20 +38,20 @@ export class Entity {
         return nearest;
     }
 
-    getDxDy(other){
+    getDxDy(other) {
         const dx = this.x - other.x,
-            dy = (this.y - other.y) * 2; 
+            dy = (this.y - other.y) * 2;
 
-        return {dx, dy};
+        return { dx, dy };
     }
 
     getDistSq(other) {
-        const {dx, dy} = this.getDxDy(other);
+        const { dx, dy } = this.getDxDy(other);
 
         return dx * dx + dy * dy;
     }
 
-    getDist(other){
+    getDist(other) {
         const distSq = this.getDistSq(other);
 
         return Math.sqrt(distSq);
@@ -85,5 +86,23 @@ export class Entity {
         }
 
         return null;
+    }
+
+    isInNonPVPArea() {
+        if (
+            Tile.checkTilesCollision(this.x, this.y, Tile.noPVPfloorQTree) ||
+            (Math.abs(this.x) < 400 && Math.abs(this.y) < 400)
+        ) {
+            return true;
+        } else return false;
+    }
+
+    static isInNonPVPArea(x, y) {
+        if (
+            Tile.checkTilesCollision(x, y, Tile.noPVPfloorQTree) ||
+            (Math.abs(x) < 400 && Math.abs(y) < 400)
+        ) {
+            return true;
+        } else return false;
     }
 }

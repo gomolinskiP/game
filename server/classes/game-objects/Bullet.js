@@ -32,7 +32,7 @@ export class Bullet extends Entity {
     }
   }
 
-  constructor(parent, angle, note, durationMs, damage) {
+  constructor(parent, angle, note, duration, damage) {
     super(parent.x, parent.y);
     this.id = Math.random();
     this.parent = parent;
@@ -47,9 +47,13 @@ export class Bullet extends Entity {
 
     this.note = note;
     this.sound = parent.weapon.sound;
-    this.duration = parent.weapon.duration;
-    this.durationMs = durationMs;
+    this.duration = duration;
+    this.durationMs = Sounds.getTimeFromDuration(this.duration);
+
     this.damage = damage;
+
+    this.creationTime = Date.now();
+    this.parent.ownBulletsIDs.push(this.id);
 
     Bullet.list[this.id] = this;
 
@@ -61,7 +65,7 @@ export class Bullet extends Entity {
     this.allowNextShotTimeout = setTimeout(()=>{
       // allow next shot slightly earlier than this bullet destroys itself (after it's duration)
       this.parent.hasShotScheduled = false;
-    }, this.durationMs * 0.75);
+    }, this.durationMs);
 
     return this;
   }
@@ -79,6 +83,11 @@ export class Bullet extends Entity {
       Character.quadtree
     );
     let isCollidingWall = Tile.checkTilesCollision(this.x, this.y, Tile.wallQTree);
+    let enteredNonPVPArea = Tile.checkTilesCollision(
+        this.x,
+        this.y,
+        Tile.noPVPfloorQTree
+    );
 
     //player hit:
     if (hitPlayerId != null) {
@@ -93,7 +102,7 @@ export class Bullet extends Entity {
     this.selfGuide();
 
     //wall hit:
-    if (isCollidingWall) {
+    if (isCollidingWall || enteredNonPVPArea) {
       this.destroy();
     }
   }
@@ -170,7 +179,7 @@ export class Bullet extends Entity {
     let nearestPlayer = this.findNearest(
       Character.list,
       Character.quadtree,
-      300
+      200
     );
 
     if (nearestPlayer === this.parent) return;
@@ -194,6 +203,8 @@ export class Bullet extends Entity {
   }
 
   destroy() {
+    this.parent.ownBulletsIDs = this.parent.ownBulletsIDs.filter((id)=>{id != this.id});
+
     clearTimeout(this.timeout);
     for (let i in Player.list) {
       let player = Player.list[i];

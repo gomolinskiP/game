@@ -4,3 +4,4 @@ certs
 .vscode
 logs/*
 .env
+server/classes/ai/models

@@ -179,7 +179,7 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
         if (res) {
             //progress already in DB
             player = new Player(
-                socket.id,
+                socket,
                 res.x,
                 res.y,
                 username,
@@ -197,7 +197,7 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             }
         } else {
             //no progress, set starting values
-            player = new Player(socket.id, 0, 0, username);
+            player = new Player(socket, 0, 0, username);
             Progress.insertOne({ username: username, x: 0, y: 0, score: 0 });
         }
         // }
@@ -254,9 +254,15 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             }
         });
 
-        socket.on("noteFire", (note) => {
+        socket.on("noteFire", (data) => {
+            const note = data.note;
+            const shootT = data.time;
+            const nowT = Date.now();
+
             player.changeSelectedNote(note);
             player.shoot();
+
+            Sounds.evaluateNoteTimingAccuracy2(shootT);
         });
 
         socket.on("noteChange", (note) => {
@@ -299,6 +305,19 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             player.spawn();
             socket.emit("respawned");
         })
+
+        socket.on("pingCheck", (t0) => {
+            const t1 = Date.now();
+            socket.emit("pongCheck", {
+                t0: t0,
+                t1: t1,
+                t2: Date.now()
+            });
+        });
+
+        socket.on("initialized", () => {
+            socket.initialized = true;
+        });
     });
 
     //main loop:

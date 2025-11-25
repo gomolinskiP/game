@@ -55,6 +55,7 @@ export class Character extends Entity {
     this.speed = 10;
     this.lastAngle = 90;
     this.hasShotScheduled = false;
+    this.ownBulletsIDs = [];
 
     this.selectedNote = Sounds.scale.base;
 
@@ -130,6 +131,7 @@ export class Character extends Entity {
     }
 
     //slowly heal if was not damaged for some time:
+    //todo heals only if needsupdate is true
     this.framesSinceDamage += 1;
     if (this.framesSinceDamage > 100 && this.framesSinceDamage%10==0) this.heal(1);
   }
@@ -138,20 +140,21 @@ export class Character extends Entity {
     if(this.isDead) return;
 
     //shooting not allowed on spawn:
-    if(this.isWithinDistance(
-      { x: 0, y: 0 },
-      1000
-    )){
-      Socket.emitShootFeedbackMsg(
-          this,
-          "Shooting notes is not allowed near spawn area!",
-          "bad"
-      );
-      return;
+    if (this.isInNonPVPArea()) {
+        Socket.emitShootFeedbackMsg(
+            this,
+            "Shooting notes is not allowed near spawn area!",
+            "bad"
+        );
+        return;
     }
     
     if(this.hasShotScheduled){
       Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
+
+      if (this.characterType == "bot") {
+          this.combatReward -= 0.5;
+      }
       return;
     }
 
@@ -267,13 +270,28 @@ export class Character extends Entity {
   }
 
   die(byWho) {
-    byWho.addScore(100);
+    //killer gets half of victims score:
+    const scoreStolen = this.score / 2;
+    byWho.addScore(scoreStolen);
+    this.score -= scoreStolen;
+
+    //send info to all sockets:
     let killMsg = `<i>${byWho.name} killed ${this.name}</i>`;
     for (var i in Socket.list) {
       var socket = Socket.list[i];
       socket.emit("chatBroadcast", killMsg);
     }
 
+    //send info to killed player:
+    if(this.characterType == "player"){
+      this.updatePack.push({
+          type: "death",
+          killer: byWho.name,
+          scoreStolen: scoreStolen
+      });
+    }
+
+    //set isDead flag to true:
     this.isDead = true;
   }
 

@@ -1,5 +1,4 @@
-import { limiter } from './main.js'
-import { Img, gameWidth, gameHeight, drawBuffer, tileImages } from './graphics.js';
+import { Graphics } from './graphics.js';
 import { Socket } from './clientSocket.js'
 import { Sounds } from './sounds.js';
 import { GameUI } from './gameButtons.js';
@@ -86,7 +85,7 @@ export class Entity{
 export class Player extends Entity{
     static list = {};
 
-    static stepSoundTimeoutMS = 300;
+    static stepSoundTimeoutMS = 250;
 
     constructor(initPack){
         super(initPack);
@@ -101,10 +100,12 @@ export class Player extends Entity{
 
         this.direction = this.updateDirection(initPack.direction);
         this.idleAnimFrame = 2;
-        this.imageAnim = Img.playerAnim;
+        this.imageAnim = Graphics.Img.playerAnim;
         this.image = this.imageAnim[this.direction][this.idleAnimFrame];
         this.animFrame = 1 * 2;
         this.hueRot = Math.round(360 * Math.random())
+
+        this.justDamaged = false;
 
         if(!SoundPool.globalSoundPool){
             SoundPool.globalSoundPool = new SoundPool(MAX_BULLET_SOUNDS);
@@ -119,6 +120,14 @@ export class Player extends Entity{
     }
 
     update(pack){
+        if(pack.hp < this.hp){
+            this.justDamaged = true;
+
+            setTimeout(()=>{
+                this.justDamaged = false;
+            }, 300);
+        }
+
         this.hp = pack.hp;
         this.score = pack.score;
         if (this.id == Socket.selfId){
@@ -128,6 +137,10 @@ export class Player extends Entity{
     
         this.direction = this.updateDirection(pack.direction);
         if(this.x !== pack.x || this.y !== pack.y){
+            if (this.id == selfId) {
+                Graphics.updateFog(pack.x - this.x, pack.y - this.y);
+            }
+
             super.update(pack);
 
             this.lastMovedTime = Date.now();
@@ -147,12 +160,12 @@ export class Player extends Entity{
                     0
                 );
 
-                const footStepNote = Sounds.allowedNotes[Math.floor(Math.random() * Sounds.allowedNotes.length)];
+                const footStepNote = Sounds.allowedNotes[0];
                 this.sampler.play(footStepNote);
 
                 setTimeout(()=>{
                     this.stepSoundTimeout = false;
-                }, Player.stepSoundTimeoutMS);
+                }, Player.stepSoundTimeoutMS + Math.random() * 100);
             }
         }
     }
@@ -167,8 +180,8 @@ export class Player extends Entity{
 
     draw(){
         if (!Player.list[selfId]) return;
-        let x = this.x - Player.list[selfId].x + gameWidth/2;
-        let y = this.y - Player.list[selfId].y + gameHeight/2;
+        let x = this.x - Player.list[selfId].x + Graphics.gameWidth/2;
+        let y = this.y - Player.list[selfId].y + Graphics.gameHeight/2;
 
         //set a static frame if player has not moved in some short time:
         if(Date.now() - this.lastMovedTime > 50){
@@ -176,7 +189,7 @@ export class Player extends Entity{
         }
 
         //player image:
-        drawBuffer.push({
+        Graphics.drawBuffer.push({
             type: "image",
             img: this.image,
             x: x - 32,
@@ -192,7 +205,7 @@ export class Player extends Entity{
         let nameFont = ''
         if(this.id == selfId) nameFont = 'bold 20px Cascadia Mono'
         else nameFont = '16px Cascadia Mono'
-        drawBuffer.push({
+        Graphics.drawBuffer.push({
             type: 'text',
             text: this.name,
             x: x,
@@ -203,13 +216,25 @@ export class Player extends Entity{
 
         //player hp bar:
         if(this.id != selfId){
-            drawBuffer.push({
+            Graphics.drawBuffer.push({
                 type: 'hpbar',
                 hp: this.hp,
                 x: x,
                 y: y,
                 sortY: y-32,
             })
+        }
+
+        if(this.justDamaged){
+            Graphics.drawBuffer.push({
+                type: "text",
+                text: "HIT!",
+                x: x,
+                y: y - 66,
+                sortY: y + 32,
+                font: nameFont,
+                color: "red"
+            });
         }
     }
 
@@ -245,7 +270,7 @@ export class Bot extends Player{
         super(initPack);
         
         this.idleAnimFrame = 1;
-        this.imageAnim = Img.botAnim;
+        this.imageAnim = Graphics.Img.botAnim;
         // this.image = Img.botAnim[this.direction][this.idleAnimFrame];
 
         console.log('bot created')
@@ -265,6 +290,7 @@ const soundNames = {
     MonoSynth: "trumpet",
     PolySynth: "violin",
     steps: "steps",
+    pickup: "pickup"
 };
 
 export class Bullet extends Entity{
@@ -273,6 +299,8 @@ export class Bullet extends Entity{
     constructor(initPack){
         super(initPack);
         // console.log('bullet pack: ', initPack)
+        
+
         this.parent = Player.list[initPack.parentId];
         this.sound = initPack.sound;
         this.hasSoundSlot = false;
@@ -290,7 +318,7 @@ export class Bullet extends Entity{
         this.duration = initPack.duration;
         this.imgWidth = 32;
         this.imgHeight = 32;
-        this.labelSize = 20;
+        this.labelSize = 30;
         this.shrinkFactor = 1000/Sounds.toneDurationToMs(this.duration);
         this.shrinkInterval = setInterval(()=>{
             this.imgWidth -= this.shrinkFactor;
@@ -298,6 +326,11 @@ export class Bullet extends Entity{
             this.labelSize -= this.shrinkFactor;
         }, 100)
         
+        //For highlighting duration timeout:
+        if (initPack.parentId == selfId) {
+            //client's bullet
+            GameUI.startDurationTimeoutHighlight(this.duration);
+        }
 
         // let synthClass = Tone[initPack.sound];
 
@@ -369,20 +402,20 @@ export class Bullet extends Entity{
     }
 
     draw(){
-        let x = this.x - Player.list[selfId].x + gameWidth/2;
-        let y = this.y - Player.list[selfId].y + gameHeight/2;
+        let x = this.x - Player.list[selfId].x + Graphics.gameWidth/2;
+        let y = this.y - Player.list[selfId].y + Graphics.gameHeight/2;
 
-        drawBuffer.push({
-            type: 'image',
-            img: Img.note[this.duration],
-            x: x - this.imgWidth/2,
-            y: y - this.imgHeight/2,
-            sortY: y+16,
+        Graphics.drawBuffer.push({
+            type: "image",
+            img: Graphics.Img.note[this.duration],
+            x: x - this.imgWidth / 2,
+            y: y - this.imgHeight / 2,
+            sortY: y + 16,
             w: this.imgWidth,
             h: this.imgHeight,
-        })
+        });
 
-        drawBuffer.push({
+        Graphics.drawBuffer.push({
             type: 'text',
             text: this.note,
             x: x-8,
@@ -398,33 +431,222 @@ export class Pickup extends Entity{
 
     constructor(initPack){
         super(initPack);
+        this.sound = "pickup";
+        this.isPicked = false;
+        this.hasSoundSlot = false;
+
+        this.imgWidth = this.imgHeight = 16;
+        this.animDir = 1;
+
         Pickup.list[this.id] = this;
     }
 
     destroy(){
-        super.destroy();
-        delete Pickup.list[this.id];
+        this.isPicked = true;
+        if (!this.hasSoundSlot) {
+            this.requestSoundSlot();
+        }
+
+        if (this.hasSoundSlot) {
+            this.pan3D.setPosition(
+                (this.x - Player.list[selfId].x) * 0.05,
+                (this.y - Player.list[selfId].y) * 0.05,
+                0
+            );
+
+            const randNote =
+                Sounds.allowedNotes[
+                    Math.floor(Math.random() * Sounds.allowedNotes.length)
+                ];
+            this.sampler.play(randNote);
+
+            setTimeout(() => {
+                this.soundSlot.free = true;
+                super.destroy();
+                delete Pickup.list[this.id];
+            }, 500);
+        }
     }
 
     draw(){
         if (!Player.list[selfId]) return;
-        let x = this.x - Player.list[selfId].x + gameWidth/2;
-        let y = this.y - Player.list[selfId].y + gameHeight/2;
+        if(this.isPicked) return;
+        let x = this.x - Player.list[selfId].x + Graphics.gameWidth/2;
+        let y = this.y - Player.list[selfId].y + Graphics.gameHeight/2;
 
-        drawBuffer.push({
-            type: 'image',
-            img: Img.pickup,
-            x: x-8,
-            y: y,
-            sortY: y+16,
-            w: 16,
-            h: 16
-        })
+        Graphics.drawBuffer.push({
+            type: "image",
+            img: Graphics.Img.pickup,
+            x: x - this.imgWidth / 2,
+            y: y - this.imgHeight / 2 + 8,
+            sortY: y + 16,
+            w: this.imgWidth,
+            h: this.imgHeight,
+        });
+
+        if(this.imgWidth > 20){
+            this.animDir = -1;
+        }
+        if(this.imgWidth < 14){
+            this.animDir = 1;
+        }
+
+        
+        this.imgWidth = this.imgHeight += (this.animDir * Math.random()*0.2);
+    }
+}
+
+export const tileLayerCanvases = {};
+// function buildStaticLayer(layerId, tiles){
+//     if (!tileImages) return;
+
+//     const minX = Math.min(...tiles.map((t) => t.x));
+//     const minY = Math.min(...tiles.map((t) => t.y));
+//     const maxX = Math.max(...tiles.map((t) => t.x));
+//     const maxY = Math.max(...tiles.map((t) => t.y));
+
+//     const width = maxX - minX + 64;
+//     const height = maxY - minY + 64;
+
+//     const buffer = new OffscreenCanvas(width, height);
+//     const bctx = buffer.getContext("2d");
+
+//     for(const t of tiles){
+//         if(t.layerId !== layerId) continue;
+
+//         const img = tileImages[t.gid];
+//         if(!img) continue;
+//         bctx.drawImage(img, t.x - minX, t.y - minY, 64, 64);
+//     }
+
+//     tileLayerCanvases[layerId] = { buffer, minX, minY, width, height };
+// }
+
+export class StaticTileLayers{
+    //TODO add time based rebuilding (some layers have fewer tiles than buffer limit + prevent building if last rebuild was not long ago)
+    //TODO all floor & below layers could be rendered at once!!
+
+    static canvases = {};
+
+    static tileBuffers = {};
+
+    static addToBuffer(tile){
+        const layerID = tile.layerId;
+
+        if (!this.tileBuffers[layerID]) {
+            this.tileBuffers[layerID] = [];
+            
+            setInterval(()=>{
+                if (
+                    this.tileBuffers[layerID] &&
+                    this.tileBuffers[layerID].length == 0
+                ) return;
+
+                this.build(layerID, Object.values(Tile.list));
+            }, 2000);
+        }
+        
+        this.tileBuffers[layerID].push(tile);
+
+        if (this.tileBuffers[layerID].length > 120) {
+            console.log('build!')
+            this.build(layerID, Object.values(Tile.list));
+        }
+
+        // console.log(this.tileBuffers[layerID]);
+
+        // console.log(
+        //     "layerID",
+        //     layerID,
+        //     "bufferLen",
+        //     this.tileBuffers[layerID].length,
+        //     "buffer",
+        //     this.tileBuffers[layerID]
+        // );
+    }
+
+    static build(layerID, tiles){
+        // if (!tileImages) return;
+        if (
+            this.canvases[layerID] &&
+            this.canvases[layerID].hasOwnProperty("timeStamp") &&
+            Date.now() - this.canvases[layerID].timeStamp < 1000
+        ) return;
+        // if(Date.now() - this.canvases[layerID].timeStamp < 1000) return;
+
+        this.tileBuffers[layerID] = [];
+
+        const minX = Math.min(...tiles.map((t) => t.x));
+        const minY = Math.min(...tiles.map((t) => t.y));
+        const maxX = Math.max(...tiles.map((t) => t.x));
+        const maxY = Math.max(...tiles.map((t) => t.y));
+
+        const width = (maxX - minX + 64) * 0.1;
+        const height = (maxY - minY + 64) * 0.1;
+
+        const buffer = new OffscreenCanvas(width, height);
+        const bctx = buffer.getContext("2d");
+        bctx.scale(0.1, 0.1);
+        //SCALE 0.1 also in graphics.js:301&:302
+
+        let yBuffer = [];
+        for (const t of tiles) {
+            if (t.layerId !== layerID) continue;
+            yBuffer.push(t);
+        }
+
+        yBuffer.sort((a, b) => {
+            let aY = a.y;
+            let bY = b.y;
+
+            return aY - bY - 0.01;
+        });
+
+        for(const t of yBuffer){
+            const img = Tile.tileImages[t.gid];
+            if (!img) {
+                //image tile not loaded yet:
+                Tile.loadImg(t.gid);
+                continue;
+            }
+            bctx.drawImage(img, t.x - minX, t.y - minY, 64, 64);
+        }
+
+        const timeStamp = Date.now();
+        this.canvases[layerID] = { buffer, minX, minY, width, height, timeStamp };
+        // console.log('built layer canvas')
     }
 }
 
 export class Tile{
     static list = {};
+
+    static mapData;
+    static tileImages = {};
+    static currentLoadingGIDs = {}
+
+    static loadMapData(){
+        fetch("../map5.json")
+            .then(res=>res.json())
+            .then(async data=>{
+                Tile.mapData = data;
+            });
+    }
+
+    static async loadImg(gid){
+        if(!Tile.mapData) return;
+        if(Tile.currentLoadingGIDs[gid]) return;
+        Tile.currentLoadingGIDs[gid] = true;
+
+        const tileset = Tile.mapData.tilesets[0];
+        const id = gid - tileset.firstgid;
+        const tile = tileset.tiles.find(t => t.id === id);
+
+        const img = new Image();
+        img.src = `../${tile.image}`;
+        await new Promise(res => (img.onload = res));
+        Tile.tileImages[gid] = img;
+    }
 
     constructor(initPack){
         this.id = initPack.id;
@@ -432,15 +654,28 @@ export class Tile{
         this.y = initPack.y;
         this.gid = initPack.gid;
         this.layerId = initPack.layerId;
+        // console.log('layerid', this.layerId)
+        if(this.layerId <= 0){
+            StaticTileLayers.addToBuffer(this);
+            // buildStaticLayer(this.layerId, Object.values(Tile.list));
+        }
 
         Tile.list[this.id] = this;
     }
 
     draw(){
-        if(!tileImages) return;
-        let x = this.x - Player.list[selfId].x + gameWidth/2;
-        let y = this.y - Player.list[selfId].y + gameHeight/2;
-        const img = tileImages[this.gid];
+        // if(!tileImages) return;
+        const img = Tile.tileImages[this.gid];
+        if(!img){
+            //image tile not loaded yet:
+            Tile.loadImg(this.gid);
+            return;
+        }
+
+        if(this.layerId <= 0 ) return;
+        let x = this.x - Player.list[selfId].x + Graphics.gameWidth/2;
+        let y = this.y - Player.list[selfId].y + Graphics.gameHeight/2;
+        // const img = tileImages[this.gid];
 
         let shiftSortY;
         if(this.layerId>0){
@@ -453,7 +688,7 @@ export class Tile{
         if(!img) console.error('no img', this.gid)
         // else console.log(this.gid)
 
-        drawBuffer.push({
+        Graphics.drawBuffer.push({
             type: 'image',
             img: img,
             x: x,
@@ -595,7 +830,7 @@ class SoundSlot{
         this.sampler = new Sampler("../audio/piano.wav");
         this.pan3D = new Tone.Panner3D();
         this.sampler.pitchShift.connect(this.pan3D);
-        this.pan3D.connect(limiter);
+        this.pan3D.connect(Sounds.limiter);
 
         this.free = true;
         this.occupierId = null;
@@ -614,6 +849,7 @@ const buffers = {
     trumpet: await new Tone.Buffer("../audio/trumpet.mp3"),
     violin: await new Tone.Buffer("../audio/violin.mp3"),
     steps: await new Tone.Buffer("../audio/steps.mp3"),
+    pickup: await new Tone.Buffer("../audio/pickup.mp3"),
 };
 
 class Sampler{
@@ -630,11 +866,12 @@ class Sampler{
     }
 
     play(note){
+        if(Tone.context.state != "running") return;
         const shift = Sounds.notes.indexOf(note);
         // console.log(note, shift)
 
         this.samplePlayer.stop();
-        this.pitchShift.pitch = shift + 0;
+        this.pitchShift.pitch = shift - 12;
         this.samplePlayer.start();
     }
 

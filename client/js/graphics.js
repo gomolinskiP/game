@@ -1,329 +1,362 @@
-import { Player, Bullet, Pickup, Tile } from './classes.js'
-// import { selfId } from './main.js'
+import { Player, Bullet, Pickup, Tile,  StaticTileLayers } from './classes.js'
 import { Socket } from './clientSocket.js';
-import { Sounds } from './sounds.js';
-let selfId = null;
 
-export let gameWidth = window.innerWidth;
-export let gameHeight = window.innerHeight;
 
-export var canvas = document.getElementById("ctx");
-canvas.tabIndex = 1000; //so I can listen to events on canvas specifically
-var ctx = canvas.getContext("2d");
-
-export class Graphics{
+export class Graphics {
+    static Img = {};
+    static drawBuffer = [];
     static gameMessages = [];
 
-    static gameZoom = 0.5;
-    static changeZoomLevel(dir){
-        if (dir == "up" && Graphics.gameZoom < 1) {
-            Graphics.gameZoom += 0.01;
-            canvasResize();
-        } else if (dir == "down" && Graphics.gameZoom > 0.2) {
-            Graphics.gameZoom -= 0.01;
-            canvasResize();
-        }
-        console.log(Graphics.gameZoom)
+    static canvas;
+    static ctx;
+
+    static gameWidth = window.innerWidth;
+    static gameHeight = window.innerHeight;
+
+    static canvasInit() {
+        Graphics.canvas = document.getElementById("ctx");
+        Graphics.tabIndex = 1000; //so I can listen to events on canvas specifically
+        Graphics.ctx = Graphics.canvas.getContext("2d");
     }
 
-    static addGameMsg(msg, rating){
-        if(Graphics.gameMessages.length > 0) Graphics.gameMessages.shift();
+    static canvasResize() {
+        Graphics.gameWidth = window.innerWidth / Graphics.gameZoom;
+        Graphics.gameHeight = window.innerHeight / Graphics.gameZoom;
+        Graphics.canvas.style.scale = Graphics.gameZoom;
+        Graphics.canvas.width = Graphics.gameWidth;
+        Graphics.canvas.height = Graphics.gameHeight;
+    }
+
+    static gameZoom = 0.5;
+    static changeZoomLevel(dir) {
+        if (dir == "up" && Graphics.gameZoom < 1) {
+            Graphics.gameZoom += 0.01;
+            Graphics.canvasResize();
+        } else if (dir == "down" && Graphics.gameZoom > 0.2) {
+            Graphics.gameZoom -= 0.01;
+            Graphics.canvasResize();
+        }
+        // console.log(Graphics.gameZoom)
+    }
+
+    static loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = (err) => reject(err);
+            img.src = src;
+        });
+    }
+
+    static loadImages() {
+        Graphics.Img.player = new Image();
+        Graphics.Img.player.src = "../img/char/s1.png";
+
+        let directions = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+        Graphics.Img.playerAnim = {};
+        for (let dir of directions) {
+            Graphics.Img.playerAnim[dir] = {};
+
+            for (let i = 0; i < 3; i++) {
+                Graphics.Img.playerAnim[dir][i] = new Image();
+                Graphics.Img.playerAnim[dir][i].src = `../img/char/${dir}${
+                    i + 1
+                }.png`;
+            }
+        }
+        Graphics.Img.botAnim = {};
+        for (let dir of directions) {
+            Graphics.Img.botAnim[dir] = {};
+
+            for (let i = 0; i < 3; i++) {
+                Graphics.Img.botAnim[dir][i] = new Image();
+                Graphics.Img.botAnim[dir][i].src = `../img/bot/${dir}${
+                    i + 1
+                }.png`;
+            }
+        }
+
+        Graphics.Img.note = {};
+
+        Graphics.Img.note["1n"] = new Image();
+        Graphics.Img.note["1n"].src = "../img/note.png";
+        Graphics.Img.note["2n"] = new Image();
+        Graphics.Img.note["2n"].src = "../img/halfnote.png";
+        Graphics.Img.note["4n"] = new Image();
+        Graphics.Img.note["4n"].src = "../img/quarternote.png";
+        Graphics.Img.note["8n"] = new Image();
+        Graphics.Img.note["8n"].src = "../img/eightnote.png";
+
+        Graphics.Img.note["1n."] = new Image();
+        Graphics.Img.note["1n."].src = "../img/note.png";
+        Graphics.Img.note["2n."] = new Image();
+        Graphics.Img.note["2n."].src = "../img/halfnote.png";
+        Graphics.Img.note["4n."] = new Image();
+        Graphics.Img.note["4n."].src = "../img/quarternote.png";
+        Graphics.Img.note["8n."] = new Image();
+        Graphics.Img.note["8n."].src = "../img/eightnote.png";
+
+        Graphics.Img.pickup = new Image();
+        Graphics.Img.pickup.src = "../img/tileset/blocks_101.png";
+
+        Graphics.Img.fog = new Image();
+        Graphics.Img.fog.src = "../img/fog.png";
+    }
+
+    static drawMap() {
+        if (!Socket.selfId) return;
+        if (!Player.list[Socket.selfId]) return;
+
+        for (let layerId in StaticTileLayers.canvases) {
+            const layer = StaticTileLayers.canvases[layerId];
+            // console.log(layer.width, layer.height)
+            // console.log('layer', layer)
+            Graphics.ctx.drawImage(
+                layer.buffer,
+                layer.minX -
+                    Player.list[Socket.selfId].x +
+                    Graphics.gameWidth / 2,
+                layer.minY -
+                    Player.list[Socket.selfId].y +
+                    Graphics.gameHeight / 2,
+                layer.width / 0.1,
+                layer.height / 0.1
+            );
+        }
+
+        if (Player.list[Socket.selfId]) {
+            for (let i in Tile.list) {
+                const tile = Tile.list[i];
+                tile.draw();
+            }
+        }
+    }
+
+    static gameLoop() {
+        if (!fogLayer) {
+            requestAnimationFrame(Graphics.gameLoop);
+            return;
+        }
+        const startT = performance.now();
+        if (!Socket.selfId) {
+            Socket.selfId = Socket.Socket.selfId;
+        }
+        // console.log(Player.list[Socket.selfId].x, Player.list[Socket.selfId].y);
+
+        //draw background & map elements:
+        Graphics.ctx.fillStyle = "black";
+        Graphics.ctx.fillRect(0, 0, Graphics.gameWidth, Graphics.gameHeight);
+        Graphics.ctx.drawImage(fogLayer, fog1.x, fog1.y);
+
+        Graphics.drawMap();
+
+        // Graphics.ctx.drawImage(fogLayer, fog2.x, fog2.y);
+
+        //draw game objects:
+        for (var i in Pickup.list) {
+            if (!Pickup.list[i]) continue;
+            Pickup.list[i].draw();
+        }
+        for (var i in Player.list) {
+            Player.list[i].draw();
+        }
+
+        for (var i in Bullet.list) {
+            Bullet.list[i].draw();
+        }
+
+        //sort and draw drawBuffer:
+        Graphics.drawBuffer.sort((a, b) => {
+            let aY = a.sortY;
+            let bY = b.sortY;
+
+            // if(a.layerId){
+            //     aY = aY + (64)*a.layerId
+            // }
+            // if(b.layerId){
+            //     bY = bY + (64)*b.layerId
+            // }
+            return aY - bY - 0.01;
+        });
+
+        for (let obj of Graphics.drawBuffer) {
+            switch (obj.type) {
+                case "image":
+                    Graphics.ctx.imageSmoothingEnabled = false;
+                    if (obj.hueRot) {
+                        // Graphics.ctx.filter = `hue-rotate(${obj.hueRot}deg)`;
+                    }
+                    if (obj.img)
+                        Graphics.ctx.drawImage(
+                            obj.img,
+                            obj.x,
+                            obj.y,
+                            obj.w,
+                            obj.h
+                        );
+                    // Graphics.ctx.filter = 'none';
+                    // Graphics.ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                    // if(obj.layerId>0) Graphics.ctx.fillRect(obj.x,obj.sortY,3,3);
+                    break;
+                case "text":
+                    Graphics.ctx.textAlign = "center";
+                    Graphics.ctx.fillStyle = obj.color ? obj.color : "black";
+                    Graphics.ctx.font = obj.font;
+                    Graphics.ctx.fillText(obj.text, obj.x, obj.y);
+                    break;
+                case "hpbar":
+                    Graphics.ctx.textAlign = "center";
+                    //hp bar:
+                    Graphics.ctx.fillStyle = "grey";
+                    Graphics.ctx.fillRect(obj.x - 25, obj.y - 58, 50, 8);
+                    Graphics.ctx.fillStyle = "red";
+                    Graphics.ctx.fillRect(
+                        obj.x - 25,
+                        obj.y - 58,
+                        (obj.hp / 1000) * 50,
+                        8
+                    );
+                    Graphics.ctx.fillStyle = "black";
+                    Graphics.ctx.font = "12px Cascadia Mono";
+                    Graphics.ctx.fillText(Math.ceil(obj.hp), obj.x, obj.y - 50);
+            }
+        }
+        Graphics.drawBuffer = [];
+
+        Graphics.ctx.drawImage(fogLayer, fog3.x, fog3.y);
+
+        Graphics.updateFog(1, 0.4);
+
+        for (const msg of Graphics.gameMessages) {
+            Graphics.ctx.fillStyle = msg.color;
+            Graphics.ctx.font = "bold " + msg.fontSize + "px Cascadia Mono";
+            Graphics.ctx.strokeStyle = "black";
+            Graphics.ctx.lineWidth = Math.max(1, msg.fontSize - 24);
+            Graphics.ctx.strokeText(msg.text, msg.x, msg.y);
+            Graphics.ctx.fillText(msg.text, msg.x, msg.y);
+
+            msg.y -= 1;
+            if (msg.fontSize > 2) msg.fontSize -= 0.05;
+        }
+        // drawHUD();
+
+        // draw agent environment grid:
+        // for(const id in Player.list){
+        //     if(id != Socket.selfId) continue;
+        //     const player = Player.list[id];
+
+        //     drawAgentGrid(player);
+        // }
+
+        const endT = performance.now();
+        // console.log("frameT", endT - startT);
+        requestAnimationFrame(Graphics.gameLoop);
+    }
+
+    static addGameMsg(msg, rating) {
+        if (Graphics.gameMessages.length > 0) Graphics.gameMessages.shift();
 
         let msgColor;
-        switch(rating){
-            case 'good':
-                msgColor = 'green';
+        switch (rating) {
+            case "good":
+                msgColor = "green";
                 break;
-            case 'ok':
-                msgColor = 'darkyellow';
+            case "ok":
+                msgColor = "darkyellow";
                 break;
-            case 'bad':
-                msgColor = 'red';
+            case "bad":
+                msgColor = "red";
                 break;
             default:
-                console.log('unknown shoot feedback message rating: ' + rating); 
+                console.log("unknown shoot feedback message rating: " + rating);
         }
 
         Graphics.gameMessages.push({
             text: msg,
             color: msgColor,
             fontSize: 26,
-            x: gameWidth/2 + (Math.random()-0.5)*gameWidth/4,
-            y: gameHeight/2 - 32
+            x:
+                Graphics.gameWidth / 2 +
+                ((Math.random() - 0.5) * Graphics.gameWidth) / 4,
+            y: Graphics.gameHeight / 2 - 32,
         });
 
-        setTimeout(()=>{
+        setTimeout(() => {
             Graphics.gameMessages.shift();
         }, 10000);
     }
-}
 
-canvasResize()
+    static createFogLayer() {
+        const width = Graphics.gameWidth * 3;
+        const height = Graphics.gameHeight * 3;
 
-function canvasResize() {
-    gameWidth = window.innerWidth / Graphics.gameZoom;
-    gameHeight = window.innerHeight / Graphics.gameZoom;
-    canvas.style.scale = Graphics.gameZoom;
-    canvas.width = gameWidth;
-    canvas.height = gameHeight;
-};
+        const layer = document.createElement("canvas");
+        layer.width = width;
+        layer.height = height;
+        const lctx = layer.getContext("2d");
+        lctx.globalAlpha = 0.4;
 
-window.addEventListener('resize', canvasResize);
+        const img = Graphics.Img.fog;
+        const imgWidth = img.width;
+        const imgHeight = img.height;
 
+        console.log(img);
 
-//for debug:
-let showCollisionRects = false;
+        const repX = Math.ceil(width / imgWidth);
+        const repY = Math.ceil(height / imgHeight);
 
-
-export const Img = {};
-export let drawBuffer = [];
-
-Img.player = new Image();
-Img.player.src = "../img/char/s1.png"
-
-let directions = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
-Img.playerAnim = {}
-for(let dir of directions){
-    Img.playerAnim[dir] = {}
-
-    for(let i = 0; i<3; i++){
-        Img.playerAnim[dir][i] = new Image();
-        Img.playerAnim[dir][i].src = `../img/char/${dir}${i+1}.png`
-    }
-}
-Img.botAnim = {};
-for (let dir of directions) {
-    Img.botAnim[dir] = {};
-
-    for (let i = 0; i < 3; i++) {
-        Img.botAnim[dir][i] = new Image();
-        Img.botAnim[dir][i].src = `../img/bot/${dir}${i + 1}.png`;
-    }
-}
-
-
-
-Img.note = {}
-
-Img.note['1n'] = new Image();
-Img.note['1n'].src = "../img/note.png"
-Img.note['2n'] = new Image();
-Img.note['2n'].src = "../img/halfnote.png"
-Img.note['4n'] = new Image();
-Img.note['4n'].src = "../img/quarternote.png"
-Img.note['8n'] = new Image();
-Img.note['8n'].src = "../img/eightnote.png"
-
-Img.note['1n.'] = new Image();
-Img.note['1n.'].src = "../img/note.png"
-Img.note['2n.'] = new Image();
-Img.note['2n.'].src = "../img/halfnote.png"
-Img.note['4n.'] = new Image();
-Img.note['4n.'].src = "../img/quarternote.png"
-Img.note['8n.'] = new Image();
-Img.note['8n.'].src = "../img/eightnote.png"
-
-Img.pickup = new Image();
-Img.pickup.src = "../img/tileset/blocks_101.png"
-
-let mapData;
-let collisionLayer;
-let floorLayer;
-let tiles = []
-
-export let tileImages;
-
-//get map data:
-fetch("../map5.json")
-    .then(res=>res.json())
-    .then(async data=>{
-        mapData = data;
-        // console.log(data)
-
-        // console.log(getUsedGIDs(mapData))
-        // console.log(loadUsedTiles(mapData));
-
-        tileImages = await loadUsedTiles(mapData)
-        // collisionLayer = getCollisionLayer(mapData)
-
-        // floorLayer = getFloorLayer(mapData);
-        // loadLayerTiles(floorLayer);
-        
-
-        // console.log(tiles);
-    });
-
-function getUsedGIDs(mapData){
-    const gids = new Set();
-    for(const layer of mapData.layers){
-        if(layer.type !== "tilelayer") continue;
-
-        for(const chunk of layer.chunks){
-
-            for(const tileID of chunk.data){
-                if(tileID !== 0) gids.add(tileID)
+        for (let i = 0; i < repX; i++) {
+            for (let j = 0; j < repY; j++) {
+                lctx.drawImage(img, i * imgWidth, j * imgHeight);
             }
         }
-    }
-    return gids;
-}
 
-// function getCollisionLayer(mapData){
-//     for(const layer of mapData.layers){
-//         if(layer.name == 'collision') return layer;
-//     }
-//     return null;
-// }
-
-async function loadUsedTiles(mapData){
-    const usedGIDs = getUsedGIDs(mapData);
-
-    const tileset = mapData.tilesets[0];
-    const tileImages = {};
-
-    for(const tile of tileset.tiles){
-        const globalID = tile.id + tileset.firstgid;
-
-        if(!usedGIDs.has(globalID)) continue;
-
-        const img = new Image();
-        img.src = `../${tile.image}`;
-        console.log(img.src)
-
-        await new Promise(res => (img.onload = res));
-        tileImages[globalID] = img;
+        return layer;
     }
 
-    return tileImages;
-}
+    static updateFog(dx, dy) {
+        fog1.x -= 0.5 * dx;
+        fog1.y -= 1 * dy;
+        if (fog1.x < -Graphics.gameWidth) {
+            fog1.x += Graphics.Img.fog.width;
+        }
+        if (fog1.y < -Graphics.gameHeight) {
+            fog1.y += Graphics.Img.fog.height;
+        }
 
-// function isoToScreen(x, y){
-//     return{
-//         x: (x-y),
-//         y: (x+y)/2
-//     }
-// }
+        fog2.x -= 2 * dx;
+        fog2.y -= 2 * dy;
+        if (fog2.x < -Graphics.gameWidth) {
+            fog2.x += Graphics.gameWidth;
+        }
+        if (fog2.y < -Graphics.gameHeight) {
+            fog2.y += Graphics.gameHeight;
+        }
 
-// function drawIsometricRect(tileX, tileY, width, height){
-//     ctx.save()
-
-//     const tileW = 64;
-//     const tileH = 32;
-
-//     let tilesNWtoSE = width/32;
-//     let tilesNEtoSW = height/32;
-
-//     let worldCoord = isoToScreen(tileX, tileY)
-
-//     let x = worldCoord.x + gameWidth/2 + tileW/2  - Player.list[selfId].x
-    
-//     let y = worldCoord.y + gameHeight/2 + 0 - Player.list[selfId].y
-
-//     ctx.strokeStyle = "red";
-
-//     // console.log(x, y)
-
-
-//     ctx.beginPath();
-//     ctx.moveTo(x, y);                     // top
-
-//     ctx.lineTo(x + tilesNWtoSE*tileW/2, y + tilesNWtoSE*tileH/2);     // right
-
-//     ctx.lineTo(x + (tilesNWtoSE - tilesNEtoSW)*tileW/2, y + (tilesNWtoSE + tilesNEtoSW)*tileH/2);            // bottom
-
-//     ctx.lineTo(x - tilesNEtoSW*tileW/2, y + tilesNEtoSW*tileH/2);     // left
-    
-//     ctx.closePath();
-//     ctx.stroke();
-
-//     ctx.restore();
-// }
-
-// function screenToIso(x, y){
-//     return{
-//         x: (2*y + x)/2,
-//         y: (2*y - x)/2
-//     }
-// }
-
-// function loadLayerTiles(layer){
-//     for(const chunk of layer.chunks){
-//         const width = chunk.width;
-//         const height = chunk.height;
-//         const tileW = 64;
-//         const tileH = 32;
-//         const offsetX = layer.offsetx || 0;
-//         const offsetY = layer.offsety || 0;
-
-//         for (let y = 0; y < height; y++) {
-//             for (let x = 0; x < width; x++) {
-//                 const index = y * width + x;
-//                 const gid = chunk.data[index];
-//                 if(gid == 0) continue;
-
-//                 // if (!gid || !tileImages[gid]) continue;
-
-//                 // const img = tileImages[gid];
-
-//                 // position:
-//                 const tileX = chunk.x + x;
-//                 const tileY = chunk.y + y;
-
-//                 //tile coordinates in orthogonal system (in game coordinates):
-//                 const ortX = (tileX - tileY) * tileW / 2 + offsetX ; //weird shift TO FIX
-//                 const ortY = (tileX + tileY) * tileH / 2 + offsetY - tileH;
-                
-
-//                 let scr = screenToIso(ortX, ortY)
-
-//                 tiles.push({x: scr.x, y: scr.y, w: 32, h: 32})
-//             }
-//         }
-//     }
-// }
-
-// function getFloorLayer(mapData){
-//     for(const layer of mapData.layers){
-//         if(layer.name == 'floor') return layer;
-//     }
-//     return null;
-// }
-
-function drawMap(){
-    if(Player.list[selfId]){
-        for(let i in Tile.list){
-            const tile = Tile.list[i];
-            tile.draw();
+        fog3.x -= 3 * dx;
+        fog3.y -= 3 * dy;
+        if (fog3.x < -Graphics.gameWidth) {
+            fog3.x += Graphics.Img.fog.width;
+        }
+        if (fog3.y < -Graphics.gameHeight) {
+            fog3.y += Graphics.Img.fog.height;
         }
     }
-    
 }
 
-function drawHUD(){
-    if (!Player.list[selfId]) return;
-     //hp bar:
-    ctx.fillStyle = "grey";
-    ctx.fillRect(20, 70, 100, 16)
-    ctx.fillStyle = "red";
-    ctx.fillRect(20, 70, (Player.list[selfId].hp/1000)*100, 16)
-    ctx.fillStyle = "black";
-    ctx.font = 'bold 18px Cascadia Mono';
-    ctx.fillText(`HP: ${Math.ceil(Player.list[selfId].hp)}`, 70, 85);
-
-    //score:
-    ctx.font = 'bold 18px Cascadia Mono';
-    ctx.fillText(`Score: ${Player.list[selfId].score}`, 180, 85);
-}
+Graphics.canvasInit();
+Graphics.canvasResize();
+window.addEventListener("resize", Graphics.canvasResize);
+Graphics.loadImages();
 
 function drawAgentGrid(player){
-    console.log(selfId);
-    if(!selfId) return;
-    const x = player.x - Player.list[selfId].x + gameWidth / 2;
-    const y = player.y - Player.list[selfId].y + gameHeight / 2;
+    if(!Socket.selfId) return;
+    const x = player.x - Player.list[Socket.selfId].x + Graphics.gameWidth / 2;
+    const y = player.y - Player.list[Socket.selfId].y + Graphics.gameHeight / 2;
 
     let gridDims = 3;
-    let cellH = 200;
-    let cellW = 400;
+    let cellH = 400;
+    let cellW = 800;
 
     for(let i = 0; i < gridDims; i++){
         for(let j = 0; j < gridDims; j++){
@@ -331,22 +364,22 @@ function drawAgentGrid(player){
             const cellY = y - gridDims*cellH/2 + i*cellH;
 
 
-            ctx.fillStyle = `#${(3*i)%9}000${(3*j)%9}044`;
-            for (let id in Pickup.list) {
-                const pickup = Pickup.list[id];
-                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
-                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+            Graphics.ctx.fillStyle = `#${(3*i)%9}000${(3*j)%9}044`;
+            for (let id in Bullet.list) {
+                const pickup = Bullet.list[id];
+                const px = pickup.x - Player.list[Socket.selfId].x + Graphics.gameWidth / 2;
+                const py = pickup.y - Player.list[Socket.selfId].y + Graphics.gameHeight / 2;
                 if (
                     px > cellX &&
                     px < cellX + cellW &&
                     py > cellY &&
                     py < cellY + cellH
                 ) {
-                    ctx.fillStyle = `#00ff0044`;
+                    Graphics.ctx.fillStyle = `#00ff0044`;
                 }
             }
-            ctx.fillRect(cellX, cellY, cellW, cellH);
-            // ctx.stroke();
+            Graphics.ctx.fillRect(cellX, cellY, cellW, cellH);
+            // Graphics.ctx.stroke();
         }
     }
 
@@ -358,22 +391,22 @@ function drawAgentGrid(player){
             const cellX = x - (gridDims * cellW) / 2 + j * cellW;
             const cellY = y - (gridDims * cellH) / 2 + i * cellH;
 
-            ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
-            for (let id in Pickup.list) {
-                const pickup = Pickup.list[id];
-                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
-                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+            Graphics.ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
+            for (let id in Bullet.list) {
+                const pickup = Bullet.list[id];
+                const px = pickup.x - Player.list[Socket.selfId].x + Graphics.gameWidth / 2;
+                const py = pickup.y - Player.list[Socket.selfId].y + Graphics.gameHeight / 2;
                 if (
                     px > cellX &&
                     px < cellX + cellW &&
                     py > cellY &&
                     py < cellY + cellH
                 ) {
-                    ctx.fillStyle = `#00ff0044`;
+                    Graphics.ctx.fillStyle = `#00ff0044`;
                 }
             }
-            ctx.fillRect(cellX, cellY, cellW, cellH);
-            // ctx.stroke();
+            Graphics.ctx.fillRect(cellX, cellY, cellW, cellH);
+            // Graphics.ctx.stroke();
         }
     }
 
@@ -385,131 +418,71 @@ function drawAgentGrid(player){
             const cellX = x - (gridDims * cellW) / 2 + j * cellW;
             const cellY = y - (gridDims * cellH) / 2 + i * cellH;
 
-            ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
-            for (let id in Pickup.list) {
-                const pickup = Pickup.list[id];
-                const px = pickup.x - Player.list[selfId].x + gameWidth / 2;
-                const py = pickup.y - Player.list[selfId].y + gameHeight / 2;
+            Graphics.ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
+            for (let id in Bullet.list) {
+                const pickup = Bullet.list[id];
+                const px = pickup.x - Player.list[Socket.selfId].x + Graphics.gameWidth / 2;
+                const py = pickup.y - Player.list[Socket.selfId].y + Graphics.gameHeight / 2;
                 if (
                     px > cellX &&
                     px < cellX + cellW &&
                     py > cellY &&
                     py < cellY + cellH
                 ) {
-                    ctx.fillStyle = `#00ff0044`;
+                    Graphics.ctx.fillStyle = `#00ff0044`;
                 }
             }
-            ctx.fillRect(cellX, cellY, cellW, cellH);
-            // ctx.stroke();
+            Graphics.ctx.fillRect(cellX, cellY, cellW, cellH);
+            // Graphics.ctx.stroke();
+        }
+    }
+
+    cellH = cellH / 3;
+    cellW = cellW / 3;
+
+    for (let i = 0; i < gridDims; i++) {
+        for (let j = 0; j < gridDims; j++) {
+            const cellX = x - (gridDims * cellW) / 2 + j * cellW;
+            const cellY = y - (gridDims * cellH) / 2 + i * cellH;
+
+            Graphics.ctx.fillStyle = `#${(3 * i) % 9}000${(3 * j) % 9}044`;
+            for (let id in Bullet.list) {
+                const pickup = Bullet.list[id];
+                const px = pickup.x - Player.list[Socket.selfId].x + Graphics.gameWidth / 2;
+                const py = pickup.y - Player.list[Socket.selfId].y + Graphics.gameHeight / 2;
+                if (
+                    px > cellX &&
+                    px < cellX + cellW &&
+                    py > cellY &&
+                    py < cellY + cellH
+                ) {
+                    Graphics.ctx.fillStyle = `#00ff0044`;
+                }
+            }
+            Graphics.ctx.fillRect(cellX, cellY, cellW, cellH);
+            // Graphics.ctx.stroke();
         }
     }
 }
 
-//game Loop:
-export function gameLoop(){
-    const startT = performance.now();
-    if(!selfId){
-        selfId = Socket.selfId;
-    }
-    // console.log(Player.list[selfId].x, Player.list[selfId].y);
+let fog1 = {
+    x: 0,
+    y: 0,
+}
 
-    //draw background & map elements:
-    ctx.fillStyle = "#363636ff";
-    ctx.fillRect(0, 0, gameWidth, gameHeight);
-    drawMap();
-    
-    //draw game objects:
-    for(var i in Pickup.list){
-        if(!Pickup.list[i]) continue;
-        Pickup.list[i].draw();
-    }
-    for(var i in Player.list){
-        Player.list[i].draw();
-    };
+let fog2 = {
+    x: 0,
+    y: 0,
+};
 
-    for(var i in Bullet.list){
-        Bullet.list[i].draw();
-    }
-    
-    //sort and draw drawBuffer:
-    drawBuffer.sort((a, b) => {
-        let aY = a.sortY;
-        let bY = b.sortY;
+let fog3 = {
+    x: 0,
+    y: 0,
+};
 
-        // if(a.layerId){
-        //     aY = aY + (64)*a.layerId
-        // }
-        // if(b.layerId){
-        //     bY = bY + (64)*b.layerId
-        // }
-            return aY - bY - 0.01
-    })
-    
-    for(let obj of drawBuffer){
-        switch(obj.type){
-            case 'image':
-                ctx.imageSmoothingEnabled = false;
-                if(obj.hueRot){
-                    // ctx.filter = `hue-rotate(${obj.hueRot}deg)`;
-                }
-                if(obj.img) ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
-                // ctx.filter = 'none';
-                // ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-                // if(obj.layerId>0) ctx.fillRect(obj.x,obj.sortY,3,3);
-                break;
-            case 'text':
-                ctx.textAlign = "center";
-                ctx.fillStyle = "black";
-                ctx.font = obj.font;
-                ctx.fillText(obj.text, obj.x, obj.y);
-                break;
-            case 'hpbar':
-                ctx.textAlign = "center";
-                //hp bar:
-                ctx.fillStyle = "grey";
-                ctx.fillRect(obj.x-25, obj.y-58, 50, 8)
-                ctx.fillStyle = "red";
-                ctx.fillRect(obj.x-25, obj.y-58, (obj.hp/1000)*50, 8)
-                ctx.fillStyle = "black";
-                ctx.font = '12px Cascadia Mono';
-                ctx.fillText(Math.ceil(obj.hp), obj.x, obj.y-50);
-        }   
-    }
-    drawBuffer = []
-
-    for(const msg of Graphics.gameMessages){
-        ctx.fillStyle = msg.color;
-        ctx.font = 'bold ' + msg.fontSize + 'px Cascadia Mono';
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = Math.max(1, msg.fontSize - 24);
-        ctx.strokeText(msg.text, msg.x, msg.y);
-        ctx.fillText(msg.text, msg.x, msg.y);
-
-        msg.y -= 1;
-        if(msg.fontSize > 2) msg.fontSize -= 0.05;
-    }
-    // drawHUD();
-
-    // for(let tile of tiles){
-    //     drawIsometricRect(tile.x, tile.y, tile.w, tile.h)
-    // }
-
-
-    //draw collision rectangles (for debug):
-    if(collisionLayer && showCollisionRects){
-        for(let obj of collisionLayer.objects){
-            drawIsometricRect(obj.x, obj.y, obj.width, obj. height)
-        }
-    }
-
-    // draw agent environment grid:
-    // for(const id in Player.list){
-    //     const player = Player.list[id];
-
-    //     drawAgentGrid(player);
-    // }
-
-    const endT = performance.now();
-    // console.log("frameT", endT - startT);
-    requestAnimationFrame(gameLoop)
+let fogLayer;
+let fogLoaded = false;
+Graphics.Img.fog.onload = () => {
+    fogLayer = Graphics.createFogLayer();
+    fogLoaded = true;
 }

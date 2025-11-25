@@ -32,13 +32,16 @@ export class Player extends Character{
         }
     }
 
-    constructor(id, x, y, username, weapon = null, score = 0){
-        super(id, x, y, username, weapon, score);
-        this.id = id;
+    constructor(socket, x, y, username, weapon = null, score = 0){
+        super(socket.id, x, y, username, weapon, score);
+        this.socket = socket;
+        this.id = socket.id;
 
         this.characterType = 'player';
 
         Player.list[this.id] = this;
+
+        
 
         this.knownObjIDs = [] //all objects' IDs known to this player
 
@@ -245,6 +248,10 @@ export class Player extends Character{
     }
 
     getUpdatePack(){
+        //skip, if client has not gotten & processed the init pack:
+        if(!this.socket.initialized) return;
+
+
         const loadRect = {
             x: this.x - unloadDistance,
             y: this.y - unloadDistance,
@@ -362,54 +369,63 @@ export class Player extends Character{
     }
 
     emitUpdatePack(){
-        let socket = Socket.list[this.id]
-        if(!socket){
-            console.log(`ERROR NO SOCKET WHILE EMITTING UPDATE PACK`)
+        //skip, if client has not gotten & processed the init pack:
+        if (!this.socket.initialized) return;
+
+        let socket = Socket.list[this.id];
+        if (!socket) {
+            console.log(`ERROR NO SOCKET WHILE EMITTING UPDATE PACK`);
             this.updatePack = [];
             return;
         }
 
-        if(this.updatePack.length){
-            socket.emit('update', this.updatePack)
+        if (this.updatePack.length) {
+            socket.emit("update", this.updatePack);
             this.updatePack = [];
         }
-        
+
         return;
     }
 
     addToRemovePack(id, type){
+        //skip, if client has not gotten & processed the init pack:
+        if (!this.socket.initialized) return;
+
         //skip if player was not aware of object with given id:
-        if(!this.knownObjIDs.includes(id)){
+        if (!this.knownObjIDs.includes(id)) {
             return;
         }
 
         this.removePack.push({
             id: id,
-            type: type
-        })
+            type: type,
+        });
     }
 
     addFarToRemovePack(){
+        //skip, if client has not gotten & processed the init pack:
+        if (!this.socket.initialized) return;
+
         const unloadRect = {
             x: this.x - unloadDistance,
             y: this.y - unloadDistance,
             width: unloadDistance * 2,
-            height: unloadDistance * 2
-        }
+            height: unloadDistance * 2,
+        };
 
         // //for characters:
-        let notToRemoveIDs = []
+        let notToRemoveIDs = [];
         let charactersNotToRemove = Character.quadtree.retrieve(unloadRect);
-        for(const c of charactersNotToRemove){
-            if(!this.isWithinDistance(c, unloadDistance)) continue;
+        for (const c of charactersNotToRemove) {
+            if (!this.isWithinDistance(c, unloadDistance)) continue;
             notToRemoveIDs.push(c.id);
         }
 
-        for(let id in Character.list){
+        for (let id in Character.list) {
             const character = Character.list[id];
-            if(!this.knownObjIDs.includes(character.id)) continue;
-            if(notToRemoveIDs.includes(character.id)) continue;
-            if(!this.isWithinDistance(character, unloadDistance)){
+            if (!this.knownObjIDs.includes(character.id)) continue;
+            if (notToRemoveIDs.includes(character.id)) continue;
+            if (!this.isWithinDistance(character, unloadDistance)) {
                 this.addToRemovePack(character.id, character.characterType);
             }
         }
@@ -418,69 +434,76 @@ export class Player extends Character{
 
         //for pickups:
         let pickupsNotToRemove = Pickup.quadtree.retrieve(unloadRect);
-        notToRemoveIDs = []
-        for(const pu of pickupsNotToRemove){
-            if(!this.isWithinDistance(pu, unloadDistance)) continue;
+        notToRemoveIDs = [];
+        for (const pu of pickupsNotToRemove) {
+            if (!this.isWithinDistance(pu, unloadDistance)) continue;
             notToRemoveIDs.push(pu.id);
         }
 
-        for(let id in Pickup.list){
+        for (let id in Pickup.list) {
             const pickup = Pickup.list[id];
-            if(!this.knownObjIDs.includes(pickup.id)) continue;
-            if(notToRemoveIDs.includes(pickup.id)) continue;
-            if(!this.isWithinDistance(pickup, unloadDistance)){
-                this.addToRemovePack(pickup.id, 'pickup');
+            if (!this.knownObjIDs.includes(pickup.id)) continue;
+            if (notToRemoveIDs.includes(pickup.id)) continue;
+            if (!this.isWithinDistance(pickup, unloadDistance)) {
+                this.addToRemovePack(pickup.id, "pickup");
             }
         }
 
         // for tiles:
         let tilesNotToRemove = Tile.quadtree.retrieve(unloadRect);
-        notToRemoveIDs = []
-        for(const t of tilesNotToRemove){
-            if(!this.isWithinDistance(t, unloadDistance)) continue;
+        notToRemoveIDs = [];
+        for (const t of tilesNotToRemove) {
+            if (!this.isWithinDistance(t, unloadDistance)) continue;
             notToRemoveIDs.push(t.id);
         }
 
-        for(let id in Tile.list){
+        for (let id in Tile.list) {
             const tile = Tile.list[id];
-            if(!this.knownObjIDs.includes(tile.id)) continue;
-            if(notToRemoveIDs.includes(tile.id)) continue;
-            if(!this.isWithinDistance(tile, unloadDistance)){
-                this.addToRemovePack(tile.id, 'tile');
+            if (!this.knownObjIDs.includes(tile.id)) continue;
+            if (notToRemoveIDs.includes(tile.id)) continue;
+            if (!this.isWithinDistance(tile, unloadDistance)) {
+                this.addToRemovePack(tile.id, "tile");
             }
         }
     }
 
     emitRemovePack(){
-        let socket = Socket.list[this.id]
-        if(!socket){
-            console.log(`ERROR NO SOCKET WHILE EMITTING REMOVE PACK`)
+        //skip, if client has not gotten & processed the init pack:
+        if (!this.socket.initialized) return;
+
+        let socket = Socket.list[this.id];
+        if (!socket) {
+            console.log(`ERROR NO SOCKET WHILE EMITTING REMOVE PACK`);
             this.removePack = [];
             return;
         }
 
-        for(let entity of this.removePack){
-            if(this.knownObjIDs.includes(entity.id)){
-                this.knownObjIDs = this.knownObjIDs.filter(id => id !== entity.id)
-            }
-            else{
-                console.log("Trying to remove something player is not aware of!!!")
+        for (let entity of this.removePack) {
+            if (this.knownObjIDs.includes(entity.id)) {
+                this.knownObjIDs = this.knownObjIDs.filter(
+                    (id) => id !== entity.id
+                );
+            } else {
+                console.log(
+                    "Trying to remove something player is not aware of!!!"
+                );
             }
         }
 
-        if(this.removePack.length){
-            let socket = Socket.list[this.id]
-            socket.emit('remove', this.removePack);
+        if (this.removePack.length) {
+            let socket = Socket.list[this.id];
+            socket.emit("remove", this.removePack);
             this.removePack = [];
         }
     }
 
-    die(byWho){
-        super.die(byWho);
+    //moved to parent class:
+    // die(byWho){
+    //     super.die(byWho);
 
-        this.updatePack.push({
-            type: "death",
-            killer: byWho.name
-        })
-    }
+    //     this.updatePack.push({
+    //         type: "death",
+    //         killer: byWho.name
+    //     })
+    // }
 }

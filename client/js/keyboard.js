@@ -1,8 +1,8 @@
 import { Socket } from "./clientSocket.js";
-import { setIsInChat, getIsInChat } from "./main.js";
+import { TextChat } from "./textChat.js";
 import { Sounds } from "./sounds.js";
 import { GameUI } from "./gameButtons.js";
-import { gameHeight, gameWidth, Graphics } from "./graphics.js";
+import { Graphics } from "./graphics.js";
 
 let spacePressed = false;
 
@@ -126,12 +126,12 @@ export function addKeyboardListeners(socket){
     const chatSendBTN = document.getElementById("chat-send-btn");
     //key handling:
     document.onkeydown = function(event){
-        if(getIsInChat()) {
+        if(TextChat.isInChat) {
             if(event.key == "Enter"){
                 if(chatSend()) {
                     chatInput.focus();
                 } else{
-                    setIsInChat(false);
+                    TextChat.isInChat = false;
                     chatInput.placeholder = "press T to start typing"
 
                     chatInput.blur();
@@ -181,7 +181,7 @@ export function addKeyboardListeners(socket){
                 break;
             case "t":
             case "T":
-                setIsInChat(true);
+                TextChat.isInChat = true;
                 chatInput.focus();
                 chatInput.placeholder = "press ENTER to leave chat"
                 event.preventDefault();

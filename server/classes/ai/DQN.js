@@ -95,8 +95,8 @@ export class WalkAgent {
     // static cellH = 200; //grid cell heigth
 
     static bigStateGrid = {
-        cellW: 400,
-        cellH: 200,
+        cellW: 800,
+        cellH: 400,
     };
 
     static mediumStateGrid = {
@@ -107,6 +107,11 @@ export class WalkAgent {
     static smallStateGrid = {
         cellW: WalkAgent.mediumStateGrid.cellW / 3,
         cellH: WalkAgent.mediumStateGrid.cellH / 3,
+    };
+
+    static extraSmallStateGrid = {
+        cellW: WalkAgent.smallStateGrid.cellW / 3,
+        cellH: WalkAgent.smallStateGrid.cellH / 3,
     };
 
     static maxDistSq =
@@ -137,8 +142,22 @@ export class WalkAgent {
         { u: false, d: true, l: true, r: false, att: true }, //SW & shoot
         { u: false, d: false, l: true, r: false, att: true }, //W & shoot
         { u: true, d: false, l: true, r: false, att: true }, //NW & shoot
-        { u: false, d: false, l: false, r: false, att: false, changeWeaponDuration: "shorter" }, //idle & change to shorter weapon duration
-        { u: false, d: false, l: false, r: false, att: false, changeWeaponDuration: "longer" }, //idle & change to longer weapon duration
+        {
+            u: false,
+            d: false,
+            l: false,
+            r: false,
+            att: false,
+            changeWeaponDuration: "shorter",
+        }, //idle & change to shorter weapon duration
+        {
+            u: false,
+            d: false,
+            l: false,
+            r: false,
+            att: false,
+            changeWeaponDuration: "longer",
+        }, //idle & change to longer weapon duration
     ];
 
     constructor(bot) {
@@ -165,9 +184,9 @@ export class WalkAgent {
         });
     }
 
-    static requestWorkerLogLoss(){
+    static requestWorkerLogLoss() {
         worker.postMessage({
-            type: "logLossAndEps"
+            type: "logLossAndEps",
         });
     }
 
