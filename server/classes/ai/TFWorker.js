@@ -5,6 +5,17 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const fs = require('fs');
 
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const modelDir = path.resolve(__dirname, "models");
+if (!fs.existsSync(modelDir)) fs.mkdirSync(modelDir, { recursive: true });
+const mainPath = path.join(modelDir, "main/model.json");
+const targetPath = path.join(modelDir, "target/model.json");
+const metaPath = path.join(modelDir, "meta.json");
+
 parentPort.on('message', async(msg)=>{
     if(!agent) return;
 
@@ -220,19 +231,23 @@ class PrioritizedReplayBuffer{
     }
 }
 
-export class DQNAgent{
-    constructor(numStates, numActions, {
-        gamma = 0.99,
-        epsilonStart = 1.0,
-        epsilonEnd = 0.01,
-        epsilonDecaySteps = 4e6,
-        learningRate = 0.0001,
-        batchSize = 128,
-        bufferSize = 400000,
-        targetUpdateFreq = 2500,
-        experienceReplayFreq = 10,
-        hiddenLayers = [512, 256, 128],
-    } = {}){
+export class DQNAgent {
+    constructor(
+        numStates,
+        numActions,
+        {
+            gamma = 0.98,
+            epsilonStart = 1.0,
+            epsilonEnd = 0.01,
+            epsilonDecaySteps = 8e6,
+            learningRate = 0.0001,
+            batchSize = 128,
+            bufferSize = 400000,
+            targetUpdateFreq = 2500,
+            experienceReplayFreq = 10,
+            hiddenLayers = [512, 256, 128],
+        } = {}
+    ) {
         this.numStates = numStates;
         this.numActions = numActions;
         this.gamma = gamma;
@@ -250,47 +265,105 @@ export class DQNAgent{
 
         this.epsilon = epsilonStart;
 
-        this.model = this._createModel(hiddenLayers);
-        this.targetModel = this._createModel(hiddenLayers);
-        this.updateTargetNetwork();
+        if (fs.existsSync(mainPath) && fs.existsSync(targetPath)) {
+            console.log("[DDQN] Loading existing models...");
+            this._loadModels(hiddenLayers);
+        } else {
+            console.log("[DDQN] No saved models found, creating new ones...");
+            this.model = this._createModel(hiddenLayers);
+            this.targetModel = this._createModel(hiddenLayers);
+            this.updateTargetNetwork();
+        }
+        // this.model = this._createModel(hiddenLayers);
+        // this.targetModel = this._createModel(hiddenLayers);
+        // this.updateTargetNetwork();
     }
 
-    _createModel(hiddenLayers){
+    _createModel(hiddenLayers) {
         const model = tf.sequential();
         hiddenLayers.forEach((units, i) => {
-            model.add(tf.layers.dense({
-                units,
-                activation: 'relu',
-                inputShape: i === 0 ? [this.numStates] : undefined,
-            }));
+            model.add(
+                tf.layers.dense({
+                    units,
+                    activation: "relu",
+                    inputShape: i === 0 ? [this.numStates] : undefined,
+                })
+            );
         });
-        model.add(tf.layers.dense({units: this.numActions}));
+        model.add(tf.layers.dense({ units: this.numActions }));
         model.compile({
             optimizer: tf.train.adam(this.learningRate),
-            loss: 'meanSquaredError'
+            loss: "meanSquaredError",
         });
         return model;
     }
 
-    updateTargetNetwork(){
+    async _loadModels(hiddenLayers) {
+        try {
+            this.model = await tf.loadLayersModel(`file://${mainPath}`);
+            this.targetModel = await tf.loadLayersModel(`file://${targetPath}`);
+            this.model.compile({
+                optimizer: tf.train.adam(this.learningRate),
+                loss: "meanSquaredError",
+            });
+            this.targetModel.compile({
+                optimizer: tf.train.adam(this.learningRate),
+                loss: "meanSquaredError",
+            });
+            if (fs.existsSync(metaPath)) {
+                const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+                this._restoreMeta(meta);
+            } else {
+                console.warn(
+                    "[DDQN] No meta.json found — using default parameters."
+                );
+            }
+            console.log("[DDQN] Models loaded successfully.");
+
+            this.loadReplayBuffer();
+        } catch (err) {
+            console.error("[DDQN] Error loading models:", err);
+            console.log("[DDQN] Creating new models instead.");
+            this.model = this._createModel(hiddenLayers);
+            this.targetModel = this._createModel(hiddenLayers);
+            this.updateTargetNetwork();
+        }
+    }
+
+    _restoreMeta(meta) {
+        this.stepCounter = meta.step ?? 0;
+        this.epsilon = meta.epsilon ?? this.epsilonStart;
+        this.learningRate = meta.learningRate ?? this.learningRate;
+        this.gamma = meta.gamma ?? this.gamma;
+        this.lastSave = meta.timestamp ?? null;
+
+        console.log(
+            `[DDQN] Restored meta: step=${
+                this.stepCounter
+            }, epsilon=${this.epsilon.toFixed(3)}`
+        );
+    }
+
+    updateTargetNetwork() {
         this.targetModel.setWeights(this.model.getWeights());
     }
 
-    decide(state){
+    decide(state) {
         this.stepCounter++;
 
         let action;
 
         this.epsilon = Math.max(
             this.epsilonEnd,
-            this.epsilonStart - (this.stepCounter/this.epsilonDecaySteps) * (this.epsilonStart - this.epsilonEnd)
+            this.epsilonStart -
+                (this.stepCounter / this.epsilonDecaySteps) *
+                    (this.epsilonStart - this.epsilonEnd)
         );
 
-        if(Math.random() < this.epsilon){
+        if (Math.random() < this.epsilon) {
             action = Math.floor(Math.random() * this.numActions);
-        }
-        else{
-            action = tf.tidy(()=>{
+        } else {
+            action = tf.tidy(() => {
                 const stateTensor = tf.tensor2d([state], [1, this.numStates]);
                 const qValues = this.model.predict(stateTensor);
                 return qValues.argMax(-1).dataSync()[0];
@@ -300,33 +373,40 @@ export class DQNAgent{
         return action;
     }
 
-    async remember(state, action, reward, nextState, done){
-        this.replayBuffer.add({state, action, reward, nextState, done});
+    async remember(state, action, reward, nextState, done) {
+        this.replayBuffer.add({ state, action, reward, nextState, done });
 
         this.rememberCounter++;
-        if(this.rememberCounter % this.experienceReplayFreq === 0
-            && this.rememberCounter >= 2000
-        ){
+        if (
+            this.rememberCounter % this.experienceReplayFreq === 0 &&
+            this.rememberCounter >= 2000
+        ) {
             await this.replay();
         }
     }
 
-    async replay(){
-        if(this.replayBuffer.length < this.batchSize) return;
+    async replay() {
+        if (this.replayBuffer.length < this.batchSize) return;
 
         // const {samples, indices, weights} = this.replayBuffer.sample(this.batchSize);
         const batch = this.replayBuffer.sample(this.batchSize);
 
-        const states = batch.map(e => e.state);
+        const states = batch.map((e) => e.state);
         const nextStates = batch.map((e) => e.nextState);
-        
+
         if (!states.every((s) => s.every((v) => isFinite(v)))) {
             console.log(states);
             throw new Error("Non-finite state detected");
         }
 
-        const statesTensor = tf.tensor2d(states, [batch.length, this.numStates]);
-        const nextStatesTensor = tf.tensor2d(nextStates, [batch.length, this.numStates]);
+        const statesTensor = tf.tensor2d(states, [
+            batch.length,
+            this.numStates,
+        ]);
+        const nextStatesTensor = tf.tensor2d(nextStates, [
+            batch.length,
+            this.numStates,
+        ]);
 
         // await tf.nextFrame();
         const qValues = this.model.predict(statesTensor);
@@ -350,23 +430,15 @@ export class DQNAgent{
 
         const tdErrors = [];
 
-        for(let i = 0; i < batch.length; i++){
-            const {action, reward, done} = batch[i];
+        for (let i = 0; i < batch.length; i++) {
+            const { action, reward, done } = batch[i];
 
             const bestAction = qValuesNextMainArray[i].indexOf(
-                        Math.max(...qValuesNextMainArray[i])
-                    );
+                Math.max(...qValuesNextMainArray[i])
+            );
             const targetQValue = qValuesNextTargetArray[i][bestAction];
 
-    //         const maxNextQ = Math.max(...qValuesNextArray[i]);
-    //         if (!isFinite(maxNextQ)) {
-    //     console.error("maxNextQ is not finite:", qValuesNextArray[i]);
-    //     continue;
-    // }
-
-            const target = done
-                ? reward 
-                : reward + (this.gamma * targetQValue);
+            const target = done ? reward : reward + this.gamma * targetQValue;
 
             const tdError = target - qValuesArray[i][action];
             tdErrors.push(tdError);
@@ -374,24 +446,12 @@ export class DQNAgent{
             if (isFinite(target)) {
                 qValuesArray[i][action] = target;
             } else {
-                console.error("Target NaN at", i, { reward, done, targetQValue });
+                console.error("Target NaN at", i, {
+                    reward,
+                    done,
+                    targetQValue,
+                });
             }
-
-            // // console.log('tdErrors', tdErrors);
-            // this.replayBuffer.updatePriorities(indices, tdErrors);
-            // console.log(
-            //     "\nqMain",
-            //     qValuesNextMainArray[i],
-            //     "\nbestAction",
-            //     bestAction,
-            //     "\ntargetQVal",
-            //     qValuesNextTargetArray[i][bestAction],
-            //     "\ntargetClassic",
-            //     reward + this.gamma * Math.max(...qValuesNextTargetArray[i]),
-            //     "\ntargetDDQN",
-            //     target,
-            //     "\ndone", done
-            // );
         }
 
         //for tdErrors logging:
@@ -402,38 +462,22 @@ export class DQNAgent{
         meanTDLogger.push(meanTD);
         maxTDLogger.push(maxTD);
 
-        const updatedTensor = tf.tensor2d(qValuesArray, [batch.length, this.numActions]);
+        const updatedTensor = tf.tensor2d(qValuesArray, [
+            batch.length,
+            this.numActions,
+        ]);
 
-        if(!this.isTraining){
+        if (!this.isTraining) {
             this.isTraining = true;
 
-            // const weightsTensor = tf.tensor1d(weights);
-            const history = await this.model.fit(
-                statesTensor,
-                updatedTensor,
-                {
-                    // sampleWeight: weightsTensor,
-                    epochs: 1,
-                    verbose: 0
-                });
+            const history = await this.model.fit(statesTensor, updatedTensor, {
+                epochs: 1,
+                verbose: 0,
+            });
             this.isTraining = false;
             const loss = history.history.loss[0];
-            // weightsTensor.dispose();
-
-            // console.log(`Loss: `, loss, ' | Epsilon: ', this.epsilon);
-            // fs.writeFileSync(
-            //     "logs/loss.txt",
-            //     loss + "\n",
-            //     {
-            //         encoding: "utf8",
-            //         flag: "a+",
-            //         mode: 0o666,
-            //     }
-            // );
             lossLogger.push(loss);
         }
-
-        
 
         tf.dispose([
             statesTensor,
@@ -444,12 +488,130 @@ export class DQNAgent{
             updatedTensor,
         ]);
 
-        if(this.stepCounter % this.targetUpdateFreq === 0){
+        if (this.stepCounter % this.targetUpdateFreq === 0) {
             this.updateTargetNetwork();
+            this.save();
         }
+    }
+
+    async save() {
+        await this.model.save(`file://${path.join(modelDir, "main")}`);
+        await this.targetModel.save(`file://${path.join(modelDir, "target")}`);
+
+        const meta = {
+            step: this.stepCounter,
+            epsilon: this.epsilon,
+            learningRate: this.learningRate,
+            gamma: this.gamma,
+            timestamp: new Date().toISOString(),
+        };
+        fs.writeFileSync(
+            path.join(modelDir, "meta.json"),
+            JSON.stringify(meta, null, 2)
+        );
+        console.log("[DDQN] Models and meta saved.");
+
+        await this.saveReplayBuffer();
+    }
+
+    async saveReplayBuffer() {
+        const filePath = path.join(modelDir, "replay.bin");
+        const validExps = this.replayBuffer.buffer.filter(
+            (e) => e && e.state && e.nextState && typeof e.action === "number"
+        );
+
+        if (validExps.length === 0) {
+            console.warn(
+                "[DDQN] Replay buffer empty or invalid — skipping save."
+            );
+            return;
+        }
+
+        const numStates = validExps[0].state.length;
+        const recordSize = (numStates * 2 + 3) * 4;
+        const buffer = Buffer.allocUnsafe(validExps.length * recordSize);
+        let offset = 0;
+
+        for (let i = 0; i < validExps.length; i++) {
+            const exp = validExps[i];
+            if (!exp) continue;
+
+            // zapis state
+            for (let j = 0; j < numStates; j++) {
+                buffer.writeFloatLE(exp.state[j] ?? 0, offset);
+                offset += 4;
+            }
+
+            // action
+            buffer.writeInt32LE(exp.action ?? 0, offset);
+            offset += 4;
+
+            // reward
+            buffer.writeFloatLE(exp.reward ?? 0, offset);
+            offset += 4;
+
+            // nextState
+            for (let j = 0; j < numStates; j++) {
+                buffer.writeFloatLE(exp.nextState[j] ?? 0, offset);
+                offset += 4;
+            }
+
+            // done (bool → uint8)
+            buffer.writeUInt8(exp.done ? 1 : 0, offset);
+            offset += 4; // padding
+        }
+
+        fs.writeFileSync(filePath, buffer);
+        console.log(
+            `[DDQN] Replay buffer saved (${validExps.length} experiences).`
+        );
+    }
+
+    loadReplayBuffer() {
+        const filePath = path.join(modelDir, "replay.bin");
+        if (!fs.existsSync(filePath)) {
+            console.warn("[DDQN] No replay buffer file found.");
+            return;
+        }
+
+        const buffer = fs.readFileSync(filePath);
+        const numStates = this.numStates;
+        const recordSize = (numStates * 2 + 3) * 4;
+        const numRecords = Math.floor(buffer.length / recordSize);
+
+        this.replayBuffer = new ReplayBuffer(this.replayBuffer.size);
+        let offset = 0;
+
+        for (let i = 0; i < numRecords; i++) {
+            const state = new Float32Array(numStates);
+            for (let j = 0; j < numStates; j++) {
+                state[j] = buffer.readFloatLE(offset);
+                offset += 4;
+            }
+
+            const action = buffer.readInt32LE(offset);
+            offset += 4;
+            const reward = buffer.readFloatLE(offset);
+            offset += 4;
+
+            const nextState = new Float32Array(numStates);
+            for (let j = 0; j < numStates; j++) {
+                nextState[j] = buffer.readFloatLE(offset);
+                offset += 4;
+            }
+
+            const done = !!buffer.readUInt8(offset);
+            offset += 4;
+
+            this.replayBuffer.add({ state, action, reward, nextState, done });
+        }
+
+        console.log(`[DDQN] Replay buffer loaded (${numRecords} experiences).`);
     }
 }
 
+
+//Create global agent:
 let agent = null;
 const statesNum = parseInt(workerData.AGENT_STATES_NUM, 10);
 const actionsNum = parseInt(workerData.AGENT_ACTIONS_NUM, 10);
