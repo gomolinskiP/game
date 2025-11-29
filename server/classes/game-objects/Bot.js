@@ -436,7 +436,7 @@ export class Bot extends Character {
     }
 
     setWalkAction(move) {
-        this.needsUpdate = true;
+        // this.needsUpdate = true;
         this.pressingUp = move.u;
         this.pressingDown = move.d;
         this.pressingLeft = move.l;

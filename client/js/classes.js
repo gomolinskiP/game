@@ -128,101 +128,120 @@ export class Player extends Entity{
     }
 
     update(pack){
-        if(pack.hp < this.hp){
-            this.justDamaged = true;
+        console.log('player update', pack)
+        if(pack.hp){
+            if (pack.hp < this.hp) {
+                this.justDamaged = true;
 
-            setTimeout(()=>{
-                this.justDamaged = false;
-            }, 300);
+                setTimeout(() => {
+                    this.justDamaged = false;
+                }, 300);
+            }
+
+            this.hp = pack.hp;
+
+            if (this.id == Socket.selfId) {
+                GameUI.setHPLabel(this.hp);
+            }
         }
-
-        this.hp = pack.hp;
-        this.score = pack.score;
-
-        //newest shooting:
-        this.isShooting = pack.isShooting;
-        if(this.selectedDuration != pack.duration){
-            console.log('changed duration')
-            this.selectedDuration = pack.duration;
-            if(this.scheduler) this.scheduler.remove();
-            this.scheduler = null;
-        }
-
-         if (this.selectedSound != pack.selectedSound) {
-             console.log("changed sound");
-             this.selectedSound = pack.selectedSound;
-             if (this.scheduler) this.scheduler.remove();
-             this.scheduler = null;
-         }
         
-        this.weaponType = pack.weaponType;
-        this.selectedNoteID = pack.selectedNoteID;
+        if(pack.score){
+            this.score = pack.score;
 
-        if(this.isShooting && !this.scheduler){
-            this.scheduler = new BulletScheduler(this, this.selectedSound, this.selectedDuration);
+            if (this.id == Socket.selfId) {
+                GameUI.setScoreLabel(this.score);
+            }
         }
-        else if(!this.isShooting && this.scheduler){
+
+        if (pack.duration) {
+            if (this.selectedDuration != pack.duration) {
+                this.selectedDuration = pack.duration;
+                if (this.scheduler) this.scheduler.remove();
+                this.scheduler = null;
+            }
+        }
+
+        if (pack.selectedSound) {
+            if (this.selectedSound != pack.selectedSound) {
+                this.selectedSound = pack.selectedSound;
+                if (this.scheduler) this.scheduler.remove();
+                this.scheduler = null;
+            }
+        }
+
+        if (pack.weaponType) {
+            this.weaponType = pack.weaponType;
+        }
+
+        if (pack.selectedNoteID) {
+            this.selectedNoteID = pack.selectedNoteID;
+        }
+
+        if(pack.isShooting != undefined){
+            this.isShooting = pack.isShooting;
+        }
+
+        if (this.isShooting && !this.scheduler) {
+            this.scheduler = new BulletScheduler(
+                this,
+                this.selectedSound,
+                this.selectedDuration
+            );
+        } else if (!this.isShooting && this.scheduler) {
             this.scheduler.remove();
             this.scheduler = null;
         }
 
-
-        if (this.id == Socket.selfId){
-            GameUI.setHPLabel(this.hp);
-            GameUI.setScoreLabel(this.score);
+        if(pack.direction != undefined){
+            this.direction = this.updateDirection(pack.direction);
         }
-    
-        this.direction = this.updateDirection(pack.direction);
-        console.log('direction', this.direction)
-        if(this.x !== pack.x || this.y !== pack.y){
-            //is walking:
 
-            if (this.id == selfId) {
-                Graphics.updateFog(pack.x - this.x, pack.y - this.y);
+        if(pack.x && pack.y){
+            if (this.x !== pack.x || this.y !== pack.y) {
+                //is walking:
+                if (this.id == selfId) {
+                    Graphics.updateFog(pack.x - this.x, pack.y - this.y);
+                }
+
+                super.update(pack);
+
+                this.lastMovedTime = Date.now();
+                this.animFrame += 1;
+
+                if (!this.hasSoundSlot) {
+                    this.requestSoundSlot();
+                }
+
+                if (this.hasSoundSlot) {
+                    this.stepSoundTimeout = true;
+                    this.pan3D.setPosition(
+                        (this.x - Player.list[selfId].x) * 0.05,
+                        0,
+                        (this.y - Player.list[selfId].y) * 0.05
+                    );
+
+                    const footStepNote = Sounds.allowedNotes[0];
+
+                    if (this.footstepScheduler == null)
+                        this.footstepScheduler = new BulletScheduler(
+                            this,
+                            this.sound,
+                            "8n."
+                        );
+                    if (this.isWalkingTimeout)
+                        clearTimeout(this.isWalkingTimeout);
+                    this.isWalkingTimeout = setTimeout(() => {
+                        console.log("walking timeout");
+
+                        if (this.footstepScheduler)
+                            this.footstepScheduler.remove();
+                        this.footstepScheduler = null;
+                    }, 100);
+                }
+            } else {
+                // //not walking:
+
             }
-
-            super.update(pack);
-
-            this.lastMovedTime = Date.now();
-            
-            this.animFrame += 1;
-
-            if(!this.hasSoundSlot){
-                this.requestSoundSlot();
-                console.log('player requested footstep sound slot')
-            }
-
-            if(this.hasSoundSlot){
-                this.stepSoundTimeout = true;
-                this.pan3D.setPosition(
-                    (this.x - Player.list[selfId].x) * 0.05,
-                    0,
-                    (this.y - Player.list[selfId].y) * 0.05
-                );
-
-                const footStepNote = Sounds.allowedNotes[0];
-                // this.sampler.play(footStepNote);
-
-                if(this.footstepScheduler == null) this.footstepScheduler = new BulletScheduler(this, this.sound, "8n.");
-                if(this.isWalkingTimeout) clearTimeout(this.isWalkingTimeout);
-                this.isWalkingTimeout = setTimeout(()=>{
-                    console.log('walking timeout')
-
-                    if (this.footstepScheduler) this.footstepScheduler.remove();
-                    this.footstepScheduler = null;
-                }, 100);
-                
-                // setTimeout(()=>{
-                //     this.stepSoundTimeout = false;
-                // }, Player.stepSoundTimeoutMS + Math.random() * 100);
-            }
-        }
-        else{
-            // //not walking:
-            // console.log('not walking')
-
-            // if (this.footstepScheduler) this.footstepScheduler.remove();
-            // this.footstepScheduler = null;
         }
     }
 
@@ -520,7 +539,8 @@ export class Bullet extends Entity{
         this.hasSoundSlot = false;
 
         //find parent's ghost bullets:
-        const ghostBullet = GhostBullet.listByID[this.parent.id];
+        let ghostBullet = null;
+        if(this.parent) ghostBullet = GhostBullet.listByID[this.parent.id];
         if(ghostBullet != null){
             console.log('found ghost bullet', ghostBullet, 'from ', Date.now() - ghostBullet.creationTimestamp, 'ms ago')
             ghostBullet.received = true;
@@ -634,8 +654,6 @@ export class Bullet extends Entity{
                 0,
                 (this.y - Player.list[selfId].y) * 0.1
             );
-            // this.pan3D.positionX = (this.x - Player.list[selfId].x) * 0.1;
-            // console.log(this.pan3D.positionX)
         }
     }
 
@@ -975,68 +993,6 @@ export class Tile{
         delete Tile.list[this.id];
     }
 }
-
-// export class SynthPool{
-//     // let soundList = ["AMSynth", "DuoSynth", "FMSynth", "MembraneSynth", "MetalSynth", "MonoSynth", "PolySynth", "Synth"]
-//     static pools = {
-//         "AMSynth": [],
-//         "DuoSynth": [],
-//         "FMSynth": [],
-//         "MembraneSynth": [],
-//         "MetalSynth": [],
-//         "MonoSynth": [],
-//         "PolySynth": [],
-//         "Synth": []
-//     }
-
-//     static populatePool(synthName, numberOfSynths){
-//         for(let i = 0; i < numberOfSynths; i++){
-//             // SynthPool.pools[synthName].push({
-//             //     synth: new Tone[synthName](),
-//             //     busy: false,
-//             //     name: `${synthName}${i}`
-//             // })
-//             SynthPool.pools[synthName].push({
-//                 synth: new Tone.Player("../audio/banjo.wav"),
-//                 busy: false,
-//                 name: `${synthName}${i}`,
-//                 isFallback: false,
-//             })
-//         }
-//     }
-
-//     static populateAllPools(numberEach){
-//         for(let synthName in SynthPool.pools){
-//             // console.log(synthName)
-//             SynthPool.populatePool(synthName, numberEach);
-//         }
-//         console.log(SynthPool.pools)
-//     }
-
-//     static getFreeSynthSlot(synthName){
-//         const pool = SynthPool.pools[synthName];
-//         const freeSlot = pool.find(slot => !slot.busy)
-//         console.log(freeSlot)
-//         if(freeSlot){
-//             freeSlot.busy = true;
-//             console.log(freeSlot)
-//             return freeSlot;
-//         }
-//         else{
-//             //fallback - no free slots left:
-//             console.log(`getFreeSynthSlot fallback`)
-//             const fallbackSlot = pool[0];
-//             fallbackSlot.isFallback = true;
-//             // fallbackSlot.synth.triggerRelease();
-//             fallbackSlot.synth.stop();
-//             fallbackSlot.synth.disconnect();
-//             fallbackSlot.busy = true;
-//             console.log(fallbackSlot)
-//             return fallbackSlot;
-//         }
-//     }
-
-
 
 const MAX_BULLET_SOUNDS = 32;
 class SoundPool{

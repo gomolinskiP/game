@@ -14,21 +14,31 @@ export class Player extends Character{
     static list = {}
 
     static updateAll(){
+        for (let id in Character.list) {
+            const character = Character.list[id];
+            character.updatePosition();
+        }
+
+        //for all human players:
         for(var i in Player.list){ 
             var player = Player.list[i];
 
+            //determine & emit update info about gamestate changes:
             player.getUpdatePack();
             player.emitUpdatePack();
+
+            //add far away objects to be removed:
             player.addFarToRemovePack();
+            //emit info about all removed objects' IDs:
             player.emitRemovePack();
         }
 
+        //update all characters (bots & human players):
         for(var i in Character.list){ 
-            var player = Character.list[i];
+            var character = Character.list[i];
 
-            if(player.needsUpdate){
-                player.updatePosition();
-            }  
+            //reset character's updated parameter list:
+            character.toUpdate = {};
         }
     }
 
@@ -43,7 +53,7 @@ export class Player extends Character{
 
         
 
-        this.knownObjIDs = [] //all objects' IDs known to this player
+        this.knownObjIDs = new Set(); //all objects' IDs known to this player
 
         this.initPack = this.getInitPack();
         this.emitInitPack();
@@ -168,28 +178,8 @@ export class Player extends Character{
                 direction: character.lastAngle,
             });
 
-            this.knownObjIDs.push(character.id);
+            this.knownObjIDs.add(character.id);
         }
-        // for(var i in Character.list){
-        //     let player = Character.list[i]
-            
-        //     //check distance:
-        //     if(Math.abs(player.x - this.x) > loadDistance ||
-        //        Math.abs(player.y - this.y) > loadDistance) continue;
-            
-        //     initPack.entities.push({
-        //         x: player.x,
-        //         y: player.y,
-        //         type: "player",
-        //         id: player.id,
-        //         name: player.name,
-        //         hp: player.hp,
-        //         score: player.score,
-        //         direction: player.lastAngle
-        //     })
-
-        //     this.knownObjIDs.push(player.id)
-        // }
 
         //get pickups in load distance from character quadtree:
         let pickupsToLoad = Pickup.quadtree.retrieve(loadRect)
@@ -205,7 +195,7 @@ export class Player extends Character{
                 id: pickup.id,
             })
 
-            this.knownObjIDs.push(pickup.id)
+            this.knownObjIDs.add(pickup.id)
         }
 
         //get pickups in load distance from character quadtree:
@@ -224,7 +214,7 @@ export class Player extends Character{
                 layerId: tile.layerId
             })
 
-            this.knownObjIDs.push(tile.id)
+            this.knownObjIDs.add(tile.id)
         }
 
         initPack.selfId = this.id;
@@ -270,7 +260,10 @@ export class Player extends Character{
             const character = Character.list[c.id];
             if(!this.isWithinDistance(character, loadDistance)) continue;
 
-            if(character.needsUpdate || !this.knownObjIDs.includes(character.id)){
+            if(!this.knownObjIDs.has(character.id)){
+                //player was not aware of this character
+                //all info must be sent:
+
                 this.updatePack.push({
                     x: character.x,
                     y: character.y,
@@ -285,29 +278,22 @@ export class Player extends Character{
                     hp: character.hp,
                     score: character.score,
                     direction: character.lastAngle,
-                })
+                });
 
-                if(!this.knownObjIDs.includes(character.id)){
-                    this.knownObjIDs.push(character.id);
-                }
+                this.knownObjIDs.add(character.id);
+            }
+            else{
+                //player already knows about this character
+                //info only about parameters that changed:
+
+                //skip this character, if there's nothing to update about them:
+                if(Object.keys(character.toUpdate).length == 0) continue;
+                //push all info to update about character to player's updatePack:
+                character.toUpdate.type = "player";
+                character.toUpdate.id = character.id;
+                this.updatePack.push(character.toUpdate);
             }
         }
-
-        // //Scheduled Bullets:
-        // let scheduledBulletsToUpdate = ScheduledBullet.quadtree.retrieve(loadRect);
-        // for(const sb of scheduledBulletsToUpdate){
-        //     const scheduledBullet = ScheduledBullet.list[sb.id];
-        //     if(!scheduledBullet) continue;
-        //     if(!this.isWithinDistance(scheduledBullet, loadDistance)) continue;
-
-        //     this.updatePack.push({
-        //         x:
-        //         y:
-        //         id: 
-        //         scheduledFor:
-
-        //     })
-        // }
 
         //Bullets:
         let bulletsToUpdate = Bullet.quadtree.retrieve(loadRect)
@@ -317,20 +303,34 @@ export class Player extends Character{
             if(!bullet) continue;
             if(!this.isWithinDistance(bullet, loadDistance)) continue;
 
-            this.updatePack.push({
-                x: bullet.x,
-                y: bullet.y,
-                id: bullet.id,
-                type: "bullet",
-                parentId: bullet.parent.id,
+            if(!this.knownObjIDs.has(bullet.id)){
+                //player was not aware of this bullet
+                //all info must be sent:
 
-                sound: bullet.sound,
-                duration: bullet.duration,
-                note: bullet.note
-            })
+                this.updatePack.push({
+                    x: bullet.x,
+                    y: bullet.y,
+                    id: bullet.id,
+                    type: "bullet",
+                    parentId: bullet.parent.id,
 
-            if(!this.knownObjIDs.includes(bullet.id)){
-                this.knownObjIDs.push(bullet.id);
+                    sound: bullet.sound,
+                    duration: bullet.duration,
+                    note: bullet.note,
+                });
+
+                this.knownObjIDs.add(bullet.id);
+            }
+            else{
+                //player already knows about this bullet
+                //info only about parameters that changed (position):
+
+                this.updatePack.push({
+                    x: bullet.x,
+                    y: bullet.y,
+                    id: bullet.id,
+                    type: "bullet",
+                });
             }
         }
 
@@ -343,7 +343,7 @@ export class Player extends Character{
             if(!this.isWithinDistance(pickup, loadDistance)) continue;
 
             //pickups need to be updated if they are not yet known to player (they're static):
-            if(!this.knownObjIDs.includes(pickup.id)){
+            if(!this.knownObjIDs.has(pickup.id)){
                 this.updatePack.push({
                     x: pickup.x,
                     y: pickup.y,
@@ -351,7 +351,7 @@ export class Player extends Character{
                     type: "pickup"
                 })
 
-                this.knownObjIDs.push(pickup.id);
+                this.knownObjIDs.add(pickup.id);
             }
         }
 
@@ -363,7 +363,7 @@ export class Player extends Character{
             if(!this.isWithinDistance(tile, loadDistance)) continue;
 
             //tiles are static - need to be updated if player does not know about them yet:
-            if(!this.knownObjIDs.includes(tile.id)){
+            if(!this.knownObjIDs.has(tile.id)){
                 this.updatePack.push({
                     type: "tile",
                     id: tile.id,
@@ -373,7 +373,7 @@ export class Player extends Character{
                     layerId: tile.layerId
                 })
 
-                this.knownObjIDs.push(tile.id);
+                this.knownObjIDs.add(tile.id);
             }
         }
     }
@@ -402,7 +402,7 @@ export class Player extends Character{
         if (!this.socket.initialized) return;
 
         //skip if player was not aware of object with given id:
-        if (!this.knownObjIDs.includes(id)) {
+        if (!this.knownObjIDs.has(id)) {
             return;
         }
 
@@ -433,7 +433,7 @@ export class Player extends Character{
 
         for (let id in Character.list) {
             const character = Character.list[id];
-            if (!this.knownObjIDs.includes(character.id)) continue;
+            if (!this.knownObjIDs.has(character.id)) continue;
             if (notToRemoveIDs.includes(character.id)) continue;
             if (!this.isWithinDistance(character, unloadDistance)) {
                 this.addToRemovePack(character.id, character.characterType);
@@ -452,7 +452,7 @@ export class Player extends Character{
 
         for (let id in Pickup.list) {
             const pickup = Pickup.list[id];
-            if (!this.knownObjIDs.includes(pickup.id)) continue;
+            if (!this.knownObjIDs.has(pickup.id)) continue;
             if (notToRemoveIDs.includes(pickup.id)) continue;
             if (!this.isWithinDistance(pickup, unloadDistance)) {
                 this.addToRemovePack(pickup.id, "pickup");
@@ -469,7 +469,7 @@ export class Player extends Character{
 
         for (let id in Tile.list) {
             const tile = Tile.list[id];
-            if (!this.knownObjIDs.includes(tile.id)) continue;
+            if (!this.knownObjIDs.has(tile.id)) continue;
             if (notToRemoveIDs.includes(tile.id)) continue;
             if (!this.isWithinDistance(tile, unloadDistance)) {
                 this.addToRemovePack(tile.id, "tile");
@@ -489,10 +489,8 @@ export class Player extends Character{
         }
 
         for (let entity of this.removePack) {
-            if (this.knownObjIDs.includes(entity.id)) {
-                this.knownObjIDs = this.knownObjIDs.filter(
-                    (id) => id !== entity.id
-                );
+            if (this.knownObjIDs.has(entity.id)) {
+                this.knownObjIDs.delete(entity.id);
             } else {
                 console.log(
                     "Trying to remove something player is not aware of!!!"

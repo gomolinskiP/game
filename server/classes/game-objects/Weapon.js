@@ -40,13 +40,16 @@ export class Weapon {
         switch (type) {
             case "sound":
                 this.setSound(code);
+                this.wielder.toUpdate.selectedSound = this.sound;
                 break;
             case "type":
                 this.setType(code);
+                this.wielder.toUpdate.weaponType = this.type;
                 break;
             case "duration":
                 this.wielder.updateShooterListOnDurationChange(this.duration, code);
                 this.setDuration(code);
+                this.wielder.toUpdate.duration = this.duration;
                 break;
             default:
                 console.log(
@@ -55,7 +58,7 @@ export class Weapon {
                 break;
         }
 
-        this.wielder.needsUpdate = true;
+        // this.wielder.needsUpdate = true;
     }
 
     setSound(sound) {

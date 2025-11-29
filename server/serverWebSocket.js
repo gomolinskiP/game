@@ -232,7 +232,7 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
 
         socket.on("keyPress", function (data) {
             if (player != null) {
-                player.needsUpdate = true;
+                // player.needsUpdate = true;
 
                 //check if number (digits shoot)
                 const isShot = !isNaN(data.inputId);

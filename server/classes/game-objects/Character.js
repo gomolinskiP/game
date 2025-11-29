@@ -53,7 +53,8 @@ export class Character extends Entity {
 
     this.entityType = "player";
 
-    this.needsUpdate = true;
+    // this.needsUpdate = true;
+    this.toUpdate = {};
 
     this.pressingUp =
       this.pressingDown =
@@ -109,25 +110,34 @@ export class Character extends Entity {
       !this.pressingLeft &&
       !this.pressingRight
     ){
-      this.needsUpdate = false;
+      // this.needsUpdate = false;
       this.spdX = 0;
       this.spdY = 0;
       }
     else {
-      this.lastAngle = (Math.atan2(this.dirY, this.dirX) * 180) / Math.PI;
+      const newAngle = (Math.atan2(this.dirY, this.dirX) * 180) / Math.PI;
+      if(this.lastAngle != newAngle){
+        this.lastAngle = newAngle;
+        this.toUpdate.direction = this.lastAngle;
+      }
+      
+      
+
       this.spdX = Math.cos((this.lastAngle / 180) * Math.PI) * this.speed;
       this.spdY = Math.sin((this.lastAngle / 180) * Math.PI) * this.speed / 2; // /2 because the map is isometric and we account for perspective
 
       //check collision with collisionLayer:
       let newX = this.x + this.spdX;
       let newY = this.y + this.spdY;
-
       if (
         Tile.checkTilesCollision(newX, newY, Tile.floorQTree) &&
         !Tile.checkTilesCollision(newX, newY, Tile.wallQTree)
       ) {
         this.x = newX;
         this.y = newY;
+
+        this.toUpdate.x = this.x;
+        this.toUpdate.y = this.y;
 
         //check if character entered nonPVP area while shooting:
         if (this.isInNonPVPArea() && this.isShooting.state) {
@@ -155,7 +165,7 @@ export class Character extends Entity {
   }
 
   updateShooterListOnDurationChange(prevDuration, newDuration){
-    this.needsUpdate = true;
+    // this.needsUpdate = true;
     if(this.isShooting.state){
       Character.shooterList[prevDuration].delete(this);
       Character.shooterList[newDuration].add(this);
@@ -181,6 +191,9 @@ export class Character extends Entity {
         );
         this.isShooting.state = false;
     }
+
+    this.toUpdate.isShooting = this.isShooting.state;
+    this.toUpdate.selectedNoteID = this.selectedNoteID;
 
     if(this.isShooting.state){
       //add character to list of characters shooting with current weapon duration
@@ -298,6 +311,8 @@ export class Character extends Entity {
   addScore(points) {
     if (this.isDead) return;
     this.score += points;
+
+    this.toUpdate.score = this.score;
   }
 
   changeSelectedNote(note) {
@@ -308,21 +323,27 @@ export class Character extends Entity {
   takeDmg(damage, attacker) {
     if (this.isDead) return;
     this.hp -= damage;
+
     this.framesSinceDamage = 0;
     if (this.hp <= 0) {
       this.die(attacker);
       this.hp = 0;
     }
-    this.needsUpdate = true;
+    this.toUpdate.hp = this.hp;
+    // this.needsUpdate = true;
   }
 
   heal(hpAmount) {
     if (this.isDead) return;
+    if(this.hp >= Character.fullHP) return;
+
     this.hp += hpAmount;
     if (this.hp > Character.fullHP) {
       this.hp = Character.fullHP;
     }
-    this.needsUpdate = true;
+
+    this.toUpdate.hp = this.hp;
+    // this.needsUpdate = true;
   }
 
   die(byWho) {
@@ -330,6 +351,8 @@ export class Character extends Entity {
     const scoreStolen = this.score / 2;
     byWho.addScore(scoreStolen);
     this.score -= scoreStolen;
+
+    this.toUpdate.score = this.score;
 
     //send info to all sockets:
     let killMsg = `<i>${byWho.name} killed ${this.name}</i>`;
@@ -356,7 +379,14 @@ export class Character extends Entity {
       this.hp = Character.fullHP;
       this.x = 0 + 250 * Math.random();
       this.y = 0 + 120 * Math.random();
-      this.needsUpdate = true;
+      this.lastAngle = 90;
+
+      this.toUpdate.x = this.x;
+      this.toUpdate.y = this.y;
+      this.toUpdate.direction = this.lastAngle;
+      this.toUpdate.hp = this.hp;
+
+      // this.needsUpdate = true;
 
       this.isDead = false;
   }
