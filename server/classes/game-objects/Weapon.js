@@ -1,9 +1,10 @@
 import { Bullet } from "./Bullet.js";
 import { Sounds } from "../musical/Sounds.js";
+import { Character } from "./Character.js";
 
 export class Weapon {
     static chordNotes = [0, 4, 7];
-    static allowedDurations = ["1n", "1n.", "2n", "2n.", "4n", "4n.", "8n"];
+    static allowedDurations = ["1n.", "1n", "2n.", "2n", "4n.", "4n", "8n"];
     static allowedSounds = [
         "AMSynth",
         "DuoSynth",
@@ -44,6 +45,7 @@ export class Weapon {
                 this.setType(code);
                 break;
             case "duration":
+                this.wielder.updateShooterListOnDurationChange(this.duration, code);
                 this.setDuration(code);
                 break;
             default:
@@ -52,6 +54,8 @@ export class Weapon {
                 );
                 break;
         }
+
+        this.wielder.needsUpdate = true;
     }
 
     setSound(sound) {
@@ -194,3 +198,5 @@ export class Weapon {
         return notes[index];
     }
 }
+
+Character.shooterListInit();

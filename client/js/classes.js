@@ -92,6 +92,14 @@ export class Player extends Entity{
         this.name = initPack.name;
         this.hp = initPack.hp;
         this.score = initPack.score;
+        this.isShooting = initPack.isShooting;
+        this.selectedDuration = initPack.duration;
+        this.weaponType = initPack.weaponType;
+        this.selectedNoteID = initPack.selectedNoteID;
+        this.selectedSound = initPack.selectedSound;
+
+        this.footstepScheduler = null;
+
         if (this.id == Socket.selfId) {
             GameUI.setHPLabel(this.hp);
             GameUI.setScoreLabel(this.score);
@@ -130,13 +138,45 @@ export class Player extends Entity{
 
         this.hp = pack.hp;
         this.score = pack.score;
+
+        //newest shooting:
+        this.isShooting = pack.isShooting;
+        if(this.selectedDuration != pack.duration){
+            console.log('changed duration')
+            this.selectedDuration = pack.duration;
+            if(this.scheduler) this.scheduler.remove();
+            this.scheduler = null;
+        }
+
+         if (this.selectedSound != pack.selectedSound) {
+             console.log("changed sound");
+             this.selectedSound = pack.selectedSound;
+             if (this.scheduler) this.scheduler.remove();
+             this.scheduler = null;
+         }
+        
+        this.weaponType = pack.weaponType;
+        this.selectedNoteID = pack.selectedNoteID;
+
+        if(this.isShooting && !this.scheduler){
+            this.scheduler = new BulletScheduler(this, this.selectedSound, this.selectedDuration);
+        }
+        else if(!this.isShooting && this.scheduler){
+            this.scheduler.remove();
+            this.scheduler = null;
+        }
+
+
         if (this.id == Socket.selfId){
             GameUI.setHPLabel(this.hp);
             GameUI.setScoreLabel(this.score);
         }
     
         this.direction = this.updateDirection(pack.direction);
+        console.log('direction', this.direction)
         if(this.x !== pack.x || this.y !== pack.y){
+            //is walking:
+
             if (this.id == selfId) {
                 Graphics.updateFog(pack.x - this.x, pack.y - this.y);
             }
@@ -152,21 +192,37 @@ export class Player extends Entity{
                 console.log('player requested footstep sound slot')
             }
 
-            if(this.hasSoundSlot && !this.stepSoundTimeout){
+            if(this.hasSoundSlot){
                 this.stepSoundTimeout = true;
                 this.pan3D.setPosition(
                     (this.x - Player.list[selfId].x) * 0.05,
-                    (this.y - Player.list[selfId].y) * 0.05,
-                    0
+                    0,
+                    (this.y - Player.list[selfId].y) * 0.05
                 );
 
                 const footStepNote = Sounds.allowedNotes[0];
-                this.sampler.play(footStepNote);
+                // this.sampler.play(footStepNote);
 
-                setTimeout(()=>{
-                    this.stepSoundTimeout = false;
-                }, Player.stepSoundTimeoutMS + Math.random() * 100);
+                if(this.footstepScheduler == null) this.footstepScheduler = new BulletScheduler(this, this.sound, "8n.");
+                if(this.isWalkingTimeout) clearTimeout(this.isWalkingTimeout);
+                this.isWalkingTimeout = setTimeout(()=>{
+                    console.log('walking timeout')
+
+                    if (this.footstepScheduler) this.footstepScheduler.remove();
+                    this.footstepScheduler = null;
+                }, 100);
+                
+                // setTimeout(()=>{
+                //     this.stepSoundTimeout = false;
+                // }, Player.stepSoundTimeoutMS + Math.random() * 100);
             }
+        }
+        else{
+            // //not walking:
+            // console.log('not walking')
+
+            // if (this.footstepScheduler) this.footstepScheduler.remove();
+            // this.footstepScheduler = null;
         }
     }
 
@@ -175,6 +231,10 @@ export class Player extends Entity{
         if (this.hasSoundSlot) {
             this.sampler.stop();
             this.soundSlot.free = true;
+        }
+
+        if(this.scheduler){
+            this.scheduler.remove();
         }
     }
 
@@ -293,6 +353,132 @@ const soundNames = {
     pickup: "pickup"
 };
 
+export class BulletScheduler{
+
+    constructor(parent, sound, duration){
+        this.parentID = parent.id;
+        // const duration = parent.selectedDuration;
+
+        this.soundSlot = null;
+        this.hasSoundSlot = false;
+
+        let startOn;
+        switch(duration){
+            case "1n.":
+                startOn = "1:2:0";
+                break;
+            case "1n":
+                startOn = "1:0:0";
+                break;
+            case "2n.":
+                startOn = "0:3:0";
+                break;
+            case "2n":
+                startOn = "0:2:0";
+                break;
+            case "4n.":
+                startOn = "0:1:2";
+                break;
+            case "4n":
+                startOn = "0:1:0";
+                break;
+            case "8n.":
+                startOn = "0:0:3";
+                break;
+            case "8n":
+                startOn = "0:0:2";
+                break;
+            default:
+                console.warn('unknown duration', duration);
+                return;
+        }
+        
+        this.ID = Tone.Transport.scheduleRepeat(
+            (time) => {
+                new GhostBullet(parent, sound, duration);
+                console.log(
+                    "position",
+                    Tone.Transport.position,
+                    "tickNum",
+                    Sounds.tickNum - Sounds.firstTickNum
+                );
+                
+            },
+            duration,
+            startOn
+        );
+        console.log('scheduleID', this.ID);
+    }
+
+    remove(){
+        if(this.soundSlot){
+            this.sampler.stop();
+            this.soundSlot.free = true;
+        }
+        Tone.Transport.clear(this.ID);
+    }
+}
+
+export class GhostBullet{
+    //a bullet that is forecasted to appear, but has not been yet received from server-side:
+
+    static listByID = {}
+
+    constructor(parent, sound, duration){
+        this.x = parent.x;
+        this.y = parent.y;
+
+        if(parent.direction.includes('w')) this.x -=20;
+        if (parent.direction.includes("e")) this.x += 20;
+        if (parent.direction.includes("n")) this.y -= 20;
+        if (parent.direction.includes("s")) this.y += 20;
+
+        this.creationTimestamp = Date.now();
+
+        this.received = false;
+
+        this.soundSlot = null;
+        this.hasSoundSlot = false;
+
+        this.soundSlot = SoundPool.globalSoundPool.getFree(
+            parent.id
+        );
+
+
+        if (this.soundSlot) {
+            this.hasSoundSlot = true;
+            this.soundSlot.occupierId = parent.id;
+
+            this.pan3D = this.soundSlot.pan3D;
+            this.pan3D.setPosition(
+                (this.x - Player.list[selfId].x) * 0.1,
+                0,
+                (this.y - Player.list[selfId].y) * 0.1
+            );
+
+            this.sampler = this.soundSlot.sampler;
+            console.log('sound', sound);
+            this.sampler.setSound(sound);
+
+
+            const note = Sounds.allowedNotes[parent.selectedNoteID];
+            this.sampler.play(note);
+            // Sounds.test.triggerAttackRelease("C5", "32n");
+
+            setTimeout(() => {
+                delete GhostBullet.listByID[parent.id];
+                if(this.received) return;
+                this.sampler.stop();
+                this.soundSlot.free = true;
+            }, 250);
+
+            GhostBullet.listByID[parent.id] = this;
+        }
+
+        
+    }
+}
+
 export class Bullet extends Entity{
     static list = {};
 
@@ -303,15 +489,92 @@ export class Bullet extends Entity{
 
         this.parent = Player.list[initPack.parentId];
         this.sound = initPack.sound;
+        this.duration = initPack.duration;
+        this.timeQuantizePos;
+        switch (this.duration) {
+            case "1n.":
+                this.timeQuantizePos = "1:2:0";
+                break;
+            case "1n":
+                this.timeQuantizePos = "1:0:0";
+                break;
+            case "2n.":
+                this.timeQuantizePos = "0:3:0";
+                break;
+            case "2n":
+                this.timeQuantizePos = "0:2:0";
+                break;
+            case "4n.":
+                this.timeQuantizePos = "0:1:2";
+                break;
+            case "4n":
+                this.timeQuantizePos = "0:1:0";
+                break;
+            case "8n":
+                this.timeQuantizePos = "0:0:2";
+                break;
+            default:
+                console.warn("unknown duration", duration);
+            // this.sampler.setSound(this.sound);
+        }
         this.hasSoundSlot = false;
-        this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
+
+        //find parent's ghost bullets:
+        const ghostBullet = GhostBullet.listByID[this.parent.id];
+        if(ghostBullet != null){
+            console.log('found ghost bullet', ghostBullet, 'from ', Date.now() - ghostBullet.creationTimestamp, 'ms ago')
+            ghostBullet.received = true;
+            this.soundSlot = ghostBullet.soundSlot
+            delete GhostBullet.listByID[this.parent.id];
+        }
+        // else{
+        //     // this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
+        //     console.warn('no ghost bullet found', Tone.Transport.position)
+        //     Tone.Transport.scheduleOnce(() => {
+        //         this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
+
+        //         if (this.soundSlot) {
+        //             console.log("bullet has soundslot");
+
+        //             this.hasSoundSlot = true;
+        //             this.soundSlot.occupierId = this.id;
+        //             this.pan3D = this.soundSlot.pan3D;
+        //             this.pan3D.setPosition(
+        //                 (this.x - Player.list[selfId].x) * 0.1,
+        //                 (this.y - Player.list[selfId].y) * 0.1,
+        //                 0
+        //             );
+        //             this.sampler = this.soundSlot.sampler;
+        //             this.sampler.play("C");
+
+        //             Tone.Transport.scheduleOnce(() => {
+        //                 this.sampler.stop();
+        //                 this.soundSlot.free = true;
+        //                 this.soundSlot = null;
+        //             }, this.timeQuantizePos);
+        //         }
+        //     }, this.timeQuantizePos);
+        // }
+
+        // this.soundSlot = SoundPool.globalSoundPool.getFree(this.id);
         if(this.soundSlot){
+            console.log('bullet has soundslot')
             this.hasSoundSlot = true;
             this.soundSlot.occupierId = this.id;
             this.pan3D = this.soundSlot.pan3D;
+            this.pan3D.setPosition(
+                (this.x - Player.list[selfId].x) * 0.1,
+                0,
+                (this.y - Player.list[selfId].y) * 0.1
+            );
             this.sampler = this.soundSlot.sampler;
 
-            this.sampler.setSound(this.sound);
+            Tone.Transport.scheduleOnce(() => {
+                this.sampler.stop();
+                this.soundSlot.free = true;
+                this.soundSlot = null;
+            }, this.timeQuantizePos);
+
         }
 
         this.note = initPack.note;
@@ -359,7 +622,7 @@ export class Bullet extends Entity{
         if(Tone.context.state == "running" && Sounds.audioOn && this.hasSoundSlot){
             // this.synth.triggerAttack(`${this.note}4`);
             // this.synth.start();
-            this.sampler.play(this.note);
+            // this.sampler.play(this.note);
         }
     }
 
@@ -367,10 +630,12 @@ export class Bullet extends Entity{
         super.update(pack);
         if(Player.list[selfId] && this.hasSoundSlot){
             this.pan3D.setPosition(
-                (this.x - Player.list[selfId].x)*0.1,
-                (this.y - Player.list[selfId].y)*0.1,
-                0
+                (this.x - Player.list[selfId].x) * 0.1,
+                0,
+                (this.y - Player.list[selfId].y) * 0.1
             );
+            // this.pan3D.positionX = (this.x - Player.list[selfId].x) * 0.1;
+            // console.log(this.pan3D.positionX)
         }
     }
 
@@ -448,11 +713,16 @@ export class Pickup extends Entity{
         }
 
         if (this.hasSoundSlot) {
-            this.pan3D.setPosition(
-                (this.x - Player.list[selfId].x) * 0.05,
-                (this.y - Player.list[selfId].y) * 0.05,
-                0
-            );
+            this.pan3D.positionX.value =
+                (this.x - Player.list[selfId].x) * 0.05;
+            this.pan3D.positionZ.value =
+                (this.y - Player.list[selfId].y) * 0.05;
+
+            // this.pan3D.setPosition(
+            //     (this.x - Player.list[selfId].x) * 0.05,
+            //     (this.y - Player.list[selfId].y) * 0.05,
+            //     0
+            // );
 
             const randNote =
                 Sounds.allowedNotes[
@@ -768,7 +1038,7 @@ export class Tile{
 
 
 
-const MAX_BULLET_SOUNDS = 16;
+const MAX_BULLET_SOUNDS = 32;
 class SoundPool{
     static globalSoundPool;
 
@@ -828,7 +1098,14 @@ class SoundPool{
 class SoundSlot{
     constructor(){
         this.sampler = new Sampler("../audio/piano.wav");
-        this.pan3D = new Tone.Panner3D();
+        this.pan3D = new Tone.Panner3D({
+            rollofFactor: 0.01,
+            distanceModel: "exponential",
+            panningModel: "HRTF",
+        });
+        // this.pan3D.rollofFactor = 0.01;
+        // this.pan3D.panningModel = "HRTF";
+        // this.distanceModel = "linear";
         this.sampler.pitchShift.connect(this.pan3D);
         this.pan3D.connect(Sounds.limiter);
 
@@ -840,8 +1117,8 @@ class SoundSlot{
 
 //preload sound buffers:
 const buffers = {
-    piano: await new Tone.Buffer("../audio/piano.wav"),
-    guitar: await new Tone.Buffer("../audio/guitar.wav"),
+    piano: await new Tone.Buffer("../audio/piano.mp3"),
+    guitar: await new Tone.Buffer("../audio/guitar.mp3"),
     clarinet: await new Tone.Buffer("../audio/clarinet.mp3"),
     flute: await new Tone.Buffer("../audio/flute.mp3"),
     harp: await new Tone.Buffer("../audio/harp.mp3"),
@@ -855,7 +1132,8 @@ const buffers = {
 class Sampler{
     constructor(sampleSrc){
         this.samplePlayer = new Tone.Player()
-        this.samplePlayer.playbackRate = 1;
+        // this.samplePlayer = new Tone.Synth();
+        this.samplePlayer.playbackRate = 0.5;
         this.pitchShift = new Tone.PitchShift()
 
         this.samplePlayer.connect(this.pitchShift);
@@ -867,12 +1145,18 @@ class Sampler{
 
     play(note){
         if(Tone.context.state != "running") return;
-        const shift = Sounds.notes.indexOf(note);
+        let shift = Sounds.notes.indexOf(note);
+        const scaleBaseIndex = Sounds.notes.indexOf(Sounds.scaleBase);
+
+        if(shift >= scaleBaseIndex) shift -= 12;
+
         // console.log(note, shift)
 
         this.samplePlayer.stop();
-        this.pitchShift.pitch = shift - 12;
+        this.pitchShift.pitch = shift + 12;
         this.samplePlayer.start();
+
+        // this.samplePlayer.triggerAttackRelease(note+"5", "32n");
     }
 
     stop(){

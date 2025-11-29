@@ -27,9 +27,10 @@ export class Sounds {
 
         Sounds.test.chain(Sounds.metrVol, Sounds.reverb, Tone.Destination);
 
-        Tone.Transport.scheduleRepeat((time) => {
-            Sounds.test.triggerAttackRelease("C5", "32n", time);
-        }, "16n");
+        // //test
+        // Tone.Transport.scheduleRepeat((time) => {
+        //     Sounds.test.triggerAttackRelease("C5", "32n", time);
+        // }, "16n");
 
         Tone.Transport.scheduleRepeat((time) => {
             // if (Socket) Socket.noteFire("C");
@@ -69,6 +70,7 @@ export class Sounds {
     static scaleName;
     static scaleBase;
     static allowedNotes;
+    static sampleNoteIndex = 0;
     static notes = [
         "C",
         "C#",
@@ -91,6 +93,7 @@ export class Sounds {
         Sounds.scaleName = scaleName;
         Sounds.scaleBase = scaleName[0];
         Sounds.allowedNotes = allowedNotes;
+        // console.log('allowed notes', allowedNotes)
         GameUI.setScaleLabel(scaleName);
         GameUI.reorderKeyboardKeys(allowedNotes[0]);
         GameUI.disableDisallowedNoteKeys(allowedNotes);
@@ -122,7 +125,7 @@ export class Sounds {
 
         if (!Sounds.firstTickNum) {
             //metronome not started yet:
-            if (Sounds.tickNum % 4 != 0) return; //want to start on first beat
+            if (Sounds.tickNum % 12 != 0) return; //want to start on first beat //12 for 1n. 
             Sounds.firstTickNum = Sounds.tickNum;
             const timeDelay_s = timeDelay_ms / 1000;
             console.log(`starting transport | tickNum: ${Sounds.tickNum}`);
@@ -155,7 +158,7 @@ export class Sounds {
             Sounds.positionToSeconds(desiredPosition) -
             Sounds.positionToSeconds(tPosition);
 
-        console.log("fixTransport error", Math.round(error * 1000));
+        // console.log("fixTransport error", Math.round(error * 1000));
 
         // console.log(`desiredPos: ${desiredPosition}, tPos: ${tPosition} ${Tone.Transport.position} | errT:${error}`)
 
@@ -245,14 +248,14 @@ export class ClockSync {
             delay: delay,
         });
 
-        console.log(
-            "offset",
-            offset,
-            "delay",
-            delay,
-            "buffer",
-            JSON.stringify(this.buffer)
-        );
+        // console.log(
+        //     "offset",
+        //     offset,
+        //     "delay",
+        //     delay,
+        //     "buffer",
+        //     JSON.stringify(this.buffer)
+        // );
         this.computeOffset();
     }
 
@@ -273,14 +276,14 @@ export class ClockSync {
         //slowly change global client offset:
         this.offset = this.offset * 0.6 + offsetMedian * 0.4;
 
-        console.log(
-            "bestByDelay",
-            JSON.stringify(bestByDelay),
-            "offsetMedian",
-            offsetMedian,
-            "globalOffset",
-            this.offset
-        );
+        // console.log(
+        //     "bestByDelay",
+        //     JSON.stringify(bestByDelay),
+        //     "offsetMedian",
+        //     offsetMedian,
+        //     "globalOffset",
+        //     this.offset
+        // );
     }
 }
 

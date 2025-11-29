@@ -1,5 +1,6 @@
 import { Socket } from "../Socket.js";
 import { Bot } from "../game-objects/Bot.js";
+import { Character } from "../game-objects/Character.js";
 import { Scale } from "./Scale.js";
 
 const MS_IN_MIN = 60000;
@@ -66,20 +67,22 @@ export class Sounds {
             (nowT - Sounds.startT) / BigInt(1e6) - BigInt(Math.round(desiredT))
         );
 
-        console.log(
-            `tick: ${Sounds.tickNum} | t: ${
-                (nowT - Sounds.startT) / BigInt(1e6)
-            } ms | desiredT: ${desiredT} | err: ${
-                (nowT - Sounds.startT) / BigInt(1e6) -
-                BigInt(Math.round(desiredT))
-            }`
-        );
+        // console.log(
+        //     `tick: ${Sounds.tickNum} | t: ${
+        //         (nowT - Sounds.startT) / BigInt(1e6)
+        //     } ms | desiredT: ${desiredT} | err: ${
+        //         (nowT - Sounds.startT) / BigInt(1e6) -
+        //         BigInt(Math.round(desiredT))
+        //     }`
+        // );
 
         //emit metronome signal:
         Socket.emitToAll("tick", {
             tick: Sounds.tickNum,
             tickT: Date.now() - err,
         });
+
+        Sounds.handleShots();
 
         //full bar:
         if (this.tickNum % 4 == 0) {
@@ -139,6 +142,73 @@ export class Sounds {
         setTimeout(() => {
             Sounds.metronomeTick();
         }, nextTickT);
+    }
+
+    static handleShots(){
+        //handle shots:
+        if (this.tickNum % 4 == 0) {
+            //all 1n
+            for (let ch of Character.shooterList["1n"]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+            }
+        }
+
+        if (this.tickNum % 2 == 0) {
+            //all 2n
+            for (let ch of Character.shooterList["2n"]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+            }
+        }
+
+        if (this.tickNum % 1 == 0) {
+            //no need for condition - every tick:
+            //all 4n
+            for (let ch of Character.shooterList["4n"]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+            }
+
+            //all 8n + setTimeout after 1/2 beatInterval
+            for (let ch of Character.shooterList["8n"]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+
+                ch.weapon.shoot(note);
+                setTimeout(() => {
+                    ch.weapon.shoot(note);
+                }, Sounds.beatInterval / 2);
+            }
+        }
+
+        if (this.tickNum % 6 == 0) {
+            //all 1n. (dotted whole notes):
+            for (let ch of Character.shooterList["1n."]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+            }
+        }
+
+        if (this.tickNum % 3 == 0) {
+            //all 2n. (dotted half notes):
+            for (let ch of Character.shooterList["2n."]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+            }
+        }
+
+        //4n. (dotted quarter notes):
+        if (this.tickNum % 3 == 0) {
+            for (let ch of Character.shooterList["4n."]) {
+                const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
+                ch.weapon.shoot(note);
+
+                //also shoot after 3/2 of beat:
+                setTimeout(() => {
+                    ch.weapon.shoot(note);
+                }, Sounds.beatInterval * (3 / 2));
+            }
+        }
     }
 
     static getNoteSpawnTime(noteDuration) {

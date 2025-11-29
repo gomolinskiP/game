@@ -211,6 +211,7 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
                 player.addToRemovePack(socket.id, "player");
             }
             delete Player.list[socket.id];
+            Character.list[socket.id].remove();
             delete Character.list[socket.id];
 
             try {
@@ -232,6 +233,13 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
         socket.on("keyPress", function (data) {
             if (player != null) {
                 player.needsUpdate = true;
+
+                //check if number (digits shoot)
+                const isShot = !isNaN(data.inputId);
+                if(isShot){
+                    player.setShootingState(data.state, data.inputId - 1)
+                    return;
+                }
 
                 switch (data.inputId) {
                     case "up":

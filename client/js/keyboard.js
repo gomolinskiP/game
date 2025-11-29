@@ -107,8 +107,9 @@ export class Keyboard{
                 pressedKeys[digit] = true;
 
                 const note = Sounds.allowedNotes[digit - 1];
-
-                Socket.noteFire(note);
+                // console.log(digit);
+                // Socket.noteFire(note);
+                Socket.pressingDirection(digit, true);
                 GameUI.setActiveNote(note);
             }
         })
@@ -116,6 +117,7 @@ export class Keyboard{
         addEventListener("keyup", (event)=>{
             if(event.key == `${digit}`){
                 pressedKeys[digit] = false;
+                Socket.pressingDirection(digit, false);
             }
         })
     }

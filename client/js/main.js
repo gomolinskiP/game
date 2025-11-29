@@ -226,7 +226,7 @@ socket.on("pongCheck", (data) => {
     const delay = (t1 - t0) + (t3 - t2);
     const offset = (t1 - t3 + t2 - t0) / 2;
 
-    console.log("Ping:", latency, "ms | " , "Delay:", delay, "ms | ", "Offset:", offset, "ms.");
+    // console.log("Ping:", latency, "ms | " , "Delay:", delay, "ms | ", "Offset:", offset, "ms.");
     ClockSync.addToBuffer(offset, delay);
     ClockSync.rtt = latency;
     ClockSync.delay = delay;

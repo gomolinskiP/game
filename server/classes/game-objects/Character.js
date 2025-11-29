@@ -10,6 +10,14 @@ const BOT_TRAINING = Boolean(process.env.BOT_TRAINING);
 
 export class Character extends Entity {
   static list = {};
+  static shooterList = {};
+  static shooterListInit(){
+    for (let d of Weapon.allowedDurations) {
+      this.shooterList[d] = new Set;
+    }
+  }
+  
+  
   static quadtree;
   static fullHP = 1000;
 
@@ -52,12 +60,16 @@ export class Character extends Entity {
       this.pressingLeft =
       this.pressingRight =
         false;
+        
+    this.isShooting = {state: false, noteID: 0};
+
     this.speed = 10;
     this.lastAngle = 90;
     this.hasShotScheduled = false;
     this.ownBulletsIDs = [];
 
     this.selectedNote = Sounds.scale.base;
+    this.selectedNoteID = 0;
 
     if (weapon == null) weapon = new Weapon(
       Weapon.allowedSounds[Math.floor(Math.random()*Weapon.allowedSounds.length)],
@@ -117,6 +129,12 @@ export class Character extends Entity {
         this.x = newX;
         this.y = newY;
 
+        //check if character entered nonPVP area while shooting:
+        if (this.isInNonPVPArea() && this.isShooting.state) {
+            this.setShootingState(false, this.isShooting.noteID);
+            console.log('entered non pvp while shooting')
+        }
+
         //update all scheduledBullets positions:
         for (const scheduledBullet of this.scheduledBullets) {
           scheduledBullet.updatePosition(this.x, this.y);
@@ -134,6 +152,44 @@ export class Character extends Entity {
     //todo heals only if needsupdate is true
     this.framesSinceDamage += 1;
     if (this.framesSinceDamage > 100 && this.framesSinceDamage%10==0) this.heal(1);
+  }
+
+  updateShooterListOnDurationChange(prevDuration, newDuration){
+    this.needsUpdate = true;
+    if(this.isShooting.state){
+      Character.shooterList[prevDuration].delete(this);
+      Character.shooterList[newDuration].add(this);
+    }
+  }
+
+  setShootingState(isShooting, noteID){
+    // this.isShooting = isShooting;
+    if(!isShooting && noteID != this.isShooting.noteID){
+      //return if player stopped pressing a key that was not his last note
+      return;
+    }
+
+    this.isShooting = {state: isShooting, noteID: noteID};
+    this.selectedNoteID = noteID;
+
+    //prevent starting shooting on spawn area:
+    if (this.isInNonPVPArea()) {
+        Socket.emitShootFeedbackMsg(
+            this,
+            "Shooting notes is not allowed near spawn area!",
+            "bad"
+        );
+        this.isShooting.state = false;
+    }
+
+    if(this.isShooting.state){
+      //add character to list of characters shooting with current weapon duration
+      Character.shooterList[this.weapon.duration].add(this);
+    }
+    else{
+      //remove character from list of characters shooting with current weapon duration
+      Character.shooterList[this.weapon.duration].delete(this);
+    }
   }
 
   shoot() {
@@ -303,5 +359,9 @@ export class Character extends Entity {
       this.needsUpdate = true;
 
       this.isDead = false;
+  }
+
+  remove(){
+    Character.shooterList[this.weapon.duration].delete(this);
   }
 }

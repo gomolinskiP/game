@@ -8,9 +8,9 @@ export class Socket {
     Socket.selfId = id;
   }
 
-  static pressingDirection(direction, state){
+  static pressingDirection(key, state){
     Socket.clientSocket.emit("keyPress", {
-        inputId: direction,
+        inputId: key,
         state: state,
     });
   }

@@ -155,6 +155,11 @@ export class Player extends Character{
             initPack.entities.push({
                 x: character.x,
                 y: character.y,
+                isShooting: character.isShooting.state,
+                duration: character.weapon.duration,
+                weaponType: character.weapon.type,
+                selectedNoteID: character.selectedNoteID,
+                selectedSound: character.weapon.sound,
                 type: character.characterType,
                 id: character.id,
                 name: character.name,
@@ -269,6 +274,11 @@ export class Player extends Character{
                 this.updatePack.push({
                     x: character.x,
                     y: character.y,
+                    isShooting: character.isShooting.state,
+                    duration: character.weapon.duration,
+                    weaponType: character.weapon.type,
+                    selectedNoteID: character.selectedNoteID,
+                    selectedSound: character.weapon.sound,
                     type: character.characterType,
                     id: character.id,
                     name: character.name,
