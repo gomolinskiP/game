@@ -8,12 +8,12 @@ let selfId = null;
 export class Entity{
     static list = {};
 
-    constructor(initPack){
+    constructor(id, initPack){
         if(!selfId) selfId = Socket.selfId;
 
         this.x = initPack.x;
         this.y = initPack.y;
-        this.id = initPack.id;
+        this.id = id;
 
         Entity.list[this.id] = this;
 
@@ -87,8 +87,8 @@ export class Player extends Entity{
 
     static stepSoundTimeoutMS = 250;
 
-    constructor(initPack){
-        super(initPack);
+    constructor(id, initPack){
+        super(id, initPack);
         this.name = initPack.name;
         this.hp = initPack.hp;
         this.score = initPack.score;
@@ -128,7 +128,7 @@ export class Player extends Entity{
     }
 
     update(pack){
-        console.log('player update', pack)
+        // console.log('player update', pack)
         if(pack.hp){
             if (pack.hp < this.hp) {
                 this.justDamaged = true;
@@ -158,6 +158,10 @@ export class Player extends Entity{
                 this.selectedDuration = pack.duration;
                 if (this.scheduler) this.scheduler.remove();
                 this.scheduler = null;
+
+                if (this.id == selfId) {
+                    GameUI.setDurationLabel(pack.duration);
+                }
             }
         }
 
@@ -166,11 +170,18 @@ export class Player extends Entity{
                 this.selectedSound = pack.selectedSound;
                 if (this.scheduler) this.scheduler.remove();
                 this.scheduler = null;
+
+                if (this.id == selfId) {
+                    GameUI.setSoundLabel(pack.selectedSound);
+                }
             }
         }
 
         if (pack.weaponType) {
             this.weaponType = pack.weaponType;
+            if (this.id == selfId) {
+                GameUI.setWeaponType(pack.weaponType);
+            }
         }
 
         if (pack.selectedNoteID) {
@@ -501,8 +512,8 @@ export class GhostBullet{
 export class Bullet extends Entity{
     static list = {};
 
-    constructor(initPack){
-        super(initPack);
+    constructor(id, initPack){
+        super(id, initPack);
         // console.log('bullet pack: ', initPack)
         
 
@@ -712,8 +723,8 @@ export class Bullet extends Entity{
 export class Pickup extends Entity{
     static list = {}
 
-    constructor(initPack){
-        super(initPack);
+    constructor(id, initPack){
+        super(id, initPack);
         this.sound = "pickup";
         this.isPicked = false;
         this.hasSoundSlot = false;
@@ -936,8 +947,8 @@ export class Tile{
         Tile.tileImages[gid] = img;
     }
 
-    constructor(initPack){
-        this.id = initPack.id;
+    constructor(id, initPack){
+        this.id = id;
         this.x = initPack.x;
         this.y = initPack.y;
         this.gid = initPack.gid;

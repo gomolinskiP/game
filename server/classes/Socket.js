@@ -11,11 +11,10 @@ export class Socket {
 
   static emitShootFeedbackMsg(recipient, message, rating){
     if(recipient.characterType == 'player'){
-      recipient.updatePack.push({
+      recipient.updatePack.gameMsg = {
           msg: message,
           rating: rating,
-          type: "gameMsg",
-      });
+      };
     }
   }
 

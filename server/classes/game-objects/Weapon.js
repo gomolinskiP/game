@@ -64,22 +64,22 @@ export class Weapon {
     setSound(sound) {
         this.sound = sound;
 
-        if (!this.wielder.updatePack) return;
-        this.wielder.updatePack.push({
-            sound: this.sound,
-            type: "weapon",
-        });
+        // if (!this.wielder.updatePack) return;
+        // this.wielder.updatePack.push({
+        //     sound: this.sound,
+        //     type: "weapon",
+        // });
     }
 
     setType(type) {
         this.type = type;
         this.shootCount = 0;
 
-        if (!this.wielder.updatePack) return;
-        this.wielder.updatePack.push({
-            weaponType: this.type,
-            type: "weapon",
-        });
+        // if (!this.wielder.updatePack) return;
+        // this.wielder.updatePack.push({
+        //     weaponType: this.type,
+        //     type: "weapon",
+        // });
     }
 
     setDuration(duration) {
@@ -87,11 +87,11 @@ export class Weapon {
 
         this.shootCount = 0;
 
-        if (!this.wielder.updatePack) return;
-        this.wielder.updatePack.push({
-            duration: this.duration,
-            type: "weapon",
-        });
+        // if (!this.wielder.updatePack) return;
+        // this.wielder.updatePack.push({
+        //     duration: this.duration,
+        //     type: "weapon",
+        // });
     }
 
     shoot(note) {

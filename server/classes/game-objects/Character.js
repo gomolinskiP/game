@@ -363,11 +363,11 @@ export class Character extends Entity {
 
     //send info to killed player:
     if(this.characterType == "player"){
-      this.updatePack.push({
+      this.updatePack.death = {
           type: "death",
           killer: byWho.name,
           scoreStolen: scoreStolen
-      });
+      };
     }
 
     //set isDead flag to true:

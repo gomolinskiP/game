@@ -57,7 +57,8 @@ export class Player extends Character{
 
         this.initPack = this.getInitPack();
         this.emitInitPack();
-        this.updatePack = [];
+        // this.updatePack = []
+        this.updatePack = {};
         this.removePack = [];
 
         return this;
@@ -134,16 +135,16 @@ export class Player extends Character{
     //     this.updatePack.push(state);
     // }
 
-    giveWeapon(sound, duration, type){
-        super.giveWeapon(sound, duration, type);
+    // giveWeapon(sound, duration, type){
+    //     super.giveWeapon(sound, duration, type);
 
-        if(!this.updatePack) return;
-        this.updatePack.push({
-            weaponType: type,
-            duration: duration,
-            type: "weapon",
-        })
-    }
+    //     // if(!this.updatePack) return;
+    //     // this.updatePack.push({
+    //     //     weaponType: type,
+    //     //     duration: duration,
+    //     //     type: "weapon",
+    //     // })
+    // }
     
     getInitPack(){
         let initPack = {};
@@ -264,7 +265,9 @@ export class Player extends Character{
                 //player was not aware of this character
                 //all info must be sent:
 
-                this.updatePack.push({
+                if (!this.updatePack.player) this.updatePack.player = {};
+
+                this.updatePack.player[character.id] = {
                     x: character.x,
                     y: character.y,
                     isShooting: character.isShooting.state,
@@ -272,13 +275,13 @@ export class Player extends Character{
                     weaponType: character.weapon.type,
                     selectedNoteID: character.selectedNoteID,
                     selectedSound: character.weapon.sound,
-                    type: character.characterType,
-                    id: character.id,
+                    // type: character.characterType,
+                    // id: character.id,
                     name: character.name,
                     hp: character.hp,
                     score: character.score,
                     direction: character.lastAngle,
-                });
+                };
 
                 this.knownObjIDs.add(character.id);
             }
@@ -288,10 +291,13 @@ export class Player extends Character{
 
                 //skip this character, if there's nothing to update about them:
                 if(Object.keys(character.toUpdate).length == 0) continue;
+
+                if (!this.updatePack.player) this.updatePack.player = {};
+
                 //push all info to update about character to player's updatePack:
-                character.toUpdate.type = "player";
+                // character.toUpdate.type = "player";
                 character.toUpdate.id = character.id;
-                this.updatePack.push(character.toUpdate);
+                this.updatePack.player[character.id] = character.toUpdate;
             }
         }
 
@@ -303,21 +309,23 @@ export class Player extends Character{
             if(!bullet) continue;
             if(!this.isWithinDistance(bullet, loadDistance)) continue;
 
+            if (!this.updatePack.bullet) this.updatePack.bullet = {};
+
             if(!this.knownObjIDs.has(bullet.id)){
                 //player was not aware of this bullet
                 //all info must be sent:
 
-                this.updatePack.push({
+                this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
-                    id: bullet.id,
-                    type: "bullet",
+                    // id: bullet.id,
+                    // type: "bullet",
                     parentId: bullet.parent.id,
 
                     sound: bullet.sound,
                     duration: bullet.duration,
                     note: bullet.note,
-                });
+                };
 
                 this.knownObjIDs.add(bullet.id);
             }
@@ -325,12 +333,12 @@ export class Player extends Character{
                 //player already knows about this bullet
                 //info only about parameters that changed (position):
 
-                this.updatePack.push({
+                this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
-                    id: bullet.id,
-                    type: "bullet",
-                });
+                    // id: bullet.id,
+                    // type: "bullet",
+                };
             }
         }
 
@@ -344,12 +352,14 @@ export class Player extends Character{
 
             //pickups need to be updated if they are not yet known to player (they're static):
             if(!this.knownObjIDs.has(pickup.id)){
-                this.updatePack.push({
+                if (!this.updatePack.pickup) this.updatePack.pickup = {};
+
+                this.updatePack.pickup[pickup.id] = {
                     x: pickup.x,
                     y: pickup.y,
-                    id: pickup.id,
-                    type: "pickup"
-                })
+                    // id: pickup.id,
+                    // type: "pickup"
+                };
 
                 this.knownObjIDs.add(pickup.id);
             }
@@ -364,14 +374,16 @@ export class Player extends Character{
 
             //tiles are static - need to be updated if player does not know about them yet:
             if(!this.knownObjIDs.has(tile.id)){
-                this.updatePack.push({
-                    type: "tile",
-                    id: tile.id,
+                if (!this.updatePack.tile) this.updatePack.tile = {};
+
+                this.updatePack.tile[tile.id] = {
+                    // type: "tile",
+                    // id: tile.id,
                     x: tile.x,
                     y: tile.y,
                     gid: tile.gid,
                     layerId: tile.layerId
-                })
+                }
 
                 this.knownObjIDs.add(tile.id);
             }
@@ -385,13 +397,13 @@ export class Player extends Character{
         let socket = Socket.list[this.id];
         if (!socket) {
             console.log(`ERROR NO SOCKET WHILE EMITTING UPDATE PACK`);
-            this.updatePack = [];
+            this.updatePack = {};
             return;
         }
 
-        if (this.updatePack.length) {
+        if (Object.keys(this.updatePack).length > 0) {
             socket.emit("update", this.updatePack);
-            this.updatePack = [];
+            this.updatePack = {};
         }
 
         return;
