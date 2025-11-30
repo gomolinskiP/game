@@ -45,6 +45,7 @@ export class Entity{
     }
 
     static getDistanceSq(id){
+        if(!selfId) return 9999;
         //returns distance squared between client's player and entity with given ID
         // console.log(`get distancesq id=${id}`)
         const entity = Entity.list[id];
@@ -128,6 +129,7 @@ export class Player extends Entity{
     }
 
     update(pack){
+        if (Player.list[selfId] == undefined) return;
         // console.log('player update', pack)
         if(pack.hp){
             if (pack.hp < this.hp) {
@@ -254,7 +256,7 @@ export class Player extends Entity{
                         this.footstepScheduler = new BulletScheduler(
                             this,
                             this.sound,
-                            "8n.",
+                            "8n",
                             "normal"
                         );
                     if (this.isWalkingTimeout)
@@ -280,6 +282,8 @@ export class Player extends Entity{
             this.sampler.stop();
             this.soundSlot.free = true;
         }
+
+        console.log('destroying player');
 
         if(this.scheduler){
             this.scheduler.remove();

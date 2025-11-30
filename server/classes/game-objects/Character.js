@@ -143,7 +143,6 @@ export class Character extends Entity {
         //check if character entered nonPVP area while shooting:
         if (this.isInNonPVPArea() && this.isShooting.state) {
             this.setShootingState(false, this.isShooting.noteID);
-            console.log('entered non pvp while shooting')
         }
 
         //update all scheduledBullets positions:
@@ -184,7 +183,7 @@ export class Character extends Entity {
     this.selectedNoteID = noteID;
 
     //prevent starting shooting on spawn area:
-    if (this.isInNonPVPArea()) {
+    if (this.isInNonPVPArea() && isShooting) {
         Socket.emitShootFeedbackMsg(
             this,
             "Shooting notes is not allowed near spawn area!",

@@ -437,12 +437,19 @@ export class Bot extends Character {
 
     setWalkAction(move) {
         // this.needsUpdate = true;
+
+        //walking:
         this.pressingUp = move.u;
         this.pressingDown = move.d;
         this.pressingLeft = move.l;
         this.pressingRight = move.r;
 
-        if(move.att) this.shoot();
+        //shooting:
+        if(this.isShooting.state != move.att){
+            this.setShootingState(false, this.isShooting.noteID);
+            this.setShootingState(move.att, Math.round(7 * Math.random()));
+        }
+
         if(move.changeWeaponDuration){
             // console.log(`setting ${move.changeWeaponDuration} weapon duration`);
             this.changeWeaponDuration(move.changeWeaponDuration);
@@ -536,19 +543,19 @@ export class Bot extends Character {
     }
     
 
-    shoot() {
-        super.shoot();
+    // shoot() {
+    //     super.shoot();
 
-        const noteIndex = Math.round(Math.random() * (Sounds.scale.allowedNotes.length - 1));
-        this.changeSelectedNote(Sounds.scale.allowedNotes[noteIndex]);
+    //     const noteIndex = Math.round(Math.random() * (Sounds.scale.allowedNotes.length - 1));
+    //     this.changeSelectedNote(Sounds.scale.allowedNotes[noteIndex]);
 
-        //small negative reward for just shooting - will be positively compensated (4x) if the shot damages other enemy
-        // const shotReward = -10 * (this.weapon.damage / this.fullHP);
-        // this.combatReward += shotReward;
-        // console.log('shooting reward: ', shotReward)
+    //     //small negative reward for just shooting - will be positively compensated (4x) if the shot damages other enemy
+    //     // const shotReward = -10 * (this.weapon.damage / this.fullHP);
+    //     // this.combatReward += shotReward;
+    //     // console.log('shooting reward: ', shotReward)
 
-        // this.shootAgentReward -= 0.05; //negative reward for just shooting - will be compensated if shot damages other player
-    }
+    //     // this.shootAgentReward -= 0.05; //negative reward for just shooting - will be compensated if shot damages other player
+    // }
 
     getReward() {
         //add negative reward if agent is not moving:

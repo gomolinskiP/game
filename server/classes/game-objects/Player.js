@@ -171,7 +171,7 @@ export class Player extends Character{
                 weaponType: character.weapon.type,
                 selectedNoteID: character.selectedNoteID,
                 selectedSound: character.weapon.sound,
-                type: character.characterType,
+                type: "player",
                 id: character.id,
                 name: character.name,
                 hp: character.hp,
@@ -448,7 +448,7 @@ export class Player extends Character{
             if (!this.knownObjIDs.has(character.id)) continue;
             if (notToRemoveIDs.includes(character.id)) continue;
             if (!this.isWithinDistance(character, unloadDistance)) {
-                this.addToRemovePack(character.id, character.characterType);
+                this.addToRemovePack(character.id, "player");
             }
         }
 

@@ -210,6 +210,7 @@ socket.on("remove", function (data) {
                     console.log(`ERROR NO PLAYER WITH ID=${id}`);
                     continue;
                 }
+                Player.list[id].destroy();
                 delete Player.list[id];
                 // console.log(`removing player`)
                 break;
