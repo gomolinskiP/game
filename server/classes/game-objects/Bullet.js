@@ -36,7 +36,8 @@ export class Bullet extends Entity {
     super(parent.x, parent.y);
     this.id = Math.random();
     this.parent = parent;
-    this.speed = 20;
+    // this.speed = 20;
+    this.speed = 10_000 / Sounds.beatInterval;
 
     this.entityType = "bullet";
 
