@@ -257,6 +257,79 @@ export default function expressSetUp(Account){
         res.redirect("/");
     });
 
+    app.get("/about", function (req, res) {
+        if (req.query.err) {
+            req.session.err = req.query.err;
+            return res.redirect("/about");
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        if (req.session?.user?.username) {
+            isLogged = true;
+            username = req.session.user.username;
+            // return res.redirect("/about");
+        }
+
+        res.render("about", {
+            isLogged: isLogged,
+            username: username,
+            error: err,
+        });
+    });
+
+    app.get("/contact", function (req, res) {
+        if (req.query.err) {
+            req.session.err = req.query.err;
+            return res.redirect("/contact");
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        if (req.session?.user?.username) {
+            isLogged = true;
+            username = req.session.user.username;
+            // return res.redirect("/about");
+        }
+
+        res.render("contact", {
+            isLogged: isLogged,
+            username: username,
+            error: err,
+        });
+    });
+
+    app.get("/privacy", function (req, res) {
+        if (req.query.err) {
+            req.session.err = req.query.err;
+            return res.redirect("/privacy");
+        }
+
+        let isLogged = false;
+        let username = undefined;
+        let err = req.session.err;
+        delete req.session.err;
+
+        if (req.session?.user?.username) {
+            isLogged = true;
+            username = req.session.user.username;
+            // return res.redirect("/about");
+        }
+
+        res.render("privacy", {
+            isLogged: isLogged,
+            username: username,
+            error: err,
+        });
+    });
+
+
     app.use("/client", express.static(__dirname + "/client"));
     app.use(express.static("client"));
     serv.listen(2000);
