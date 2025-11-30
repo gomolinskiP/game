@@ -156,8 +156,10 @@ export class Player extends Entity{
         if (pack.duration) {
             if (this.selectedDuration != pack.duration) {
                 this.selectedDuration = pack.duration;
-                if (this.scheduler) this.scheduler.remove();
-                this.scheduler = null;
+                if (this.scheduler) {
+                    this.scheduler.remove();
+                    this.scheduler = null;
+                }
 
                 if (this.id == selfId) {
                     GameUI.setDurationLabel(pack.duration);
@@ -168,8 +170,10 @@ export class Player extends Entity{
         if (pack.selectedSound) {
             if (this.selectedSound != pack.selectedSound) {
                 this.selectedSound = pack.selectedSound;
-                if (this.scheduler) this.scheduler.remove();
-                this.scheduler = null;
+                if (this.scheduler) {
+                    this.scheduler.remove();
+                    this.scheduler = null;
+                }
 
                 if (this.id == selfId) {
                     GameUI.setSoundLabel(pack.selectedSound);
@@ -178,14 +182,26 @@ export class Player extends Entity{
         }
 
         if (pack.weaponType) {
-            this.weaponType = pack.weaponType;
-            if (this.id == selfId) {
-                GameUI.setWeaponType(pack.weaponType);
+            if(this.weaponType != pack.weaponType){
+                this.weaponType = pack.weaponType;
+                if (this.scheduler) {
+                    this.scheduler.remove();
+                    this.scheduler = null;
+                }
+                if (this.id == selfId) {
+                    GameUI.setWeaponType(pack.weaponType);
+                }
             }
         }
 
-        if (pack.selectedNoteID) {
-            this.selectedNoteID = pack.selectedNoteID;
+        if (pack.selectedNoteID != undefined) {
+            if(this.selectedNoteID != pack.selectedNoteID){
+                this.selectedNoteID = pack.selectedNoteID;
+                if (this.scheduler) {
+                    this.scheduler.remove();
+                    this.scheduler = null;
+                }
+            }
         }
 
         if(pack.isShooting != undefined){
@@ -196,7 +212,8 @@ export class Player extends Entity{
             this.scheduler = new BulletScheduler(
                 this,
                 this.selectedSound,
-                this.selectedDuration
+                this.selectedDuration,
+                this.weaponType
             );
         } else if (!this.isShooting && this.scheduler) {
             this.scheduler.remove();
@@ -237,7 +254,8 @@ export class Player extends Entity{
                         this.footstepScheduler = new BulletScheduler(
                             this,
                             this.sound,
-                            "8n."
+                            "8n.",
+                            "normal"
                         );
                     if (this.isWalkingTimeout)
                         clearTimeout(this.isWalkingTimeout);
@@ -385,12 +403,14 @@ const soundNames = {
 
 export class BulletScheduler{
 
-    constructor(parent, sound, duration){
+    constructor(parent, sound, duration, weaponType){
         this.parentID = parent.id;
         // const duration = parent.selectedDuration;
 
         this.soundSlot = null;
         this.hasSoundSlot = false;
+
+        this.shootCount = 0;
 
         let startOn;
         switch(duration){
@@ -423,21 +443,120 @@ export class BulletScheduler{
                 return;
         }
         
-        this.ID = Tone.Transport.scheduleRepeat(
-            (time) => {
-                new GhostBullet(parent, sound, duration);
-                console.log(
-                    "position",
-                    Tone.Transport.position,
-                    "tickNum",
-                    Sounds.tickNum - Sounds.firstTickNum
+
+        const noteID = parent.selectedNoteID;
+        const note = Sounds.allowedNotes[noteID];
+        const [note2ID, octUp2] = Sounds.getTransposedAllowedNoteID(noteID, 4);
+        const [note3ID, octUp3] = Sounds.getTransposedAllowedNoteID(noteID, 7);
+        //TODO use octUp!
+
+        const note2 = Sounds.allowedNotes[note2ID];
+        const note3 = Sounds.allowedNotes[note3ID];
+
+        switch(weaponType){
+            case "normal":
+                this.ID = Tone.Transport.scheduleRepeat(
+                    (time) => {
+                        new GhostBullet(parent, note, sound, duration);
+                    },
+                    duration,
+                    startOn
                 );
-                
-            },
-            duration,
-            startOn
-        );
-        console.log('scheduleID', this.ID);
+                break;
+            case "chord":                
+                // console.log(
+                //     'note1',
+                //     note,
+                //     'note2',
+                //     note2,
+                //     'note3',
+                //     note3
+                // )
+                this.ID = Tone.Transport.scheduleRepeat(
+                    (time) => {
+                        //triad chord from 3 notes:
+                        new GhostBullet(parent, note, sound, duration);
+                        new GhostBullet(parent, note2, sound, duration);
+                        new GhostBullet(parent, note3, sound, duration);
+                    },
+                    duration,
+                    startOn
+                );
+                break;
+            case "arp-up":
+                this.ID = Tone.Transport.scheduleRepeat(                    
+                    (time) => {
+                        let notesIDs = [noteID, note2ID, note3ID];
+                        let arpNoteID = notesIDs[this.shootCount % notesIDs.length];
+                        let arpNote = Sounds.allowedNotes[arpNoteID];
+                        // console.log('asc arp note', arpNote)
+
+                        //triad chord from 3 notes:
+                        new GhostBullet(parent, arpNote, sound, duration);
+
+                        this.shootCount++;
+                    },
+                    duration,
+                    startOn
+                );
+                break;
+            case "arp-down":
+                this.ID = Tone.Transport.scheduleRepeat(
+                    (time) => {
+                        let notesIDs = [noteID, note2ID, note3ID];
+                        let arpNoteID =
+                            notesIDs[
+                                notesIDs.length -
+                                    1 -
+                                    (this.shootCount % notesIDs.length)
+                            ];
+                        let arpNote = Sounds.allowedNotes[arpNoteID];
+                        // console.log("desc arp note", arpNote);
+
+                        //triad chord from 3 notes:
+                        new GhostBullet(parent, arpNote, sound, duration);
+
+                        this.shootCount++;
+                    },
+                    duration,
+                    startOn
+                );
+                break;
+            case "arp-alt":
+                this.ID = Tone.Transport.scheduleRepeat(
+                    (time) => {
+                        let notesIDs = [noteID, note2ID, note3ID];
+
+                        let cycleLen = 2 * (notesIDs.length - 1);
+                        let cyclePos = this.shootCount % cycleLen;
+
+                        let index;
+                        if (cyclePos < notesIDs.length) index = cyclePos;
+                        else index = cycleLen - cyclePos;
+
+                        let arpNoteID =
+                            notesIDs[index];
+                        let arpNote = Sounds.allowedNotes[arpNoteID];
+                        // console.log("alt arp note", arpNote);
+
+                        //triad chord from 3 notes:
+                        new GhostBullet(parent, arpNote, sound, duration);
+
+                        this.shootCount++;
+                    },
+                    duration,
+                    startOn
+                );
+                break;
+            default:
+                console.warn("weapon type not supported for ghost bullet scheduling!");
+        }
+
+        //weaponType: "normal":
+        
+
+        //weaponType: "chord" (triad chord):
+
     }
 
     remove(){
@@ -454,7 +573,7 @@ export class GhostBullet{
 
     static listByID = {}
 
-    constructor(parent, sound, duration){
+    constructor(parent, note, sound, duration){
         this.x = parent.x;
         this.y = parent.y;
 
@@ -490,8 +609,7 @@ export class GhostBullet{
             console.log('sound', sound);
             this.sampler.setSound(sound);
 
-
-            const note = Sounds.allowedNotes[parent.selectedNoteID];
+            // const note = Sounds.allowedNotes[parent.selectedNoteID];
             this.sampler.play(note);
             // Sounds.test.triggerAttackRelease("C5", "32n");
 

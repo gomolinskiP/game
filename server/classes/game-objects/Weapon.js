@@ -17,7 +17,7 @@ export class Weapon {
     ];
     static allwedTypes = [
         "normal",
-        "random",
+        // "random",
         "chord",
         "arp-up",
         "arp-down",

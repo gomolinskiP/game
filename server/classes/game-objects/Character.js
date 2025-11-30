@@ -198,6 +198,8 @@ export class Character extends Entity {
     if(this.isShooting.state){
       //add character to list of characters shooting with current weapon duration
       Character.shooterList[this.weapon.duration].add(this);
+
+      this.weapon.shootCount = 0;
     }
     else{
       //remove character from list of characters shooting with current weapon duration

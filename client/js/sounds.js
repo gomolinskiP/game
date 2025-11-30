@@ -200,6 +200,51 @@ export class Sounds {
         return position;
     }
 
+    static getTransposedAllowedNoteID(fromID, transposition){
+        if(transposition < 0){
+            //this implementation works only for positive transposition values:
+            console.warn('Transposition only works for positive valueas for now! Aborting method.')
+            return [fromID, 0];
+
+        }
+
+        //variable telling how many octaves higher the transposition went:
+        let octUp = 0;
+
+        //note we start from & it's index in all notes (not only allowed):
+        let fromNote = Sounds.allowedNotes[fromID];
+        let fromNoteIndex = Sounds.notes.indexOf(fromNote);
+
+        //naive transposition:
+        let transposedNoteIndex = fromNoteIndex + transposition;
+
+        //check if we went above the all notes length:
+        if(transposedNoteIndex > Sounds.notes.length - 1){
+            transposedNoteIndex -= Sounds.notes.length;
+            octUp = 1;
+        }
+
+        //index of transposed note in all notes (not only allowed) array:
+        let transposedNote = Sounds.notes[transposedNoteIndex];
+
+        //if transposed note is not allowed, we decrease index by 1 (chord is minor third & not major third):
+        if(!Sounds.allowedNotes.includes(transposedNote)){
+            transposedNoteIndex -= 1;
+
+            //if the decreased index is smaller than 0, we rotate up by note array length:
+            if (transposedNoteIndex < 0)
+                transposedNoteIndex += Sounds.notes.length;
+        }
+
+        //result note:
+        transposedNote = Sounds.notes[transposedNoteIndex];
+
+        //index of result note in allowed notes array:
+        let transposedID = Sounds.allowedNotes.indexOf(transposedNote);
+
+        return [transposedID, octUp];
+    }
+
     static setupNoteKeyboard() {
         let digit = 1;
         for (const note of Sounds.allowedNotes) {
