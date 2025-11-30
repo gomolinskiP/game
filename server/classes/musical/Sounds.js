@@ -175,7 +175,7 @@ export class Sounds {
                 const note = Sounds.scale.allowedNotes[ch.selectedNoteID];
 
                 ch.weapon.shoot(note);
-                setTimeout(() => {
+                ch.outOfMetronomeSchedule = setTimeout(() => {
                     ch.weapon.shoot(note);
                 }, Sounds.beatInterval / 2);
             }
@@ -204,7 +204,7 @@ export class Sounds {
                 ch.weapon.shoot(note);
 
                 //also shoot after 3/2 of beat:
-                setTimeout(() => {
+                ch.outOfMetronomeSchedule = setTimeout(() => {
                     ch.weapon.shoot(note);
                 }, Sounds.beatInterval * (3 / 2));
             }

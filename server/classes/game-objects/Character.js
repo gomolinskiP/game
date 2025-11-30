@@ -63,6 +63,7 @@ export class Character extends Entity {
         false;
         
     this.isShooting = {state: false, noteID: 0};
+    this.outOfMetronomeSchedule = null;
 
     this.speed = 10;
     this.lastAngle = 90;
@@ -204,6 +205,13 @@ export class Character extends Entity {
     else{
       //remove character from list of characters shooting with current weapon duration
       Character.shooterList[this.weapon.duration].delete(this);
+
+      //remove out-of-metronome scheduled shot
+      //(for some durations that's notes start between metronome ticks):
+      if(this.outOfMetronomeSchedule){
+        clearTimeout(this.outOfMetronomeSchedule);
+        this.outOfMetronomeSchedule = null;
+      }
     }
   }
 
