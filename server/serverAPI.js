@@ -33,7 +33,7 @@ export default function expressSetUp(Account){
     const serv = https.createServer(options, app);
     //TODO mkcert to make it work with VSCode DevTunnels
 
-    app.use(favicon("client/img/placeholder.png"));
+    app.use(favicon("client/img/logo.svg"));
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
 
