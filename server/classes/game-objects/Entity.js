@@ -26,6 +26,7 @@ export class Entity {
             if (!other) continue;
             if (other === this) continue;
             if (other.isDead) continue;
+            if(!other.isPlaying) continue;
 
             const distSq = this.getDistSq(other);
 

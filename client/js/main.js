@@ -18,16 +18,21 @@ const socket = Socket.clientSocket;
 
 
 Tile.loadMapData();
-let gameLoaded = false;
+// let gameLoaded = false;
 
 
 //create synths beforehand and store them in a synth pool:
 // SynthPool.populateAllPools(4)
 
+socket.on("dbProgressChecked", (data)=>{
+    Socket.setSelfID(data.selfID);
+    console.log("db progress checked");
+});
+
 socket.on("init", function (data) {
     console.log("InitPack:", data)
 
-    Socket.setSelfID(data.selfId);
+    // Socket.setSelfID(data.selfId);
     Sounds.setScale(data.scale.name, data.scale.allowedNotes);
     Sounds.setupNoteKeyboard();
     Sounds.setBPM(data.bpm);
@@ -127,73 +132,6 @@ socket.on("update", function (data) {
         const pack = data.death;
         GameUI.showDeathMessage(pack);
     }
-
-
-
-///////
-    // for (let i = 0; i < data.length; i++) {
-    //     let pack = data[i];
-    //     let id = pack.id;
-
-    //     switch (pack.type) {
-    //         case "player":
-    //             let p = Player.list[id];
-    //             if (p) {
-    //                 p.update(pack);
-    //             } else {
-    //                 new Player(pack);
-    //             }
-    //             break;
-    //         case "bot":
-    //             const bt = Player.list[id];
-    //             if(bt){
-    //                 bt.update(pack);
-    //             }
-    //             else{
-    //                 new Bot(pack);
-    //             }
-    //             break;
-    //         case "bullet":
-    //             let b = Bullet.list[id];
-    //             if (b) {
-    //                 b.update(pack);
-    //             } else {
-    //                 new Bullet(pack);
-    //                 if (pack.parentId == Socket.selfId) {
-    //                     GameUI.highlightPlayedNote(pack.note, pack.duration);
-    //                 }
-    //             }
-    //             break;
-    //         case "pickup":
-    //             let pU = Pickup.list[id];
-    //             if (!pU) {
-    //                 new Pickup(pack);
-    //             }
-    //             break;
-    //         case "tile":
-    //             let tile = Tile.list[id];
-    //             if (!tile) {
-    //                 new Tile(pack);
-    //             }
-    //             break;
-    //         // case "weapon":
-    //         //     console.log(pack);
-    //         //     if (pack.weaponType) GameUI.setWeaponType(pack.weaponType);
-    //         //     if (pack.duration){
-    //         //         GameUI.setDurationLabel(pack.duration);
-    //         //         // timingHelperID = newTimingHelper(pack.duration, timingHelperID);
-    //         //     }
-    //         //     if (pack.sound) GameUI.setSoundLabel(pack.sound);
-    //         //     break;
-    //         case "gameMsg":
-    //             Graphics.addGameMsg(pack.msg, pack.rating);
-    //             break;
-    //         case "death":
-    //             console.log('death', pack);
-    //             GameUI.showDeathMessage(pack);
-    //             break;
-    //     }
-    // }
 });
 
 socket.on("remove", function (data) {

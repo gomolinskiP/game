@@ -47,6 +47,8 @@ export class Player extends Character{
         this.socket = socket;
         this.id = socket.id;
 
+        this.isPlaying = false;
+
         this.characterType = 'player';
 
         Player.list[this.id] = this;
@@ -55,13 +57,22 @@ export class Player extends Character{
 
         this.knownObjIDs = new Set(); //all objects' IDs known to this player
 
-        this.initPack = this.getInitPack();
-        this.emitInitPack();
+        // this.initPack = this.getInitPack();
+        // this.emitInitPack();
         // this.updatePack = []
         this.updatePack = {};
         this.removePack = [];
 
         return this;
+    }
+
+    startGame(){
+        console.log('player started game')
+
+        this.isPlaying = true;
+        this.initPack = this.getInitPack();
+        this.emitInitPack();
+        
     }
 
     // getEnvironment(){
@@ -162,6 +173,7 @@ export class Player extends Character{
             const character = Character.list[candidate.id];
 
             if(!this.isWithinDistance(character, loadDistance)) continue;
+            if(character.characterType == "player" && character.isPlaying == false) continue;
 
             initPack.entities.push({
                 x: character.x,
@@ -260,6 +272,7 @@ export class Player extends Character{
         for(const c of charactersToUpdate){
             const character = Character.list[c.id];
             if(!this.isWithinDistance(character, loadDistance)) continue;
+            if(character.characterType == "player" && character.isPlaying == false) continue;
 
             if(!this.knownObjIDs.has(character.id)){
                 //player was not aware of this character

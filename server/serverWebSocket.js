@@ -157,8 +157,10 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             (player) => player.name === username
         );
         if (loggedPlayer) {
-            //
+            //the player is currently playing from another socket
             console.log(`>>>>MULTISOCKET DETECTED<<<<`);
+
+            //save their progress from that socket:
             await Progress.updateOne(
                 { username: loggedPlayer.name },
                 {
@@ -166,13 +168,22 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
                         x: loggedPlayer.x,
                         y: loggedPlayer.y,
                         score: loggedPlayer.score,
+                        weapon: {
+                            sound: loggedPlayer.weapon.sound,
+                            type: loggedPlayer.weapon.type,
+                            duration: loggedPlayer.weapon.duration,
+                        },
                     },
                 }
             );
+
+            //force redirect on that socket to homepage
             Socket.list[loggedPlayer.id].emit("redirect", "/");
-            delete Socket.list[loggedPlayer.id];
-            delete Player.list[loggedPlayer.id];
-            delete Character.list[loggedPlayer.id];
+
+            // //delete previous socket & player object
+            // delete Socket.list[loggedPlayer.id];
+            // delete Player.list[loggedPlayer.id];
+            // delete Character.list[loggedPlayer.id];
         }
         //retrieve player progress:
         let res = await Progress.findOne({ username: username });
@@ -186,8 +197,9 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
                 res.weapon,
                 res.score
             );
+            console.log(res)
 
-            //teleport player if they're stuck in collision area:
+            //teleport player if they're stuck in collision area (due to map change):
             if (
                 Tile.checkTilesCollision(player.x, player.y, Tile.wallQTree) ||
                 !Tile.checkTilesCollision(player.x, player.y, Tile.floorQTree)
@@ -200,7 +212,14 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             player = new Player(socket, 0, 0, username);
             Progress.insertOne({ username: username, x: 0, y: 0, score: 0 });
         }
-        // }
+
+        socket.emit("dbProgressChecked", {
+            selfID: socket.id,
+        });
+
+        socket.on("startGame", function(){
+            player.startGame();
+        })
 
         socket.on("disconnect", async function () {
             //socket disconnected
@@ -217,10 +236,12 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
             try {
                 await Progress.updateOne(
                     { username: username },
-                    { $set: { x: player.x, y: player.y, score: player.score } }
+                    { $set: { x: player.x, y: player.y, score: player.score, weapon: {
+                        sound: player.weapon.sound,
+                        type: player.weapon.type,
+                        duration: player.weapon.duration
+                    } } }
                 );
-
-                console.log("progress saved");
             } catch (err) {
                 console.error(`Error with saving progress to database: ${err}`);
             }

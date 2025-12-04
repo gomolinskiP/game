@@ -78,6 +78,7 @@ export class Character extends Entity {
       Weapon.allowedDurations[Math.floor(Math.random()*Weapon.allowedDurations.length)],
       Weapon.allwedTypes[Math.floor(Math.random()*Weapon.allwedTypes.length)],
       this);
+  
     this.giveWeapon(weapon.sound, weapon.duration, weapon.type);
 
     this.scheduledBullets = [];
@@ -89,6 +90,7 @@ export class Character extends Entity {
 
   updatePosition() {
     if(this.isDead) return;
+    if(this.characterType == "player" && this.isPlaying == false) return;
 
     if (this.pressingUp) {
       this.dirY = -1;
@@ -174,6 +176,7 @@ export class Character extends Entity {
 
   setShootingState(isShooting, noteID){
     if(this.isDead) return;
+    if(this.characterType == "player" && this.isPlaying == false) return;
 
     // this.isShooting = isShooting;
     if(!isShooting && noteID != this.isShooting.noteID){
@@ -321,6 +324,8 @@ export class Character extends Entity {
 
   addScore(points) {
     if (this.isDead) return;
+    if (this.characterType == "player" && this.isPlaying == false) return;
+
     this.score += points;
 
     this.toUpdate.score = this.score;
@@ -333,6 +338,8 @@ export class Character extends Entity {
 
   takeDmg(damage, attacker) {
     if (this.isDead) return;
+    if (this.characterType == "player" && this.isPlaying == false) return;
+
     this.hp -= damage;
 
     this.framesSinceDamage = 0;
@@ -346,6 +353,8 @@ export class Character extends Entity {
 
   heal(hpAmount) {
     if (this.isDead) return;
+    if (this.characterType == "player" && this.isPlaying == false) return;
+
     if(this.hp >= Character.fullHP) return;
 
     this.hp += hpAmount;

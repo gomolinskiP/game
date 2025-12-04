@@ -21,12 +21,16 @@ const AccountSchema = new mongoose.Schema({
     password: { type: String, required: true }
 }, { collection: 'account' });
 
-const ProgressSchema = new mongoose.Schema({
-    username: String,
-    x: Number,
-    y: Number,
-    score: Number
-}, { collection: 'progress' });
+const ProgressSchema = new mongoose.Schema(
+    {
+        username: { type: String, unique: true, required: true },
+        x: Number,
+        y: Number,
+        score: Number,
+        weapon: mongoose.Schema.Types.Mixed,
+    },
+    { collection: "progress" }
+);
 
 const Account = mongoose.model('account', AccountSchema);
 const Progress = mongoose.model('progress', ProgressSchema);

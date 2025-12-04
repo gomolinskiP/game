@@ -20,7 +20,9 @@ export class Socket {
 
   constructor(socket) {
     this.id = Math.random();
+    this.playing = false;
     this.initialized = false;
+    this.progressFromDB = null;
 
     Socket.list[this.id] = socket;
     return this;

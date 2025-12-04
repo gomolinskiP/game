@@ -1,7 +1,9 @@
-import { Graphics } from "./graphics.js";
-console.log('start loading images:')
-await Graphics.loadImages();
-console.log('images loaded!')
+// import { Graphics } from "./graphics.js";
+import { Socket } from "./clientSocket.js";
+
+// console.log('start loading images:')
+// await Graphics.loadImages();
+// console.log('images loaded!')
 
 /*
 Pre-startup script should:
@@ -12,18 +14,27 @@ Pre-startup script should:
 - after above is done, allow to start the proper game
 */
 
+const socket = Socket.clientSocket;
+
+socket.on("dbProgressChecked", (data)=>{
+    Socket.setSelfID(data.selfID);
+    console.log("db progress checked");
+});
+
 const startGameBTN = document.getElementById("start-game-btn");
 const preloadContent = document.getElementById("not-loaded");
 const gameContent = document.getElementById("loaded");
 
-startGameBTN.onclick = () => {
+startGameBTN.onclick = async () => {
     //game is loaded - start:
-    preloadContent.style.display = "none";
-    gameContent.style.display = "block";
+    
 
     clearInterval(dotsNumChangeInterval);
-
     Tone.start();
+    await import("./main.js");
+    socket.emit("startGame");
+    preloadContent.style.display = "none";
+    gameContent.style.display = "block";
 };
 
 const animatedDots = document.getElementById("dots-anim");
