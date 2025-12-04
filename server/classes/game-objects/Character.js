@@ -173,6 +173,8 @@ export class Character extends Entity {
   }
 
   setShootingState(isShooting, noteID){
+    if(this.isDead) return;
+
     // this.isShooting = isShooting;
     if(!isShooting && noteID != this.isShooting.noteID){
       //return if player stopped pressing a key that was not his last note
@@ -214,107 +216,107 @@ export class Character extends Entity {
     }
   }
 
-  shoot() {
-    if(this.isDead) return;
+  // shoot() {
+  //   if(this.isDead) return;
 
-    //shooting not allowed on spawn:
-    if (this.isInNonPVPArea()) {
-        Socket.emitShootFeedbackMsg(
-            this,
-            "Shooting notes is not allowed near spawn area!",
-            "bad"
-        );
-        return;
-    }
+  //   //shooting not allowed on spawn:
+  //   if (this.isInNonPVPArea()) {
+  //       Socket.emitShootFeedbackMsg(
+  //           this,
+  //           "Shooting notes is not allowed near spawn area!",
+  //           "bad"
+  //       );
+  //       return;
+  //   }
     
-    if(this.hasShotScheduled){
-      Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
+  //   if(this.hasShotScheduled){
+  //     Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
 
-      if (this.characterType == "bot") {
-          this.combatReward -= 0.5;
-      }
-      return;
-    }
+  //     if (this.characterType == "bot") {
+  //         this.combatReward -= 0.5;
+  //     }
+  //     return;
+  //   }
 
-    if (BOT_TRAINING) {
-        //skip timing validation for bot training:
-        this.weapon.shoot(this.selectedNote);
-        this.hasShotScheduled = true;
-        return;
-    }
+  //   if (BOT_TRAINING) {
+  //       //skip timing validation for bot training:
+  //       this.weapon.shoot(this.selectedNote);
+  //       this.hasShotScheduled = true;
+  //       return;
+  //   }
 
-    let timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
+  //   let timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
 
-    let inaccuracyType;
-    if(timeInaccuracy >= 0){
-      //shot timing perfect or late:
-      inaccuracyType = 'late';
-    }
-    else{
-      //shot timing perfect or early:
-      inaccuracyType = "early";
-      timeInaccuracy = -timeInaccuracy; //we want absolute value for later
-    }
+  //   let inaccuracyType;
+  //   if(timeInaccuracy >= 0){
+  //     //shot timing perfect or late:
+  //     inaccuracyType = 'late';
+  //   }
+  //   else{
+  //     //shot timing perfect or early:
+  //     inaccuracyType = "early";
+  //     timeInaccuracy = -timeInaccuracy; //we want absolute value for later
+  //   }
 
-    if(timeInaccuracy > Sounds.maxTimeInaccuracy){
-      Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
-      return;
-    }
+  //   if(timeInaccuracy > Sounds.maxTimeInaccuracy){
+  //     Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
+  //     return;
+  //   }
 
-    this.hasShotScheduled = true;
-    if(timeInaccuracy < Sounds.perfectTimeInaccuracy){
-      Socket.emitShootFeedbackMsg(this, 'Perfect timing!', 'good');
-    }
-    else{
-      Socket.emitShootFeedbackMsg(this, 'Timing ' + timeInaccuracy + ' to ' + inaccuracyType, 'ok');
-    }
+  //   this.hasShotScheduled = true;
+  //   if(timeInaccuracy < Sounds.perfectTimeInaccuracy){
+  //     Socket.emitShootFeedbackMsg(this, 'Perfect timing!', 'good');
+  //   }
+  //   else{
+  //     Socket.emitShootFeedbackMsg(this, 'Timing ' + timeInaccuracy + ' to ' + inaccuracyType, 'ok');
+  //   }
 
-    this.weapon.shoot(this.selectedNote);
+  //   this.weapon.shoot(this.selectedNote);
 
 
-    // //shooting not allowed on spawn:
-    // if (
-    //   this.isWithinDistance(
-    //     {
-    //       x: 0,
-    //       y: 0,
-    //     },
-    //     1600
-    //   )
-    // )
-    //   return;
-    // this.needsUpdate = true;
-    // if (!this.hasShotScheduled) {
-    //   this.hasShotScheduled = true;
-    //   let newBullets = this.weapon.shoot(this.selectedNote);
-    //   //add to this players scheduled bullet list:
-    //   this.scheduledBullets = this.scheduledBullets.concat(newBullets);
-    //   // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
+  //   // //shooting not allowed on spawn:
+  //   // if (
+  //   //   this.isWithinDistance(
+  //   //     {
+  //   //       x: 0,
+  //   //       y: 0,
+  //   //     },
+  //   //     1600
+  //   //   )
+  //   // )
+  //   //   return;
+  //   // this.needsUpdate = true;
+  //   // if (!this.hasShotScheduled) {
+  //   //   this.hasShotScheduled = true;
+  //   //   let newBullets = this.weapon.shoot(this.selectedNote);
+  //   //   //add to this players scheduled bullet list:
+  //   //   this.scheduledBullets = this.scheduledBullets.concat(newBullets);
+  //   //   // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
 
-    //   // setTimeout(()=>{
-    //   //     this.shootTimeout = false
-    //   // }, this.shootTimeoutTime)
-    // } else {
-    //   if (this.updatePack) {
-    //     this.updatePack.push({
-    //       msg: "To early to shoot!",
-    //       type: "gameMsg",
-    //     });
-    //   }
-    // }
-  }
+  //   //   // setTimeout(()=>{
+  //   //   //     this.shootTimeout = false
+  //   //   // }, this.shootTimeoutTime)
+  //   // } else {
+  //   //   if (this.updatePack) {
+  //   //     this.updatePack.push({
+  //   //       msg: "To early to shoot!",
+  //   //       type: "gameMsg",
+  //   //     });
+  //   //   }
+  //   // }
+  // }
 
   giveWeapon(sound, duration, type) {
     this.weapon = new Weapon(sound, duration, type, this);
-    let durationInt = parseInt(duration.replace("n", "").replace(".", ""));
-    switch (this.weapon.durationType) {
-      case "normal":
-        this.shootTimeoutTime = (60000 / 120) * (4 / durationInt);
-        break;
-      case "dotted":
-        this.shootTimeoutTime = ((60000 / 120) * (4 / durationInt) * 3) / 2;
-        break;
-    }
+    // let durationInt = parseInt(duration.replace("n", "").replace(".", ""));
+    // switch (this.weapon.durationType) {
+    //   case "normal":
+    //     this.shootTimeoutTime = (60000 / 120) * (4 / durationInt);
+    //     break;
+    //   case "dotted":
+    //     this.shootTimeoutTime = ((60000 / 120) * (4 / durationInt) * 3) / 2;
+    //     break;
+    // }
   }
 
   addScore(points) {
@@ -378,6 +380,13 @@ export class Character extends Entity {
           scoreStolen: scoreStolen
       };
     }
+
+    //stop shooting when died:
+    this.setShootingState(false, this.isShooting.noteID);
+
+    //hp to update:
+    this.toUpdate.hp = 0;
+    console.log('to update hp', this.toUpdate.hp);
 
     //set isDead flag to true:
     this.isDead = true;

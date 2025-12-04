@@ -27,7 +27,8 @@ export class Bullet extends Entity {
         width: 16,
         height: 16,
         id: id,
-        parentID: bullet.parent.id
+        parentID: bullet.parent.id,
+        TTLNorm: bullet.TTLNorm
       });
     }
   }
@@ -54,6 +55,7 @@ export class Bullet extends Entity {
     this.damage = damage;
 
     this.creationTime = Date.now();
+    this.TTLNorm = 1;
     this.parent.ownBulletsIDs.push(this.id);
 
     Bullet.list[this.id] = this;
@@ -77,6 +79,9 @@ export class Bullet extends Entity {
 
     // this.spdX *= 1.01;
     // this.spdY *= 1.01;
+
+    this.TTLNorm = (this.durationMs - (Date.now() - this.creationTime)) /
+        this.durationMs;
 
     //collision check
     let hitPlayerId = this.collidingPlayerId(

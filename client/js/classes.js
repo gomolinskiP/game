@@ -134,6 +134,7 @@ export class Player extends Entity{
         if(pack.hp){
             if (pack.hp < this.hp) {
                 this.justDamaged = true;
+                console.log('got hp update', pack.hp)
 
                 setTimeout(() => {
                     this.justDamaged = false;

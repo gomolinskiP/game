@@ -169,6 +169,10 @@ export class Bot extends Character {
                             //normalised other player's HP in cell:
                             isObjInCell = candidate.hp / Character.fullHP;
                         }
+                        else if(candidate.TTLNorm){
+                            //object is a bullet:
+                            isObjInCell = candidate.TTLNorm;
+                        }
                         else isObjInCell = 1;
                         //if object is not another player cell state is just 1
                     }
@@ -268,6 +272,11 @@ export class Bot extends Character {
             state.push(this.spdX / this.speed, this.spdY / this.speed);
         }
 
+        //current server BPM
+        //normalised to <-1, 1>:
+        state.push(Sounds.bpm / (Sounds.maxBPM - Sounds.minBPM) - 1);
+        // console.log("norm bpm: ", state.slice(-1).toString());
+
         //self distance from starting position:
         state.push(
             (this.x - this.startX) / Bot.moveDistGoal,
@@ -279,13 +288,15 @@ export class Bot extends Character {
 
         //self- weapon duration normalised to <-1, 1>:
         state.push(
-            2*(Weapon.allowedDurations.indexOf(this.weapon.duration) / (Weapon.allowedDurations.length - 1)) - 1
+            2 *
+                (Weapon.allowedDurations.indexOf(this.weapon.duration) /
+                    (Weapon.allowedDurations.length - 1)) -
+                1
         );
 
         //self-info about being in non-PVP area:
         state.push(Number(this.isInNonPVPArea()));
         // console.log("is in non pvp?: ", state.slice(-1).toString());
-
 
         //Is shooting on cooldown state:
         state.push(Number(this.hasShotScheduled));
@@ -294,7 +305,6 @@ export class Bot extends Character {
         const pickupGridState = this.getGridState(Pickup.quadtree);
         state = state.concat(pickupGridState);
         // console.log("pickup grid state: ", state.slice(-36).toString());
-
 
         const nearestPickup = this.findNearest(
             Pickup.list,
@@ -327,7 +337,7 @@ export class Bot extends Character {
             // console.log('nearestPickupReward', nearestPickupReward);
             this.pickupsReward += nearestPickupReward;
 
-            let {dx, dy} = this.getDxDy(nearestPickup);
+            let { dx, dy } = this.getDxDy(nearestPickup);
 
             state.push(dx / WalkAgent.maxDX, dy / WalkAgent.maxDY);
         } else {
@@ -366,26 +376,24 @@ export class Bot extends Character {
         // console.log("bullet grid state: ", state.slice(-36).toString());
 
         //3 own bullets' distances & normalised bullets' time to live:
-        for(let i = 0; i < 3; i++){
+        for (let i = 0; i < 3; i++) {
             const ownBulletID = this.ownBulletsIDs[i];
 
-            if(ownBulletID == undefined){
+            if (ownBulletID == undefined) {
                 state.push(2, 2);
                 state.push(-1);
-            }
-            else{
+            } else {
                 const bullet = Bullet.list[ownBulletID];
 
-                let {dx, dy} = this.getDxDy(bullet);
+                let { dx, dy } = this.getDxDy(bullet);
                 state.push(dx / WalkAgent.maxDist, dy / WalkAgent.maxDist);
 
-                const bulletTimeLeft = (bullet.durationMs - (Date.now() - bullet.creationTime)) / bullet.durationMs;
+                const bulletTimeLeft = bullet.TTLNorm;
                 state.push(bulletTimeLeft);
             }
         }
 
-        // console.log('own bullet distances & ttl: ', state.slice(-8).toString());
-
+        // console.log('own bullet distances & ttl: ', state.slice(-9).toString());
 
         // //character grid-state
         // const characterGridState = this.getGridState(Character.quadtree);
