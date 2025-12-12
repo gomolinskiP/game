@@ -136,6 +136,11 @@ button{
     cursor: pointer;
 }
 
+button:disabled{
+    filter: saturate(0);
+    cursor: not-allowed;
+}
+
 label{
     font-size: small;
     font-weight: bold;

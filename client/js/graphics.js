@@ -1,9 +1,10 @@
 import { Player, Bullet, Pickup, Tile,  StaticTileLayers } from './classes.js'
 import { Socket } from './clientSocket.js';
+import { Images } from './Assets.js';
 
 
 export class Graphics {
-    static Img = {};
+    static Img = Images.Img;
     static drawBuffer = [];
     static gameMessages = [];
 

@@ -18,11 +18,18 @@
     <div id="not-loaded">
         <div id="main">
             <div id="pageContent">
-                <h1>Loading</h1>
-                    Please wait, while the game is loading
-                    <p id="dots-anim" style="display: inline; position: absolute; translate: 0 -1em;">.</p> <br>
+                <h1>Entering the game</h1>
+                    <p id="progress-all">
+                        Please wait, while the game is loading
+                        <span id="dots-anim">.</span>
+                    </p>
+                    <p id="progress-info-connect">Establishing connection with server.</p>
+                    <p id="progress-info-db">Retrieving player progress.</p>
+                    <p id="progress-info-images">Loading graphical assets.</p>
+                    <br>
+
                     Note that by starting the game, you also allow it to play audio. <br><br>
-                <button id="start-game-btn" class="ui-button"> Start </button>
+                <button id="start-game-btn" class="ui-button" disabled> Start </button>
             </div>
         </div>        
     </div>
