@@ -34,83 +34,95 @@ export class Bullet extends Entity {
   }
 
   constructor(parent, angle, note, duration, damage) {
-    super(parent.x, parent.y);
-    this.id = Math.random();
-    this.parent = parent;
-    // this.speed = 20;
-    this.speed = 10_000 / Sounds.beatInterval;
+      super(parent.x, parent.y);
+      this.id = Math.random();
+      this.parent = parent;
+      // this.speed = 20;
+      this.speed = 10_000 / Sounds.beatInterval;
 
-    this.entityType = "bullet";
+      this.entityType = "bullet";
 
-    angle = angle + 10 * (Math.random() - 0.5);
+      angle = angle + 10 * (Math.random() - 0.5);
 
-    this.spdX = Math.cos((angle / 180) * Math.PI) * this.speed;
-    this.spdY = Math.sin((angle / 180) * Math.PI) * this.speed / 2;
+      this.spdX = Math.cos((angle / 180) * Math.PI) * this.speed;
+      this.spdY = (Math.sin((angle / 180) * Math.PI) * this.speed) / 2;
 
-    this.note = note;
-    this.sound = parent.weapon.sound;
-    this.duration = duration;
-    this.durationMs = Sounds.getTimeFromDuration(this.duration);
+      this.note = note;
+      this.sound = parent.weapon.sound;
+      this.duration = duration;
+      this.durationMs = Sounds.getTimeFromDuration(this.duration);
 
-    this.damage = damage;
+      this.damage = damage;
 
-    this.creationTime = Date.now();
-    this.TTLNorm = 1;
-    this.parent.ownBulletsIDs.push(this.id);
+      this.creationTime = Date.now();
+      this.TTLNorm = 1;
+      this.parent.ownBulletsIDs.push(this.id);
 
-    Bullet.list[this.id] = this;
+      Bullet.list[this.id] = this;
 
-    this.timeout = setTimeout(() => {
       // delete itself after timeout:
-      this.destroy();
-    }, this.durationMs);
+      this.timeout = setTimeout(() => {
+          this.destroy();
 
-    this.allowNextShotTimeout = setTimeout(()=>{
-      // allow next shot slightly earlier than this bullet destroys itself (after it's duration)
-      this.parent.hasShotScheduled = false;
-    }, this.durationMs);
+          //negative reward for bot if bullet missed & timed out
+          if (this.parent.characterType == "bot") {
+              this.parent.didBulletMiss;
+          }
+      }, this.durationMs);
 
-    return this;
+      return this;
   }
 
   update() {
-    this.x += this.spdX;
-    this.y += this.spdY;
+      this.x += this.spdX;
+      this.y += this.spdY;
 
-    // this.spdX *= 1.01;
-    // this.spdY *= 1.01;
+      //update normalised time-to-live:
+      this.TTLNorm =
+          (this.durationMs - (Date.now() - this.creationTime)) /
+          this.durationMs;
 
-    this.TTLNorm = (this.durationMs - (Date.now() - this.creationTime)) /
-        this.durationMs;
-
-    //collision check
-    let hitPlayerId = this.collidingPlayerId(
-      Character.list,
-      Character.quadtree
-    );
-    let isCollidingWall = Tile.checkTilesCollision(this.x, this.y, Tile.wallQTree);
-    let enteredNonPVPArea = Tile.checkTilesCollision(
-        this.x,
-        this.y,
-        Tile.noPVPfloorQTree
-    );
-
-    //player hit:
-    if (hitPlayerId != null) {
-      let targetPlayer = Character.list[hitPlayerId];
-      if (this.parent != targetPlayer) {
-        this.destroy();
-        targetPlayer.takeDmg(this.damage, this.parent);
+      //collision checks:
+      //check collision with characters:
+      let hitPlayerId = this.collidingPlayerId(
+          Character.list,
+          Character.quadtree
+      );
+      //player hit:
+      if (hitPlayerId != null) {
+          let targetPlayer = Character.list[hitPlayerId];
+          if (this.parent != targetPlayer) {
+              this.destroy();
+              targetPlayer.takeDmg(this.damage, this.parent);
+              return;
+          }
       }
-    }
 
-    //bullet self-guiding
-    this.selfGuide();
+      //check collision with walls:
+      let isCollidingWall = Tile.checkTilesCollision(
+          this.x,
+          this.y,
+          Tile.wallQTree
+      );
+      //check collision with non-PVP-area:
+      let enteredNonPVPArea = Tile.checkTilesCollision(
+          this.x,
+          this.y,
+          Tile.noPVPfloorQTree
+      );
+      //wall or non-PVP-area hit:
+      if (isCollidingWall || enteredNonPVPArea) {
+          this.destroy();
 
-    //wall hit:
-    if (isCollidingWall || enteredNonPVPArea) {
-      this.destroy();
-    }
+          //negative reward for bot if bullet hit collision
+          if (this.parent.characterType == "bot") {
+              this.parent.didBulletMiss = true;
+          }
+          return;
+      }
+
+      //bullet self-guiding
+      this.selfGuide();
   }
 
   findNearestSameNote(objList, maxDistance) {
@@ -173,8 +185,10 @@ export class Bullet extends Entity {
   selfGuide() {
     //self-guide to the nearest bullet with same note/tone:
 
+    
     if(!BOT_TRAINING){
-      let nearestSameBullet = this.findNearestSameNote(Bullet.list, 600); //have to check 1) type 2) parent
+      const enemyBulletGuideRange = 300;
+      let nearestSameBullet = this.findNearestSameNote(Bullet.list, enemyBulletGuideRange); //have to check 1) type 2) parent
       if (nearestSameBullet) {
         this.guideTo(nearestSameBullet);
         return;
@@ -182,10 +196,11 @@ export class Bullet extends Entity {
     }
     
     //self-guide to the nearest player/bot in set range:
+    const enemyGuideRange = 200;
     let nearestPlayer = this.findNearest(
       Character.list,
       Character.quadtree,
-      200
+      enemyGuideRange
     );
 
     if (nearestPlayer === this.parent) return;

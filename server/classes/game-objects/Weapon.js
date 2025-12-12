@@ -101,9 +101,10 @@ export class Weapon {
         // const durationMs = this.durationMs;
         const duration = this.duration;
 
-        if(parent.characterType == 'bot'){
-            parent.combatReward -= 5;
-        }
+        //legacy - moved to destroying bullets by timeout or wall collision:
+        // if(parent.characterType == 'bot'){
+        //     parent.combatReward -= 1;
+        // }
 
         switch (this.type) {
             case "normal":

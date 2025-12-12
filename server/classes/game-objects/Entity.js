@@ -25,6 +25,7 @@ export class Entity {
             let other = objList[candidate.id];
             if (!other) continue;
             if (other === this) continue;
+            // if(other.id == this.parent?.id) continue;
             if (other.isDead) continue;
             if(!other.isPlaying) continue;
 

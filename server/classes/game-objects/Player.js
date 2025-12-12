@@ -6,8 +6,8 @@ import { Socket } from '../Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
 
-const loadDistance = 1200; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
-const loadUnloadMargin = 0;
+const loadDistance = 1000; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
+const loadUnloadMargin = 600;
 const unloadDistance = loadDistance + loadUnloadMargin;
 
 export class Player extends Character{
@@ -271,15 +271,15 @@ export class Player extends Character{
 
         for(const c of charactersToUpdate){
             const character = Character.list[c.id];
-            if(!this.isWithinDistance(character, loadDistance)) continue;
             if(character.characterType == "player" && character.isPlaying == false) continue;
 
             if(!this.knownObjIDs.has(character.id)){
-                //player was not aware of this character
-                //all info must be sent:
+                //player was not aware of this character - all info must be sent:
 
+                //only NEW if is within loadDistance:
+                if(!this.isWithinDistance(character, loadDistance)) continue;
+                
                 if (!this.updatePack.player) this.updatePack.player = {};
-
                 this.updatePack.player[character.id] = {
                     x: character.x,
                     y: character.y,
@@ -299,16 +299,16 @@ export class Player extends Character{
                 this.knownObjIDs.add(character.id);
             }
             else{
-                //player already knows about this character
-                //info only about parameters that changed:
-
+                //player already knows about this character - info only about parameters that changed
+                
                 //skip this character, if there's nothing to update about them:
                 if(Object.keys(character.toUpdate).length == 0) continue;
 
-                if (!this.updatePack.player) this.updatePack.player = {};
+                //update known only within unloadDistance:
+                if(!this.isWithinDistance(character, unloadDistance)) continue;
 
+                if (!this.updatePack.player) this.updatePack.player = {};
                 //push all info to update about character to player's updatePack:
-                // character.toUpdate.type = "player";
                 character.toUpdate.id = character.id;
                 this.updatePack.player[character.id] = character.toUpdate;
             }
@@ -320,21 +320,20 @@ export class Player extends Character{
         for(const b of bulletsToUpdate){
             const bullet = Bullet.list[b.id];
             if(!bullet) continue;
-            if(!this.isWithinDistance(bullet, loadDistance)) continue;
+            
 
             if (!this.updatePack.bullet) this.updatePack.bullet = {};
 
             if(!this.knownObjIDs.has(bullet.id)){
-                //player was not aware of this bullet
-                //all info must be sent:
+                //player was not aware of this bullet - all info must be sent:
 
+                //send NEW only within loadDistance:
+                if(!this.isWithinDistance(bullet, loadDistance)) continue;
+                
                 this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
-                    // id: bullet.id,
-                    // type: "bullet",
                     parentId: bullet.parent.id,
-
                     sound: bullet.sound,
                     duration: bullet.duration,
                     note: bullet.note,
@@ -343,14 +342,15 @@ export class Player extends Character{
                 this.knownObjIDs.add(bullet.id);
             }
             else{
-                //player already knows about this bullet
-                //info only about parameters that changed (position):
+                //player already knows about this bullet - info only about parameters that changed (position):
+
+                //update all known in unloadDistance:
+                if(!this.isWithinDistance(bullet, unloadDistance)) continue;
+                
 
                 this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
-                    // id: bullet.id,
-                    // type: "bullet",
                 };
             }
         }
@@ -361,17 +361,15 @@ export class Player extends Character{
         for(const pu of pickupsToUpdate){
             const pickup = Pickup.list[pu.id];
             if(!pickup) continue;
-            if(!this.isWithinDistance(pickup, loadDistance)) continue;
 
             //pickups need to be updated if they are not yet known to player (they're static):
             if(!this.knownObjIDs.has(pickup.id)){
+                if(!this.isWithinDistance(pickup, loadDistance)) continue;
                 if (!this.updatePack.pickup) this.updatePack.pickup = {};
 
                 this.updatePack.pickup[pickup.id] = {
                     x: pickup.x,
                     y: pickup.y,
-                    // id: pickup.id,
-                    // type: "pickup"
                 };
 
                 this.knownObjIDs.add(pickup.id);
@@ -383,15 +381,13 @@ export class Player extends Character{
 
         for(const t of tilesToUpdate){
             const tile = Tile.list[t.id];
-            if(!this.isWithinDistance(tile, loadDistance)) continue;
-
+            
             //tiles are static - need to be updated if player does not know about them yet:
             if(!this.knownObjIDs.has(tile.id)){
+                if(!this.isWithinDistance(tile, loadDistance)) continue;
                 if (!this.updatePack.tile) this.updatePack.tile = {};
 
                 this.updatePack.tile[tile.id] = {
-                    // type: "tile",
-                    // id: tile.id,
                     x: tile.x,
                     y: tile.y,
                     gid: tile.gid,
