@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs-node";
+import { NoisyDense } from "./NoisyDense.js";
 import { parentPort, workerData } from "worker_threads";
 
 import { createRequire } from "module";
@@ -71,6 +72,8 @@ class AvgLogger {
     }
 
     logAvg(){
+        if (this.recent.length === 0) return;
+
         fs.writeFileSync(
             this.logFilePath,
             average(this.recent) + "\n",
@@ -82,6 +85,11 @@ class AvgLogger {
         );
 
         this.recent = [];
+
+
+        if(this.logFilePath == "logs/loss.txt"){
+            ActionLogger.log();
+        }
     }
 }
 
@@ -93,6 +101,55 @@ const meanQLogger = new AvgLogger("logs/meanQ.txt");
 
 const maxTDLogger = new AvgLogger("logs/maxTD.txt");
 const meanTDLogger = new AvgLogger("logs/meanTD.txt");
+
+class ActionLogger {
+    static totalNum = 0;
+    static actionsNum = parseInt(process.env.AGENT_ACTIONS_NUM, 10);
+    static chosenActionNum = [];
+
+    static init() {
+        ActionLogger.totalNum = 0;
+        ActionLogger.chosenActionNum = new Array(ActionLogger.actionsNum).fill(
+            0
+        );
+    }
+
+    static push(action) {
+        if (action < 0 || action >= ActionLogger.actionsNum) {
+            console.warn("Unknown action:", action);
+            return;
+        }
+
+        ActionLogger.totalNum++;
+        ActionLogger.chosenActionNum[action]++;
+    }
+
+    static log() {
+        if (ActionLogger.totalNum === 0) {
+            return;
+        }
+
+        let histogram = "";
+
+        for (let i = 0; i < ActionLogger.actionsNum; i++) {
+            const percentage = (
+                (ActionLogger.chosenActionNum[i] / ActionLogger.totalNum) *
+                100
+            ).toFixed(2);
+
+            histogram += `${i}:${percentage}|`;
+        }
+
+        fs.writeFileSync("logs/actions_hist.txt", histogram + "\n", {
+            encoding: "utf8",
+            flag: "a+",
+            mode: 0o666,
+        });
+
+        ActionLogger.init();
+    }
+}
+ActionLogger.init();
 
 class ReplayBuffer{
     constructor(size){
@@ -237,14 +294,14 @@ export class DQNAgent {
         numActions,
         {
             gamma = 0.98,
-            epsilonStart = 1.0,
-            epsilonEnd = 0.01,
+            epsilonStart = 0.0,
+            epsilonEnd = 0.0,
             epsilonDecaySteps = 8e6,
-            learningRate = 0.0001,
-            batchSize = 128,
+            learningRate = 0.00005,
+            batchSize = 1024,
             bufferSize = 400000,
-            targetUpdateFreq = 2500,
-            experienceReplayFreq = 10,
+            targetUpdateFreq = 3000,
+            experienceReplayFreq = 100,
             hiddenLayers = [512, 256, 128],
         } = {}
     ) {
@@ -265,6 +322,10 @@ export class DQNAgent {
 
         this.epsilon = epsilonStart;
 
+        this.tempEpsilon = 0.0;
+        this.tempEpsilonStepsLeft = 0;
+
+        this.modelsReady = false;
         if (fs.existsSync(mainPath) && fs.existsSync(targetPath)) {
             console.log("[DDQN] Loading existing models...");
             this._loadModels(hiddenLayers);
@@ -274,6 +335,7 @@ export class DQNAgent {
             this.targetModel = this._createModel(hiddenLayers);
             this.updateTargetNetwork();
         }
+        this.modelsReady = true;
         // this.model = this._createModel(hiddenLayers);
         // this.targetModel = this._createModel(hiddenLayers);
         // this.updateTargetNetwork();
@@ -283,14 +345,22 @@ export class DQNAgent {
         const model = tf.sequential();
         hiddenLayers.forEach((units, i) => {
             model.add(
-                tf.layers.dense({
+                new NoisyDense({
+                // tf.layers.dense({
                     units,
                     activation: "relu",
                     inputShape: i === 0 ? [this.numStates] : undefined,
+                    sigmaInit: 0.017,
                 })
             );
         });
-        model.add(tf.layers.dense({ units: this.numActions }));
+        model.add(
+            new NoisyDense({
+            // tf.layers.dense({
+                units: this.numActions,
+                sigmaInit: 0.017,
+            })
+        );
         model.compile({
             optimizer: tf.train.adam(this.learningRate),
             loss: "meanSquaredError",
@@ -351,25 +421,48 @@ export class DQNAgent {
     decide(state) {
         this.stepCounter++;
 
-        let action;
-
-        this.epsilon = Math.max(
+        let epsilon;
+        // not used in noisy-nets:
+        epsilon = this.epsilon = Math.max(
             this.epsilonEnd,
             this.epsilonStart -
                 (this.stepCounter / this.epsilonDecaySteps) *
                     (this.epsilonStart - this.epsilonEnd)
         );
 
-        if (Math.random() < this.epsilon) {
+        //temp epsilon even in noisy-nets:
+        if(this.tempEpsilonStepsLeft > 0){
+            epsilon = Math.max(this.epsilon, this.tempEpsilon);
+            this.tempEpsilonStepsLeft -= 1;
+        }
+        
+
+
+        let action;
+
+        if (Math.random() < epsilon) {
             action = Math.floor(Math.random() * this.numActions);
         } else {
-            action = tf.tidy(() => {
+            // KLUCZ: jedna próbka szumu na jedną decyzję
+            this.model.layers.forEach((l) => {
+                if (typeof l.resetNoise === "function") {
+                    l.resetNoise();
+                }
+            });
+
+            tf.tidy(() => {
                 const stateTensor = tf.tensor2d([state], [1, this.numStates]);
                 const qValues = this.model.predict(stateTensor);
-                return qValues.argMax(-1).dataSync()[0];
+                const actionTensor = qValues.argMax(-1);
+                action = actionTensor.dataSync()[0];
+
+                // ręczne dispose
+                actionTensor.dispose();
+                qValues.dispose();
             });
         }
 
+        ActionLogger.push(action);
         return action;
     }
 
@@ -385,112 +478,167 @@ export class DQNAgent {
         }
     }
 
+    enableTemporaryEpsilon(epsilon, steps){
+        //enables temporary epsilon (random action propability) for a set number of steps:
+
+        this.tempEpsilon = epsilon;
+        this.tempEpsilonStepsLeft = steps;
+    }
+
     async replay() {
+        
+
         if (this.replayBuffer.length < this.batchSize) return;
 
-        // const {samples, indices, weights} = this.replayBuffer.sample(this.batchSize);
-        const batch = this.replayBuffer.sample(this.batchSize);
-
-        const states = batch.map((e) => e.state);
-        const nextStates = batch.map((e) => e.nextState);
-
-        if (!states.every((s) => s.every((v) => isFinite(v)))) {
-            console.log(states);
-            throw new Error("Non-finite state detected");
-        }
-
-        const statesTensor = tf.tensor2d(states, [
-            batch.length,
-            this.numStates,
-        ]);
-        const nextStatesTensor = tf.tensor2d(nextStates, [
-            batch.length,
-            this.numStates,
-        ]);
-
-        // await tf.nextFrame();
-        const qValues = this.model.predict(statesTensor);
-        const qValuesNextMain = this.model.predict(nextStatesTensor);
-        const qValuesNextTarget = this.targetModel.predict(nextStatesTensor);
-
-        const qValuesArray = qValues.arraySync();
-        const qValuesNextMainArray = qValuesNextMain.arraySync();
-        const qValuesNextTargetArray = qValuesNextTarget.arraySync();
-
-        //for Q-val logging:
-        const qArr = qValues.arraySync();
-        const maxQs = qArr.map((q) => Math.max(...q));
-        const meanQ = maxQs.reduce((a, b) => a + b, 0) / maxQs.length;
-        const minQ = Math.min(...maxQs);
-        const maxQ = Math.max(...maxQs);
-
-        meanQLogger.push(meanQ);
-        minQLogger.push(minQ);
-        maxQLogger.push(maxQ);
-
-        const tdErrors = [];
-
-        for (let i = 0; i < batch.length; i++) {
-            const { action, reward, done } = batch[i];
-
-            const bestAction = qValuesNextMainArray[i].indexOf(
-                Math.max(...qValuesNextMainArray[i])
-            );
-            const targetQValue = qValuesNextTargetArray[i][bestAction];
-
-            const target = done ? reward : reward + this.gamma * targetQValue;
-
-            const tdError = target - qValuesArray[i][action];
-            tdErrors.push(tdError);
-
-            if (isFinite(target)) {
-                qValuesArray[i][action] = target;
-            } else {
-                console.error("Target NaN at", i, {
-                    reward,
-                    done,
-                    targetQValue,
-                });
-            }
-        }
-
-        //for tdErrors logging:
-        const absTD = tdErrors.map((x) => Math.abs(x));
-        const meanTD = absTD.reduce((a, b) => a + b, 0) / absTD.length;
-        const maxTD = Math.max(...absTD);
-
-        meanTDLogger.push(meanTD);
-        maxTDLogger.push(maxTD);
-
-        const updatedTensor = tf.tensor2d(qValuesArray, [
-            batch.length,
-            this.numActions,
-        ]);
-
         if (!this.isTraining) {
+            const startT = process.hrtime.bigint();
             this.isTraining = true;
+
+            // console.log("replay started");
+            // const {samples, indices, weights} = this.replayBuffer.sample(this.batchSize);
+            const batch = this.replayBuffer.sample(this.batchSize);
+
+            const states = batch.map((e) => e.state);
+            const nextStates = batch.map((e) => e.nextState);
+
+            if (!states.every((s) => s.every((v) => isFinite(v)))) {
+                console.log(states);
+                throw new Error("Non-finite state detected");
+            }
+
+            const statesTensor = tf.tensor2d(states, [
+                batch.length,
+                this.numStates,
+            ]);
+            const nextStatesTensor = tf.tensor2d(nextStates, [
+                batch.length,
+                this.numStates,
+            ]);
+
+            //freeze noise:
+            this.model.layers.forEach((layer) => {
+                if (layer.resetNoise) layer.resetNoise();
+            });
+
+            this.targetModel.layers.forEach((layer) => {
+                if (layer.resetNoise) layer.resetNoise();
+            });
+
+            const {
+                qValuesArray,
+                qValuesNextMainArray,
+                qValuesNextTargetArray,
+            } = tf.tidy(() => {
+                const qValues = this.model.predict(statesTensor);
+                const qValuesNextMain = this.model.predict(nextStatesTensor);
+                const qValuesNextTarget =
+                    this.targetModel.predict(nextStatesTensor);
+
+                return {
+                    qValuesArray: qValues.arraySync(),
+                    qValuesNextMainArray: qValuesNextMain.arraySync(),
+                    qValuesNextTargetArray: qValuesNextTarget.arraySync(),
+                };
+            });
+
+            //for Q-val logging:
+            const { meanQ, minQ, maxQ } = tf.tidy(() => {
+                const qTensor = this.model.predict(statesTensor);
+                const maxQs = qTensor.max(1);
+
+                return {
+                    meanQ: maxQs.mean().dataSync()[0],
+                    minQ: maxQs.min().dataSync()[0],
+                    maxQ: maxQs.max().dataSync()[0],
+                };
+            });
+
+            meanQLogger.push(meanQ);
+            minQLogger.push(minQ);
+            maxQLogger.push(maxQ);
+
+            const tdErrors = [];
+
+            for (let i = 0; i < batch.length; i++) {
+                const { action, reward, done } = batch[i];
+
+                const bestAction = qValuesNextMainArray[i].indexOf(
+                    Math.max(...qValuesNextMainArray[i])
+                );
+                const targetQValue = qValuesNextTargetArray[i][bestAction];
+
+                const target = done
+                    ? reward
+                    : reward + this.gamma * targetQValue;
+
+                const tdError = target - qValuesArray[i][action];
+                tdErrors.push(tdError);
+
+                if (isFinite(target)) {
+                    qValuesArray[i][action] = target;
+                } else {
+                    console.error("Target NaN at", i, {
+                        reward,
+                        done,
+                        targetQValue,
+                    });
+                }
+            }
+
+            //for tdErrors logging:
+            const absTD = tdErrors.map((x) => Math.abs(x));
+            const meanTD = absTD.reduce((a, b) => a + b, 0) / absTD.length;
+            const maxTD = Math.max(...absTD);
+
+            meanTDLogger.push(meanTD);
+            maxTDLogger.push(maxTD);
+
+            const updatedTensor = tf.tensor2d(qValuesArray, [
+                batch.length,
+                this.numActions,
+            ]);
 
             const history = await this.model.fit(statesTensor, updatedTensor, {
                 epochs: 1,
                 verbose: 0,
             });
-            this.isTraining = false;
             const loss = history.history.loss[0];
             lossLogger.push(loss);
-        }
 
-        tf.dispose([
-            statesTensor,
-            nextStatesTensor,
-            qValues,
-            qValuesNextMain,
-            qValuesNextTarget,
-            updatedTensor,
-        ]);
+            // this.model.layers.forEach((l) => {
+            //     if (l.muWeight) {
+            //         console.log(
+            //             "mu mean",
+            //             l.muWeight.read().abs().mean().dataSync()
+            //         );
+            //         console.log(
+            //             "sigma mean",
+            //             l.sigmaWeight.read().mean().dataSync()
+            //         );
+            //     }
+            // });
 
-        if (this.stepCounter % this.targetUpdateFreq === 0) {
-            this.updateTargetNetwork();
-            this.save();
+            tf.dispose([
+                statesTensor,
+                nextStatesTensor,
+                // qValues,
+                // qValuesNextMain,
+                // qValuesNextTarget,
+                updatedTensor,
+            ]);
+
+            if(!this.lastSaveTime) this.lastSaveTime = Date.now();
+            if (Date.now() > this.lastSaveTime + 1_800_000) { //save every 30min (1.8M ms)
+                this.updateTargetNetwork();
+                this.save();
+                this.lastSaveTime = Date.now();
+            }
+
+            const endT = process.hrtime.bigint()
+            // console.log('replay end! time: ', endT-startT)
+
+            this.isTraining = false;
+            console.log("TF memory:", tf.memory());
         }
     }
 
@@ -608,6 +756,14 @@ export class DQNAgent {
 
         console.log(`[DDQN] Replay buffer loaded (${numRecords} experiences).`);
     }
+
+    // resetNoise() {
+    //     this.model.layers.forEach((layer) => {
+    //         if (layer.resetNoise) {
+    //             layer.resetNoise();
+    //         }
+    //     });
+    // }
 }
 
 
@@ -619,4 +775,9 @@ const actionsNum = parseInt(workerData.AGENT_ACTIONS_NUM, 10);
 (async () => {
     agent = new DQNAgent(statesNum, actionsNum);
 })();
+
+//temp epsilon from start:
+// agent.enableTemporaryEpsilon(0.2, 100000);
+
+
 

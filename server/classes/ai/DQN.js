@@ -21,7 +21,7 @@ worker.on("message", (msg)=>{
             //make move:
             const bot = Bot.list[msg.botID]
 
-            bot.setWalkAction(move);
+            bot.applyAction_DQN(move);
 
             if (!bot.lastAction) bot.lastAction = action;
 
@@ -86,7 +86,7 @@ worker.on("message", (msg)=>{
 
 
 export class WalkAgent {
-    static actionsNum = 9; //8-dir + not moving
+    static actionsNum = process.env.AGENT_ACTIONS_NUM; //8-dir + not moving
     static statesNum = process.env.AGENT_STATES_NUM; //31
 
     static gridDims = 3; //5x5 grid around agent
@@ -143,19 +143,9 @@ export class WalkAgent {
         { u: false, d: false, l: true, r: false, att: true }, //W & shoot
         { u: true, d: false, l: true, r: false, att: true }, //NW & shoot
         {
-            u: false,
-            d: false,
-            l: false,
-            r: false,
-            att: false,
             changeWeaponDuration: "shorter",
         }, //idle & change to shorter weapon duration
         {
-            u: false,
-            d: false,
-            l: false,
-            r: false,
-            att: false,
             changeWeaponDuration: "longer",
         }, //idle & change to longer weapon duration
     ];

@@ -8,6 +8,8 @@ import { Tile } from "./Tile.js";
 import { Sounds } from "../musical/Sounds.js";
 import { stat } from "fs";
 
+import { RandomName } from "./RandomName.js";
+
 import { createRequire } from "module";
 import { Entity } from "./Entity.js";
 const require = createRequire(import.meta.url);
@@ -52,7 +54,7 @@ class AvgRewardLogger {
                     0
                 ) / this.recentRewards.length;
 
-            fs.writeFileSync("logs/rewards_varr.txt", avg + "\n", {
+            fs.writeFileSync("logs/rewards_varr.txt", varr + "\n", {
                 encoding: "utf8",
                 flag: "a+",
                 mode: 0o666,
@@ -90,7 +92,7 @@ export class Bot extends Character {
     static randomSpawn() {
         // random bot spawn:
         if (
-            Math.random() < 0.1 &&
+            Math.random() < 0.01 &&
             Object.keys(Bot.list).length < Number(process.env.BOT_NUM)
         ) {
             // console.log("bot spawned")
@@ -100,7 +102,7 @@ export class Bot extends Character {
 
     static agentStepTime_ms = 250; //time between next dqn agent steps
     // static startPosResetTime_ms = 600000; //time after start position is resetted to current position (for dqn map exploration implementation)
-    static moveDistGoal = 2000; //max distance from start position, that reaching gives reward and resets start position
+    static moveDistGoal = 1200; //max distance from start position, that reaching gives reward and resets start position
 
     constructor() {
         const { x, y } = Tile.getRandomWalkablePos();
@@ -108,14 +110,18 @@ export class Bot extends Character {
         // x = y = 0;
 
         let id = Math.random();
-        let username = `(●'◡'●)`;
+        let username = RandomName.getRandomName();
         super(id, x, y, username);
 
         this.walkAgent = new WalkAgent(this);
         this.walkingReward = 0; //rewards regarding walking itself
+        this.walkedIntoCollision = false;
         this.pickupsReward = 0; //rewards regarding collecting pickups
         this.stepsSinceLastPickup = 100000000;
         this.combatReward = 0;
+        this.didBulletMiss = false;
+        this.didBulletHit = false;
+        this.wasHitByBullet = false;
 
         this.agentStepCount = 0;
 
@@ -125,8 +131,102 @@ export class Bot extends Character {
         this.isLearningCycleDone = false;
 
         this.characterType = "bot";
+        this.isPlaying = true;
 
         Bot.list[this.id] = this;
+    }
+
+    getShootReward(characterGridState){
+        //calculates reward for trying to shoot in correct direction (other characters)
+        //and a negative reward for wrong dirrection
+        //also negative reward for not shooting if there is an other character in current bot's direction
+
+        //skip if bot is in non-PVP area:
+        if(this.isInNonPVPArea()){
+            return 0;
+        } 
+
+        let gridIndecesInFront = [];
+        //current player angle:
+        switch (this.lastAngle) {
+            case 0:
+                //East
+                gridIndecesInFront = [5, 14, 23, 32];
+                break;
+            case 180:
+                //West:
+                gridIndecesInFront = [3, 12, 21, 30];
+                break;
+            case 90:
+                //South:
+                gridIndecesInFront = [7, 16, 25, 34];
+                break;
+            case -90:
+                //North:
+                gridIndecesInFront = [1, 10, 19, 28];
+                break;
+            case 45:
+                //South-East:
+                gridIndecesInFront = [8, 17, 26, 35];
+                break;
+            case -45:
+                //North-East:
+                gridIndecesInFront = [2, 11, 20, 29];
+                break;
+            case 135:
+                //South-West:
+                gridIndecesInFront = [6, 15, 24, 33];
+                break;
+            case -135:
+                //North-West:
+                gridIndecesInFront = [0, 9, 18, 27];
+                break;
+        }
+
+        let isOtherCharacterInFront = false;
+        //indeces are arranged from biggest grid to smallest
+        //we can multiply the rewards by closeness factor - bigger rewards if other character is close:
+        let closenessFactor = 0;
+        for (let i = 0; i < gridIndecesInFront.length; i++) {
+            const index = gridIndecesInFront[i];
+            const cellState = characterGridState[index];
+
+            if (cellState != -1) {
+                isOtherCharacterInFront = true;
+                closenessFactor = i + 1;
+            }
+        }
+
+        //reward depends on:
+        // - other character being in front of bot,
+        // - shootingState
+        let shootReward = 0;
+        if(isOtherCharacterInFront){
+            if(this.isShooting.state){
+                //good - bot is shooting in other character's direction:
+                shootReward += closenessFactor * 0.2;
+            }
+            else{
+                //bad - bot is not shooting & there's other character in front:
+                shootReward -= closenessFactor * 0.2;
+            }
+        }
+        else{
+            if (this.isShooting.state) {
+                //bad - bot is shooting at nothing:
+                shootReward -= 0.5;
+            } else {
+                //good - bot is not shooting when there's no one in front:
+                shootReward += 0.1;
+            }
+        }
+
+        // console.log('isCharInFront', isOtherCharacterInFront,
+        //     'closenessFactor', closenessFactor,
+        //     'shootReward', shootReward
+        // )
+
+        return shootReward;
     }
 
     _getGridState(grid, objQuadtree) {
@@ -163,6 +263,10 @@ export class Bot extends Character {
                         if(candidate.hp) {
                             //object is alive & has HealthPoints
 
+                            //skip if they are already dead but before respawn:
+                            if(candidate.hp <= 0) continue;
+                            //TODO
+
                             //skip if they are in non-pvp area:
                             if(Entity.isInNonPVPArea(candidate.x, candidate.y)) continue;
 
@@ -185,6 +289,24 @@ export class Bot extends Character {
     }
 
     getGridState(objQuadtree) {
+        /* grid-state indexes:
+            0_big_NW, 1_big_N, 2_big_NE, 3_big_W, 4_big_CENTER, 5_big_E, 6_big_SW, 7_big_S, 8_big_SE;
+            9_medium_NW, 10_medium_N, 11_medium_NE, 12_medium_W, 13_medium_CENTER, 14_medium_E, 15_medium_SW, 16_medium_S, 17_medium_SE;
+            18_small_NW, 19_small_N, 20_small_NE, 21_small_W, 22_small_CENTER, 23_small_E, 24_small_SW, 25_small_S, 26_small_SE;
+            27_small_NW, 28_small_N, 29_small_NE, 30_small_W, 31_small_CENTER, 32_small_E, 33_small_SW, 34_small_S, 35_small_SE;
+
+            By world directions (from biggest grid to smallest):
+            NW: 0, 9, 18, 27
+            N: 1, 10, 19, 28,
+            NE: 2, 11, 20, 29,
+            W: 3, 12, 21, 30,
+            CENTER: 4, 13, 22, 31,
+            E: 5, 14, 23, 32,
+            SW: 6, 15, 24, 33,
+            S: 7, 16, 25, 34,
+            SE: 8, 17, 26, 35
+        */
+
         let resultArray = [];
 
         resultArray = resultArray.concat(
@@ -277,7 +399,7 @@ export class Bot extends Character {
         state.push(Sounds.bpm / (Sounds.maxBPM - Sounds.minBPM) - 1);
         // console.log("norm bpm: ", state.slice(-1).toString());
 
-        //self distance from starting position:
+        //self distance from "starting position":
         state.push(
             (this.x - this.startX) / Bot.moveDistGoal,
             (this.y - this.startY) / Bot.moveDistGoal
@@ -298,8 +420,8 @@ export class Bot extends Character {
         state.push(Number(this.isInNonPVPArea()));
         // console.log("is in non pvp?: ", state.slice(-1).toString());
 
-        //Is shooting on cooldown state:
-        state.push(Number(this.hasShotScheduled));
+        //Is shooting state:
+        state.push(Number(this.isShooting.state));
 
         //add pickup grid state to RL state (is pickup in one of the cells around agent? 0/1):
         const pickupGridState = this.getGridState(Pickup.quadtree);
@@ -317,21 +439,7 @@ export class Bot extends Character {
                 this.lastNearestPickupDist = nearestPickupDist;
             }
 
-            //reward for getting closer to/further from the nearest pickup (positive if closer, negative if further):
-            // const pickupDistDeltaReward = Math.max(
-            //     -1,
-            //     Math.min(
-            //         1,
-            //         (this.lastNearestPickupDist - nearestPickupDist) / 100
-            //     )
-            // );
-            // // console.log(
-            // //     "pickupProx reward ",
-            // //     -(nearestPickupDist / WalkAgent.maxDist)/10,
-            // //     ' dist delta reward ',
-            // //     pickupDistDeltaReward
-            // // );
-            // this.agentReward += pickupDistDeltaReward;
+            //reward for being closer to a pickup:
             const nearestPickupReward =
                 1 - nearestPickupDist / WalkAgent.maxDist;
             // console.log('nearestPickupReward', nearestPickupReward);
@@ -339,8 +447,10 @@ export class Bot extends Character {
 
             let { dx, dy } = this.getDxDy(nearestPickup);
 
+            //information about a vector to the closest pickup:
             state.push(dx / WalkAgent.maxDX, dy / WalkAgent.maxDY);
         } else {
+            //instead of a vector to the closest pickup:
             state.push(2, 2);
         }
 
@@ -368,6 +478,13 @@ export class Bot extends Character {
         //character grid-state:
         const characterGridState = this.getGridState(Character.quadtree);
         state = state.concat(characterGridState);
+
+        //combat reward for shooting in relation to character grid state (in enemy direction)
+        // & punish for not shooting if enemy is in front of bot:
+        const shootReward = this.getShootReward(characterGridState);
+        this.combatReward += shootReward;
+
+
 
         //bullet grid-state:
         const bulletGridState = this.getGridState(Bullet.quadtree);
@@ -443,22 +560,45 @@ export class Bot extends Character {
         return state;
     }
 
-    setWalkAction(move) {
+    applyAction_DQN(move) {
         // this.needsUpdate = true;
+        // console.log(move)
+        const nowT = Date.now();
+        if(!this.lastActionT) this.lastActionT = nowT;
+        else{
+            console.log(
+                "time between actions: ",
+                nowT - this.lastActionT,
+                "ms"
+            );
+            this.lastActionT = nowT;
+        }
+        
 
         //walking:
-        this.pressingUp = move.u;
-        this.pressingDown = move.d;
-        this.pressingLeft = move.l;
-        this.pressingRight = move.r;
+        if (move.u != undefined){
+            this.pressingUp = move.u;
+            this.pressingDown = move.d;
+            this.pressingLeft = move.l;
+            this.pressingRight = move.r;
+
+            // console.log('walk move')
+        }
 
         //shooting:
-        if(this.isShooting.state != move.att){
-            this.setShootingState(false, this.isShooting.noteID);
-            this.setShootingState(move.att, Math.round(7 * Math.random()));
+        if(move.att != undefined){
+            // console.log('att move');
+            if (this.isShooting.state != move.att) {
+                this.setShootingState(false, this.isShooting.noteID);
+                this.setShootingState(move.att, Math.round(7 * Math.random()));
+            }
+            else{
+                this.combatReward -= 0.5; //wasted move
+            }
         }
 
         if(move.changeWeaponDuration){
+            // console.log('duration change move')
             // console.log(`setting ${move.changeWeaponDuration} weapon duration`);
             this.changeWeaponDuration(move.changeWeaponDuration);
         }
@@ -496,6 +636,7 @@ export class Bot extends Character {
         }
         
         const newDuration = Weapon.allowedDurations[newDurationIndex];
+        this.updateShooterListOnDurationChange(currentDuration, newDuration);
         this.weapon.setDuration(newDuration)
         // console.log(currentDuration, durationIndex, newDurationIndex, newDuration);
     }
@@ -520,16 +661,19 @@ export class Bot extends Character {
     takeDmg(damage, attacker) {
         super.takeDmg(damage, attacker);
 
-        const dmgReward =  40 * (damage / this.fullHP);
+        const dmgReward =  1 * (damage / this.fullHP);
         // console.log('dmgReward', dmgReward);
         this.combatReward -= dmgReward;
-        attacker.combatReward += dmgReward;
+        this.wasHitByBullet = true;
+
+        attacker.combatReward += dmgReward + 1;
+        attacker.didBulletHit = true;
     }
 
     die(attacker) {
         super.die(attacker);
         this.combatReward -= 50;
-        attacker.combatReward += 50;
+        attacker.combatReward += 55;
         this.isLearningCycleDone = true;
 
         //random respawn time between 1s and 4s:
@@ -548,6 +692,8 @@ export class Bot extends Character {
         const { x, y } = Tile.getRandomWalkablePos();
         this.x = x;
         this.y = y;
+        this.startX = this.x;
+        this.startY = this.y;
     }
     
 
@@ -568,7 +714,7 @@ export class Bot extends Character {
     getReward() {
         //add negative reward if agent is not moving:
         if (Math.abs(this.spdX) < 0.1 && Math.abs(this.spdY) < 0.1) {
-            this.walkingReward -= 0.5;
+            this.walkingReward -= 1;
         }
 
         //add reward for recently found pickup:
@@ -594,9 +740,29 @@ export class Bot extends Character {
         this.walkingReward += walkFarReward;
 
         if(this.walkedIntoCollision){
-            this.walkingReward -= 1;
+            this.walkingReward -= 2;
             this.walkedIntoCollision = false;
         }
+
+        //negative reward if bot's bullet was destroyed without hitting enemy & any other bullet did not hit
+        if(this.didBulletMiss){
+            if(!this.didBulletHit){
+                this.combatReward -= 3;
+            }
+            this.didBulletMiss = false;
+        }
+
+        //positive reward if bot did damage this step:
+        if(this.didBulletHit){
+            this.combatReward += 10;
+            this.didBulletHit = false;
+        }
+
+        if(this.wasHitByBullet){
+            this.combatReward -= 9;
+            this.wasHitByBullet = false;
+        }
+
 
         // const stillAliveReward = Math.min(
         //     Math.exp(this.agentStepCount / 1000) - 1,
