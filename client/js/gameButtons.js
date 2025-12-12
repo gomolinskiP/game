@@ -96,11 +96,11 @@ weaponChangePopups.forEach((popup)=>{
     })
 })
 
-function noteClick(item){
-    canvas.focus();
-    GameUI.setActiveNote(item.dataset.note);
-    Socket.noteChange(item.dataset.note);
-}
+// function noteClick(item){
+//     canvas.focus();
+//     GameUI.setActiveNote(item.dataset.note);
+//     Socket.noteChange(item.dataset.note);
+// }
 
 //manage emitting note change requests:
 noteBTNs.forEach((item)=>{

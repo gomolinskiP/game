@@ -67,7 +67,6 @@ export class Character extends Entity {
 
     this.speed = 10;
     this.lastAngle = 90;
-    this.hasShotScheduled = false;
     this.ownBulletsIDs = [];
 
     this.selectedNote = Sounds.scale.base;
@@ -331,10 +330,10 @@ export class Character extends Entity {
     this.toUpdate.score = this.score;
   }
 
-  changeSelectedNote(note) {
-    //TODO check if note is allowed!
-    this.selectedNote = note;
-  }
+  // changeSelectedNote(note) {
+  //   //TODO check if note is allowed!
+  //   this.selectedNote = note;
+  // }
 
   takeDmg(damage, attacker) {
     if (this.isDead) return;
@@ -395,7 +394,7 @@ export class Character extends Entity {
 
     //hp to update:
     this.toUpdate.hp = 0;
-    console.log('to update hp', this.toUpdate.hp);
+    // console.log('to update hp', this.toUpdate.hp);
 
     //set isDead flag to true:
     this.isDead = true;

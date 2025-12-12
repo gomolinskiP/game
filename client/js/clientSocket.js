@@ -15,9 +15,9 @@ export class Socket {
     });
   }
 
-  static noteChange(note) {
-    Socket.clientSocket.emit("noteChange", note);
-  }
+  // static noteChange(note) {
+  //   Socket.clientSocket.emit("noteChange", note);
+  // }
 
   static weaponChange(type, code) {
     Socket.clientSocket.emit("weaponChange", {

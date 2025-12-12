@@ -10,7 +10,6 @@ const argon2 = require('argon2');
 const fs = require('fs');
 const https = require('https');
 
-import mongoose from 'mongoose';
 import MongoStore from 'connect-mongo';
 
 //Environtment variables from .env file

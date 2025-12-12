@@ -42,7 +42,7 @@ Pickup.createQuadtree(Map.boundRect);
 
 Bot.startAgentStep();
 
-export const gameUpdateTickTimeMs = 1000 / 25;
+const gameUpdateTickTimeMs = 1000 / 25;
 
 export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
     //socket.io:
@@ -275,28 +275,28 @@ export default async function webSocketSetUp(serv, ses, mongoStore, Progress) {
                     case "right":
                         player.pressingRight = data.state;
                         break;
-                    case "space":
-                        console.log(`keypress space`);
-                        player.shoot();
-                        break;
+                    // case "space":
+                    //     console.log(`keypress space`);
+                    //     player.shoot();
+                    //     break;
                 }
             }
         });
 
-        socket.on("noteFire", (data) => {
-            const note = data.note;
-            const shootT = data.time;
-            const nowT = Date.now();
+        // socket.on("noteFire", (data) => {
+        //     const note = data.note;
+        //     const shootT = data.time;
+        //     const nowT = Date.now();
 
-            player.changeSelectedNote(note);
-            player.shoot();
+        //     player.changeSelectedNote(note);
+        //     player.shoot();
 
-            Sounds.evaluateNoteTimingAccuracy2(shootT);
-        });
+        //     Sounds.evaluateNoteTimingAccuracy2(shootT);
+        // });
 
-        socket.on("noteChange", (note) => {
-            player.changeSelectedNote(note);
-        });
+        // socket.on("noteChange", (note) => {
+        //     player.changeSelectedNote(note);
+        // });
 
         socket.on("chat", function (msg) {
             //Allows to authorize as admin while knowing secret password:
