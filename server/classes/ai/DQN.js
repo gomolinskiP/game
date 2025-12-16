@@ -27,8 +27,6 @@ worker.on("message", (msg)=>{
 
             let reward = bot.getReward();
 
-            if(action == bot.lastAction) reward += 0.1;
-
             // console.log("reward: ", reward, ' bot: ', bot.id);
             // WalkAgent.recentRewards.push(reward);
             // if (WalkAgent.recentRewards.length > 1000) {
@@ -68,7 +66,15 @@ worker.on("message", (msg)=>{
                 bot.isLearningCycleDone,
             )
 
-            if(bot.isLearningCycleDone) bot.startNewLearningCycle();
+            if(bot.isLearningCycleDone) {
+                bot.startNewLearningCycle();
+                console.log('bot died - new cycle',
+                    'bot HP',
+                    bot.hp,
+                    'reward',
+                    reward
+                )
+            }
             // console.log('lastState', bot.lastState, 'lastAction', bot.lastAction,'reward', reward, 'state', bot.state);
             // console.log(reward);
 

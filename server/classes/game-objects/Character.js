@@ -72,13 +72,12 @@ export class Character extends Entity {
     this.selectedNote = Sounds.scale.base;
     this.selectedNoteID = 0;
 
-    if (weapon == null) weapon = new Weapon(
-      Weapon.allowedSounds[Math.floor(Math.random()*Weapon.allowedSounds.length)],
-      Weapon.allowedDurations[Math.floor(Math.random()*Weapon.allowedDurations.length)],
-      Weapon.allwedTypes[Math.floor(Math.random()*Weapon.allwedTypes.length)],
-      this);
-  
-    this.giveWeapon(weapon.sound, weapon.duration, weapon.type);
+    if (weapon == null) {
+      this.giveRandomWeapon();
+    }
+    else{
+      this.giveWeapon(weapon.sound, weapon.duration, weapon.type);
+    }
 
     this.scheduledBullets = [];
 
@@ -163,6 +162,23 @@ export class Character extends Entity {
     //todo heals only if needsupdate is true
     this.framesSinceDamage += 1;
     if (this.framesSinceDamage > 100 && this.framesSinceDamage%10==0) this.heal(1);
+  }
+
+  giveRandomWeapon(){
+    const weapon = new Weapon(
+        Weapon.allowedSounds[
+            Math.floor(Math.random() * Weapon.allowedSounds.length)
+        ],
+        Weapon.allowedDurations[
+            Math.floor(Math.random() * Weapon.allowedDurations.length)
+        ],
+        Weapon.allwedTypes[
+            Math.floor(Math.random() * Weapon.allwedTypes.length)
+        ],
+        this
+    );
+
+    this.giveWeapon(weapon.sound, weapon.duration, weapon.type);
   }
 
   updateShooterListOnDurationChange(prevDuration, newDuration){

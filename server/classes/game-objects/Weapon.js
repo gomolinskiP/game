@@ -29,6 +29,8 @@ export class Weapon {
         this.wielder = wielder;
         this.damage = 250;
 
+        this.rangeX = this.rangeY = undefined;
+
         this.setType(type);
         this.setDuration(duration);
     }
@@ -87,11 +89,22 @@ export class Weapon {
 
         this.shootCount = 0;
 
+        this.updateRange();
+
         // if (!this.wielder.updatePack) return;
         // this.wielder.updatePack.push({
         //     duration: this.duration,
         //     type: "weapon",
         // });
+    }
+
+    updateRange(){
+        const durationMs = Sounds.getTimeFromDuration(this.duration);
+        this.rangeX = (durationMs / 25) * (10_000 / Sounds.beatInterval);
+        this.rangeY = this.rangeX / 2;
+        //magic numbers:
+        //25 - ticks per second in server game loop
+        //10_000 - a constant scaling the range
     }
 
     shoot(note) {

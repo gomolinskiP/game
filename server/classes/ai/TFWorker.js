@@ -470,6 +470,11 @@ export class DQNAgent {
         this.replayBuffer.add({ state, action, reward, nextState, done });
 
         this.rememberCounter++;
+        if (this.rememberCounter % this.targetUpdateFreq === 0) {
+            this.updateTargetNetwork();
+            console.log("updating target network");
+        }
+
         if (
             this.rememberCounter % this.experienceReplayFreq === 0 &&
             this.rememberCounter >= 2000

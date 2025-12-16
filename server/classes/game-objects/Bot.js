@@ -76,7 +76,16 @@ export class Bot extends Character {
         for (const id in Bot.list) {
             const bot = Bot.list[id];
 
-            if(bot.isDead) continue; //skip for dead bots
+            if(bot.isDead){
+                if(!bot.hasSentDeathExperience){
+                    //do 1 step to get the immidiate death experience
+                    bot.hasSentDeathExperience = true;
+                }
+                else{
+                    //skip for dead bots
+                    continue;
+                }
+            };
             // if (Math.random() > 0.9) bot.shoot();
             bot.walkAgent.step();
             bot.stepsSinceLastPickup++;
@@ -102,7 +111,7 @@ export class Bot extends Character {
 
     static agentStepTime_ms = 250; //time between next dqn agent steps
     // static startPosResetTime_ms = 600000; //time after start position is resetted to current position (for dqn map exploration implementation)
-    static moveDistGoal = 1200; //max distance from start position, that reaching gives reward and resets start position
+    static moveDistGoal = 600; //max distance from start position, that reaching gives reward and resets start position
 
     constructor() {
         const { x, y } = Tile.getRandomWalkablePos();
@@ -184,18 +193,25 @@ export class Bot extends Character {
         }
 
         let isOtherCharacterInFront = false;
+        let gridStateWidths = [
+            WalkAgent.bigStateGrid.cellW,
+            WalkAgent.mediumStateGrid.cellW,
+            WalkAgent.smallStateGrid.cellW,
+            WalkAgent.extraSmallStateGrid.cellW,
+        ];
         //indeces are arranged from biggest grid to smallest
         //we can multiply the rewards by closeness factor - bigger rewards if other character is close:
-        let closenessFactor = 0;
         for (let i = 0; i < gridIndecesInFront.length; i++) {
+            if(this.weapon.rangeX < gridStateWidths[i]) continue;
             const index = gridIndecesInFront[i];
             const cellState = characterGridState[index];
 
             if (cellState != -1) {
                 isOtherCharacterInFront = true;
-                closenessFactor = i + 1;
             }
         }
+
+        
 
         //reward depends on:
         // - other character being in front of bot,
@@ -204,20 +220,20 @@ export class Bot extends Character {
         if(isOtherCharacterInFront){
             if(this.isShooting.state){
                 //good - bot is shooting in other character's direction:
-                shootReward += closenessFactor * 0.2;
+                shootReward +=  1;
             }
             else{
                 //bad - bot is not shooting & there's other character in front:
-                shootReward -= closenessFactor * 0.2;
+                shootReward -=  0.5;
             }
         }
         else{
             if (this.isShooting.state) {
                 //bad - bot is shooting at nothing:
-                shootReward -= 0.5;
+                shootReward -= 1;
             } else {
                 //good - bot is not shooting when there's no one in front:
-                shootReward += 0.1;
+                shootReward += 0.5;
             }
         }
 
@@ -405,6 +421,8 @@ export class Bot extends Character {
             (this.y - this.startY) / Bot.moveDistGoal
         );
 
+        // state.push(Math.tanh(this.agentStepCount / 240));
+
         //self normalised HP:
         state.push(this.hp / this.fullHP);
 
@@ -566,11 +584,11 @@ export class Bot extends Character {
         const nowT = Date.now();
         if(!this.lastActionT) this.lastActionT = nowT;
         else{
-            console.log(
-                "time between actions: ",
-                nowT - this.lastActionT,
-                "ms"
-            );
+            // console.log(
+            //     "time between actions: ",
+            //     nowT - this.lastActionT,
+            //     "ms"
+            // );
             this.lastActionT = nowT;
         }
         
@@ -671,11 +689,12 @@ export class Bot extends Character {
     }
 
     die(attacker) {
-        super.die(attacker);
         this.combatReward -= 50;
         attacker.combatReward += 55;
         this.isLearningCycleDone = true;
 
+        this.hasSentDeathExperience = false;
+        super.die(attacker);
         //random respawn time between 1s and 4s:
         const respawnTimeMs = Math.random() * 3000 + 1000;
         setTimeout(()=>{
@@ -688,6 +707,7 @@ export class Bot extends Character {
 
         this.stepsSinceLastPickup = 100000000;
         this.agentStepCount = 0;
+        this.giveRandomWeapon();
 
         const { x, y } = Tile.getRandomWalkablePos();
         this.x = x;
@@ -726,11 +746,11 @@ export class Bot extends Character {
         const distTraveled = this.getDist({ x: this.startX, y: this.startY });
         this.driftStartPos();
         if (distTraveled > Bot.moveDistGoal) {
-            this.walkingReward += 10;
+            this.walkingReward += 2;
             this.startX = this.x;
             this.startY = this.y;
         }
-        const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5);
+        const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5) * Math.tanh(this.agentStepCount / 240);
         // console.log(
         //     "normalised dist: ",
         //     distTraveled / Bot.moveDistGoal - 0.5,
@@ -747,19 +767,19 @@ export class Bot extends Character {
         //negative reward if bot's bullet was destroyed without hitting enemy & any other bullet did not hit
         if(this.didBulletMiss){
             if(!this.didBulletHit){
-                this.combatReward -= 3;
+                this.combatReward -= 0.5;
             }
             this.didBulletMiss = false;
         }
 
         //positive reward if bot did damage this step:
         if(this.didBulletHit){
-            this.combatReward += 10;
+            this.combatReward += 3;
             this.didBulletHit = false;
         }
 
         if(this.wasHitByBullet){
-            this.combatReward -= 9;
+            this.combatReward -= 3;
             this.wasHitByBullet = false;
         }
 
