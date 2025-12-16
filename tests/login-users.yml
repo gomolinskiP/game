@@ -2,7 +2,7 @@ config:
   target: "https://localhost:2000"
   processor: "./nextUser.cjs"
   phases:
-    - duration: 1
+    - duration: 100
       arrivalRate: 1
   defaults:
     headers:
@@ -25,6 +25,6 @@ scenarios:
       - think: 1
 
       - function: "connectSocket"
-      - think: 100
+      - think: 10
 
 

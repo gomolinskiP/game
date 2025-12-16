@@ -10,20 +10,21 @@ const argon2 = require('argon2');
 const fs = require('fs');
 const https = require('https');
 
-import MongoStore from 'connect-mongo';
-
 //Environtment variables from .env file
 import dotenv from 'dotenv';
 dotenv.config();
 
-export default function expressSetUp(Account){
+export default function expressSetUp(ses, Account){
     var express = require("express");
     var app = express();
+
+    //use EJS view engine with "views" folder:
     app.set("views", "views");
     app.set("view engine", "ejs");
     var favicon = require("serve-favicon");
-    const session = require("express-session");
+
     const { checkLoggedIn, bypassLogin } = require("./middlewares");
+    //cert for httpS:
     const options = {
         key: fs.readFileSync("certs/server.key"),
         cert: fs.readFileSync("certs/server.cert"),
@@ -36,28 +37,10 @@ export default function expressSetUp(Account){
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
 
-    const mongoStore = MongoStore.create({
-        mongoUrl: "mongodb://localhost:27017/mgrGame",
-        collectionName: "sessions",
-        ttl: 60 * 60 * 24, //24 hours
-    });
-
-    const ses = session({
-        secret: process.env.SESSION_SECRET,
-        resave: false,
-        saveUninitialized: true,
-        name: "cookieName",
-        store: mongoStore,
-        cookie: {
-            maxAge: 1000 * 60 * 60 * 24, //24 hours
-            httpOnly: true, //do not let JS access the cookie - helps preventing XSS
-            secure: false, //use only HTTPS for cookie sending
-            sameSite: "lax", //prevents CSRF attacks
-        },
-    });
-
+    //use sessions:
     app.use(ses);
-    //express for file communication:
+
+    //ROUTING:
     app.get("/", bypassLogin, function (req, res) {
         if (req.query.err) {
             req.session.err = req.query.err;
@@ -210,33 +193,13 @@ export default function expressSetUp(Account){
         }
         catch(err){
             if(err.code === 11000){
+                //username already exists in DB (taken):
                 return postRes.redirect("/register?err=usernameTaken");
             }
 
             console.error("Register error: ", err);
             return postRes.redirect("/register?err=serverError");
         }
-
-        // //check if username is already taken:
-        // const existingUser = await Account.findOne({
-        //     username: chosenUsername,
-        // });
-
-        // if (existingUser) {
-        //     //acount already exists
-        //     return postRes.redirect("/register?err=usernameTaken");
-        // } else {
-        //     //username is not taken, create account
-        //     const passwordHash = await argon2.hash(chosenPassword, {
-        //         type: argon2.argon2id,
-        //     });
-
-        //     Account.insertOne({
-        //         username: chosenUsername,
-        //         password: passwordHash,
-        //     });
-        //     return postRes.redirect("/register?err=registerSuccess");
-        // }
     });
 
     app.get("/game", checkLoggedIn, function (req, res) {
@@ -270,7 +233,6 @@ export default function expressSetUp(Account){
         if (req.session?.user?.username) {
             isLogged = true;
             username = req.session.user.username;
-            // return res.redirect("/about");
         }
 
         res.render("about", {
@@ -294,7 +256,6 @@ export default function expressSetUp(Account){
         if (req.session?.user?.username) {
             isLogged = true;
             username = req.session.user.username;
-            // return res.redirect("/about");
         }
 
         res.render("contact", {
@@ -318,7 +279,6 @@ export default function expressSetUp(Account){
         if (req.session?.user?.username) {
             isLogged = true;
             username = req.session.user.username;
-            // return res.redirect("/about");
         }
 
         res.render("privacy", {
@@ -328,12 +288,14 @@ export default function expressSetUp(Account){
         });
     });
 
-
+    //static route (/client dir contents are available to client):
     app.use("/client", express.static(__dirname + "/client"));
     app.use(express.static("client"));
+
+    //start server on port:
     serv.listen(2000);
 
     console.log("✅ HTTPS server started.");
-    return { serv, ses, mongoStore };
+    return { serv };
 }
 
