@@ -17,6 +17,8 @@ const mainPath = path.join(modelDir, "main/model.json");
 const targetPath = path.join(modelDir, "target/model.json");
 const metaPath = path.join(modelDir, "meta.json");
 
+const IS_BOT_TRAINING_MODE = Boolean(Number(process.env.BOT_TRAINING));  
+
 parentPort.on('message', async(msg)=>{
     if(!agent) return;
 
@@ -176,126 +178,126 @@ class ReplayBuffer{
     }
 }
 
-class PrioritizedReplayBuffer{
-    constructor(capacity, priorityAlpha = 0.6, betaStart = 0.4, betaFrames = 100000){
-        this.capacity = capacity;
-        this.buffer = [];
-        this.priorities = [];
-        this.position = 0;
-        this.priorityAlpha = priorityAlpha;
-        this.betaStart = betaStart;
-        this.betaFrames = betaFrames;
-        this.frame = 1;
-    }
+// class PrioritizedReplayBuffer{
+//     constructor(capacity, priorityAlpha = 0.6, betaStart = 0.4, betaFrames = 100000){
+//         this.capacity = capacity;
+//         this.buffer = [];
+//         this.priorities = [];
+//         this.position = 0;
+//         this.priorityAlpha = priorityAlpha;
+//         this.betaStart = betaStart;
+//         this.betaFrames = betaFrames;
+//         this.frame = 1;
+//     }
 
-    add(experience){
-        const maxPrio = this.priorities.length > 0
-            ? Math.max(...this.priorities)
-            : 1.0;
-        // console.log(maxPrio);
+//     add(experience){
+//         const maxPrio = this.priorities.length > 0
+//             ? Math.max(...this.priorities)
+//             : 1.0;
+//         // console.log(maxPrio);
 
 
-        if(this.buffer.length < this.capacity){
-            this.buffer.push(experience);
-            this.priorities.push(maxPrio);
-        } else{
-            this.buffer[this.position] = experience;
-            this.priorities[this.position] = maxPrio;
-        }
+//         if(this.buffer.length < this.capacity){
+//             this.buffer.push(experience);
+//             this.priorities.push(maxPrio);
+//         } else{
+//             this.buffer[this.position] = experience;
+//             this.priorities[this.position] = maxPrio;
+//         }
 
-        this.position = (this.position + 1) % this.capacity;
-    }
+//         this.position = (this.position + 1) % this.capacity;
+//     }
 
-    sample(batchSize){
-        //getting propabilities from priorities:
-        const prios = this.priorities.map(p => Math.pow(p, this.priorityAlpha));
-        const sumP = prios.reduce((a, b) => a+b, 0);
-        const probs = prios.map(p => p/sumP);
+//     sample(batchSize){
+//         //getting propabilities from priorities:
+//         const prios = this.priorities.map(p => Math.pow(p, this.priorityAlpha));
+//         const sumP = prios.reduce((a, b) => a+b, 0);
+//         const probs = prios.map(p => p/sumP);
 
-        //getting random experiences by propabilities:
-        const indices = [];
-        for(let i=0; i<batchSize; i++){
-            const rand = Math.random();
-            let cumSum = 0;
-            for(let j=0; j<probs.length; j++){
-                cumSum += probs[j];
-                if(rand <= cumSum){
-                    indices.push(j);
-                    break;
-                }
-            }
-        }
+//         //getting random experiences by propabilities:
+//         const indices = [];
+//         for(let i=0; i<batchSize; i++){
+//             const rand = Math.random();
+//             let cumSum = 0;
+//             for(let j=0; j<probs.length; j++){
+//                 cumSum += probs[j];
+//                 if(rand <= cumSum){
+//                     indices.push(j);
+//                     break;
+//                 }
+//             }
+//         }
 
-        //increase beta with each batch:
-        const beta = Math.min(
-            1.0,
-            this.betaStart + this.frame * (1.0 - this.betaStart) / this.betaFrames
-        );
-        this.frame++;
+//         //increase beta with each batch:
+//         const beta = Math.min(
+//             1.0,
+//             this.betaStart + this.frame * (1.0 - this.betaStart) / this.betaFrames
+//         );
+//         this.frame++;
 
-        //weight correction:
-        const weights = indices.map(i => Math.pow(this.buffer.length * probs[i], -beta));
-        const maxW = Math.max(...weights);
-        const normWeights = weights.map(w => w/maxW);
+//         //weight correction:
+//         const weights = indices.map(i => Math.pow(this.buffer.length * probs[i], -beta));
+//         const maxW = Math.max(...weights);
+//         const normWeights = weights.map(w => w/maxW);
 
-        const samples = indices.map(i => this.buffer[i]);
+//         const samples = indices.map(i => this.buffer[i]);
 
-        return {samples, indices, weights: normWeights};
-    }
+//         return {samples, indices, weights: normWeights};
+//     }
 
-    updatePriorities(indices, tdErrors){
-        const absErrors = tdErrors.map(e => Math.abs(e) + 1e-5);
-        // const maxErr = Math.max(...absErrors);
+//     updatePriorities(indices, tdErrors){
+//         const absErrors = tdErrors.map(e => Math.abs(e) + 1e-5);
+//         // const maxErr = Math.max(...absErrors);
 
-        for(let i=0; i<indices.length; i++){
-            const idx = indices[i];
-            const scaled = Math.log1p(absErrors[i]); 
-            this.priorities[idx] = Math.max(
-                scaled,
-                0.05
-            );
-        }
+//         for(let i=0; i<indices.length; i++){
+//             const idx = indices[i];
+//             const scaled = Math.log1p(absErrors[i]); 
+//             this.priorities[idx] = Math.max(
+//                 scaled,
+//                 0.05
+//             );
+//         }
 
-        if(this.frame % 1000 == 0){
-            fs.writeFileSync(
-                "logs/priorities.txt",
-                "mean priority " +
-                (this.priorities.reduce((a, b) => a + b) / this.priorities.length) +
-                " maxP " + 
-                Math.max(...this.priorities) +
-                " minP " +
-                Math.min(...this.priorities) + "\n",
-                {
-                    encoding: "utf8",
-                    flag: "a+",
-                    mode: 0o666,
-                }
-            );
-        }
+//         if(this.frame % 1000 == 0){
+//             fs.writeFileSync(
+//                 "logs/priorities.txt",
+//                 "mean priority " +
+//                 (this.priorities.reduce((a, b) => a + b) / this.priorities.length) +
+//                 " maxP " + 
+//                 Math.max(...this.priorities) +
+//                 " minP " +
+//                 Math.min(...this.priorities) + "\n",
+//                 {
+//                     encoding: "utf8",
+//                     flag: "a+",
+//                     mode: 0o666,
+//                 }
+//             );
+//         }
 
-        // console.log(
-            // "mean priority",
-            // this.priorities.reduce((a, b) => a + b) / this.priorities.length,
-            // 'maxP',
-            // Math.max(...this.priorities),
-            // 'minP',
-            // Math.min(...this.priorities)
-        // );
-    }
+//         // console.log(
+//             // "mean priority",
+//             // this.priorities.reduce((a, b) => a + b) / this.priorities.length,
+//             // 'maxP',
+//             // Math.max(...this.priorities),
+//             // 'minP',
+//             // Math.min(...this.priorities)
+//         // );
+//     }
 
-    get length(){
-        return this.buffer.length;
-    }
-}
+//     get length(){
+//         return this.buffer.length;
+//     }
+// }
 
-export class DQNAgent {
+export class DQNModel {
     constructor(
         numStates,
         numActions,
         {
             gamma = 0.98,
-            epsilonStart = 0.0,
-            epsilonEnd = 0.0,
+            epsilonStart = 1.0,
+            epsilonEnd = 0.05,
             epsilonDecaySteps = 8e6,
             learningRate = 0.00005,
             batchSize = 1024,
@@ -345,8 +347,8 @@ export class DQNAgent {
         const model = tf.sequential();
         hiddenLayers.forEach((units, i) => {
             model.add(
-                new NoisyDense({
-                // tf.layers.dense({
+                // new NoisyDense({
+                tf.layers.dense({
                     units,
                     activation: "relu",
                     inputShape: i === 0 ? [this.numStates] : undefined,
@@ -355,8 +357,8 @@ export class DQNAgent {
             );
         });
         model.add(
-            new NoisyDense({
-            // tf.layers.dense({
+            // new NoisyDense({
+            tf.layers.dense({
                 units: this.numActions,
                 sigmaInit: 0.017,
             })
@@ -469,6 +471,7 @@ export class DQNAgent {
     async remember(state, action, reward, nextState, done) {
         this.replayBuffer.add({ state, action, reward, nextState, done });
 
+        if(!IS_BOT_TRAINING_MODE) return;
         this.rememberCounter++;
         if (this.rememberCounter % this.targetUpdateFreq === 0) {
             this.updateTargetNetwork();
@@ -778,10 +781,10 @@ const statesNum = parseInt(workerData.AGENT_STATES_NUM, 10);
 const actionsNum = parseInt(workerData.AGENT_ACTIONS_NUM, 10);
 
 (async () => {
-    agent = new DQNAgent(statesNum, actionsNum);
+    agent = new DQNModel(statesNum, actionsNum);
 })();
 
-//temp epsilon from start:
+// temp epsilon from start:
 // agent.enableTemporaryEpsilon(0.2, 100000);
 
 

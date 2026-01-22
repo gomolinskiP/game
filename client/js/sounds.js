@@ -17,8 +17,14 @@ export class Sounds {
         Sounds.reverb.toDestination();
     }
 
-    static metronome = new Tone.Synth();
-    static metrVol = new Tone.Volume(-26);
+    static metronome = new Tone.Synth({
+        oscillator: { type: 'sine' },
+        envelope: {
+            attack: 0.1, 
+            release: 0.1
+        }
+    });
+    static metrVol = new Tone.Volume(-16);
 
     static test = new Tone.Synth();
 
@@ -129,7 +135,7 @@ export class Sounds {
             Sounds.firstTickNum = Sounds.tickNum;
             const timeDelay_s = timeDelay_ms / 1000;
             console.log(`starting transport | tickNum: ${Sounds.tickNum}`);
-            Tone.Transport.start("+0", -timeDelay_s);
+            Tone.Transport.start("+0", timeDelay_s);
         } else {
             //metronome already started:
             const localTickNum = Sounds.tickNum - Sounds.firstTickNum;
@@ -172,7 +178,7 @@ export class Sounds {
 
         Tone.Transport.bpm.value = baseBPM * correction;
 
-        // console.log("setBPM:", Sounds.bpm, "transportBPM:", Tone.Transport.bpm.value,"errorMS:", Math.round(error*1000), "correctionScaler:", correction);
+        console.log("setBPM:", Sounds.bpm, "transportBPM:", Tone.Transport.bpm.value,"errorMS:", Math.round(error*1000), "correctionScaler:", correction);
         // console.log(`bpm correction: ${Tone.Transport.bpm.value}`)
     }
 
@@ -331,20 +337,3 @@ export class ClockSync {
         // );
     }
 }
-
-// class ClockSync {
-//     static offset = 0; //serverTime - clientTime [ms]
-//     static rtt = 0;
-
-//     static async syncRoundTrip(ws, attempts = 8) {
-//         const results = [];
-
-//         for (let i = 0; i < attempts; i++) {
-//             const t0 = performance.now();
-//             const resp = await new Promise((resolve) => {
-//                 const id = Math.random().toString(36).slice(2);
-//                 const handler = (msg) => {};
-//             });
-//         }
-//     }
-// }

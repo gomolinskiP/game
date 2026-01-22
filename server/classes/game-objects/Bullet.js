@@ -5,7 +5,7 @@ import { Character } from "./Character.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";
 
-const BOT_TRAINING = Boolean(process.env.BOT_TRAINING);
+const BOT_TRAINING = Boolean(Number(process.env.BOT_TRAINING));
 
 
 export class Bullet extends Entity {

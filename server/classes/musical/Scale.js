@@ -20,12 +20,9 @@ export class Scale {
 
     constructor(base, type) {
         this.setScale(base, type);
-
-        console.log(this.allowedNotes);
     }
 
     setScale(base, type) {
-        // console.log(`changing scale to ${base} ${type}`);
         this.base = base;
         this.type = type;
 
@@ -39,7 +36,9 @@ export class Scale {
 
     changeToRelative() {
         //base -3 / +9
-        let newBase = this.getTransposed(this.base, 9);
+        const newBase = this.getTransposed(this.base, 9);
+
+        //switch from major to minor or vice-versa:
         let newType;
         if (this.type == "major") {
             newType = "minor";

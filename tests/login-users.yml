@@ -2,8 +2,9 @@ config:
   target: "https://localhost:2000"
   processor: "./nextUser.cjs"
   phases:
-    - duration: 100
-      arrivalRate: 1
+    - name: "100 users"
+      duration: 3000
+      arrivalCount: 100
   defaults:
     headers:
       Content-Type: "application/json"
@@ -25,6 +26,6 @@ scenarios:
       - think: 1
 
       - function: "connectSocket"
-      - think: 10
+      - think: 30
 
 

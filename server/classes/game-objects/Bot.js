@@ -3,7 +3,7 @@ import { Character } from "./Character.js";
 import { Weapon } from "./Weapon.js";
 import { Map } from "../Map.js";
 import { Pickup } from "./Pickup.js";
-import { WalkAgent } from "../ai/DQN.js";
+import { DQNAgent } from "../ai/DQN.js";
 import { Tile } from "./Tile.js";
 import { Sounds } from "../musical/Sounds.js";
 import { stat } from "fs";
@@ -45,7 +45,7 @@ class AvgRewardLogger {
 
         if (this.logFilePath == "logs/walking_rewards.txt"){
             //so we log loss only once per all the reward types
-            WalkAgent.requestWorkerLogLoss();
+            DQNAgent.requestWorkerLogLoss();
         }
         if (this.logFilePath == "logs/rewards.txt") {
             const varr =
@@ -76,18 +76,17 @@ export class Bot extends Character {
         for (const id in Bot.list) {
             const bot = Bot.list[id];
 
-            if(bot.isDead){
-                if(!bot.hasSentDeathExperience){
+            if (bot.isDead) {
+                if (!bot.hasSentDeathExperience) {
                     //do 1 step to get the immidiate death experience
                     bot.hasSentDeathExperience = true;
-                }
-                else{
+                } else {
                     //skip for dead bots
                     continue;
                 }
-            };
+            }
             // if (Math.random() > 0.9) bot.shoot();
-            bot.walkAgent.step();
+            bot.DQNAgent.step();
             bot.stepsSinceLastPickup++;
         }
     }
@@ -97,6 +96,67 @@ export class Bot extends Character {
             Bot.stepAll();
         }, Bot.agentStepTime_ms);
     }
+
+    static manageNumber(playerNum){
+        // console.log('managing bot number for', playerNum, 'players');
+
+        const isBotTrainingMode = Boolean(Number(process.env.BOT_TRAINING));
+
+        const maxBotNum = Number(process.env.BOT_NUM);
+        const currentBotNum = Object.keys(Bot.list).length;
+
+        const wantedMinCharNum = maxBotNum;
+
+        if(isBotTrainingMode){
+            //in bot-training-mode we always want max bot num:
+            const botsToSpawn = maxBotNum - currentBotNum;
+
+            if(botsToSpawn <= 0) return;
+
+            for(let i=0; i<botsToSpawn; i++){
+                new Bot();
+            }
+        }
+        else{
+            //in production mode we want:
+            //- no bots if no players,
+            //- at least wantedCharNum if at least one player
+
+            if(playerNum == 0){
+                //despawn all bots:
+                for(let id in Bot.list){
+                    const bot = Bot.list[id];
+                    bot.remove();
+                }
+                // console.log('despawned all bots');
+            }
+            else{
+                const charNumDiff = wantedMinCharNum - (playerNum + currentBotNum);
+
+                if(charNumDiff > 0){
+                    //to few bots:
+                    for(let i=0; i<charNumDiff; i++){
+                        new Bot();
+                    }
+                    // console.log('spawned', charNumDiff, 'bots')
+                }
+                else{
+                    //to many bots or good num of bots:
+                    for(let i=0; i<Math.abs(charNumDiff); i++){
+                        //TODO choose bot furthest from real players
+
+                        const ids = Object.keys(Bot.list);
+                        if(ids.length <= 0) return;
+
+                        const randomId = ids[Math.floor(Math.random() * ids.length)];
+                        const randomBot = Bot.list[randomId];
+                        randomBot.remove();
+                    }
+                    // console.log("despawned", Math.abs(charNumDiff), 'bots');
+                }
+            }
+        }
+    };
 
     static randomSpawn() {
         // random bot spawn:
@@ -122,11 +182,12 @@ export class Bot extends Character {
         let username = RandomName.getRandomName();
         super(id, x, y, username);
 
-        this.walkAgent = new WalkAgent(this);
+        this.DQNAgent = new DQNAgent(this);
         this.walkingReward = 0; //rewards regarding walking itself
         this.walkedIntoCollision = false;
         this.pickupsReward = 0; //rewards regarding collecting pickups
         this.stepsSinceLastPickup = 100000000;
+        this.stepsSinceDealingDMG = 40;
         this.combatReward = 0;
         this.didBulletMiss = false;
         this.didBulletHit = false;
@@ -145,15 +206,20 @@ export class Bot extends Character {
         Bot.list[this.id] = this;
     }
 
-    getShootReward(characterGridState){
+    remove(){
+        super.remove();
+        delete Bot.list[this.id];
+    }
+
+    getShootReward(characterGridState) {
         //calculates reward for trying to shoot in correct direction (other characters)
         //and a negative reward for wrong dirrection
         //also negative reward for not shooting if there is an other character in current bot's direction
 
         //skip if bot is in non-PVP area:
-        if(this.isInNonPVPArea()){
+        if (this.isInNonPVPArea()) {
             return 0;
-        } 
+        }
 
         let gridIndecesInFront = [];
         //current player angle:
@@ -194,15 +260,15 @@ export class Bot extends Character {
 
         let isOtherCharacterInFront = false;
         let gridStateWidths = [
-            WalkAgent.bigStateGrid.cellW,
-            WalkAgent.mediumStateGrid.cellW,
-            WalkAgent.smallStateGrid.cellW,
-            WalkAgent.extraSmallStateGrid.cellW,
+            DQNAgent.bigStateGrid.cellW,
+            DQNAgent.mediumStateGrid.cellW,
+            DQNAgent.smallStateGrid.cellW,
+            DQNAgent.extraSmallStateGrid.cellW,
         ];
         //indeces are arranged from biggest grid to smallest
         //we can multiply the rewards by closeness factor - bigger rewards if other character is close:
         for (let i = 0; i < gridIndecesInFront.length; i++) {
-            if(this.weapon.rangeX < gridStateWidths[i]) continue;
+            if (this.weapon.rangeX < gridStateWidths[i]) continue;
             const index = gridIndecesInFront[i];
             const cellState = characterGridState[index];
 
@@ -211,29 +277,25 @@ export class Bot extends Character {
             }
         }
 
-        
-
         //reward depends on:
         // - other character being in front of bot,
         // - shootingState
         let shootReward = 0;
-        if(isOtherCharacterInFront){
-            if(this.isShooting.state){
+        if (isOtherCharacterInFront) {
+            if (this.isShooting.state) {
                 //good - bot is shooting in other character's direction:
-                shootReward +=  1;
-            }
-            else{
+                shootReward += 2;
+            } else {
                 //bad - bot is not shooting & there's other character in front:
-                shootReward -=  0.5;
+                shootReward -= 1.5;
             }
-        }
-        else{
+        } else {
             if (this.isShooting.state) {
                 //bad - bot is shooting at nothing:
-                shootReward -= 1;
+                shootReward -= 1.5;
             } else {
                 //good - bot is not shooting when there's no one in front:
-                shootReward += 0.5;
+                shootReward += 0.2;
             }
         }
 
@@ -245,10 +307,15 @@ export class Bot extends Character {
         return shootReward;
     }
 
+    isSeeingOtherCharacters(characterGridState){
+        if(Math.max(...characterGridState) == -1) return false;
+        else return true;
+    }
+
     _getGridState(grid, objQuadtree) {
         let resultArray = [];
 
-        const gridDims = WalkAgent.gridDims,
+        const gridDims = DQNAgent.gridDims,
             cellW = grid.cellW,
             cellH = grid.cellH;
 
@@ -267,8 +334,8 @@ export class Bot extends Character {
                 });
 
                 for (const candidate of objCandidates) {
-                    if(candidate.parentID == this.id) continue; //(for bullets) skip if bot is bullet's parent
-                    if(candidate.id == this.id) continue; //(for characters) skip if self
+                    if (candidate.parentID == this.id) continue; //(for bullets) skip if bot is bullet's parent
+                    if (candidate.id == this.id) continue; //(for characters) skip if self
                     if (
                         candidate.x + candidate.width > cellX &&
                         candidate.x < cellX + cellW &&
@@ -276,24 +343,22 @@ export class Bot extends Character {
                         candidate.y < cellY + cellH
                     ) {
                         //object of quadtree is in the cell [i][j]
-                        if(candidate.hp) {
+                        if (candidate.hp != undefined) {
                             //object is alive & has HealthPoints
 
                             //skip if they are already dead but before respawn:
-                            if(candidate.hp <= 0) continue;
-                            //TODO
+                            if (candidate.hp <= 0) continue;
 
                             //skip if they are in non-pvp area:
-                            if(Entity.isInNonPVPArea(candidate.x, candidate.y)) continue;
+                            if (Entity.isInNonPVPArea(candidate.x, candidate.y))
+                                continue;
 
                             //normalised other player's HP in cell:
                             isObjInCell = candidate.hp / Character.fullHP;
-                        }
-                        else if(candidate.TTLNorm){
+                        } else if (candidate.TTLNorm) {
                             //object is a bullet:
                             isObjInCell = candidate.TTLNorm;
-                        }
-                        else isObjInCell = 1;
+                        } else isObjInCell = 1;
                         //if object is not another player cell state is just 1
                     }
                 }
@@ -326,16 +391,16 @@ export class Bot extends Character {
         let resultArray = [];
 
         resultArray = resultArray.concat(
-            this._getGridState(WalkAgent.bigStateGrid, objQuadtree)
+            this._getGridState(DQNAgent.bigStateGrid, objQuadtree)
         );
         resultArray = resultArray.concat(
-            this._getGridState(WalkAgent.mediumStateGrid, objQuadtree)
+            this._getGridState(DQNAgent.mediumStateGrid, objQuadtree)
         );
         resultArray = resultArray.concat(
-            this._getGridState(WalkAgent.smallStateGrid, objQuadtree)
+            this._getGridState(DQNAgent.smallStateGrid, objQuadtree)
         );
         resultArray = resultArray.concat(
-            this._getGridState(WalkAgent.extraSmallStateGrid, objQuadtree)
+            this._getGridState(DQNAgent.extraSmallStateGrid, objQuadtree)
         );
 
         return resultArray;
@@ -391,13 +456,13 @@ export class Bot extends Character {
         const nearest = this.findNearest(
             objList,
             objQuadtree,
-            WalkAgent.maxDist
+            DQNAgent.maxDist
         );
         const distSq = this.getDistSq(nearest);
         return Math.sqrt(distSq);
     }
 
-    getWalkAgentEnvironment() {
+    getDQNAgentEnvironment() {
         let state = [];
 
         //self-info
@@ -441,6 +506,12 @@ export class Bot extends Character {
         //Is shooting state:
         state.push(Number(this.isShooting.state));
 
+        //combat state
+        state.push(Number(this.didBulletHit));
+        state.push(Number(this.didBulletMiss));
+        state.push(Number(this.wasHitByBullet));
+        state.push(-Math.tanh((this.stepsSinceDealingDMG - 40) * 0.05));
+
         //add pickup grid state to RL state (is pickup in one of the cells around agent? 0/1):
         const pickupGridState = this.getGridState(Pickup.quadtree);
         state = state.concat(pickupGridState);
@@ -449,7 +520,7 @@ export class Bot extends Character {
         const nearestPickup = this.findNearest(
             Pickup.list,
             Pickup.quadtree,
-            WalkAgent.maxDist
+            DQNAgent.maxDist
         );
         if (nearestPickup) {
             const nearestPickupDist = this.getDist(nearestPickup);
@@ -459,14 +530,14 @@ export class Bot extends Character {
 
             //reward for being closer to a pickup:
             const nearestPickupReward =
-                1 - nearestPickupDist / WalkAgent.maxDist;
+                1 - nearestPickupDist / DQNAgent.maxDist;
             // console.log('nearestPickupReward', nearestPickupReward);
             this.pickupsReward += nearestPickupReward;
 
             let { dx, dy } = this.getDxDy(nearestPickup);
 
             //information about a vector to the closest pickup:
-            state.push(dx / WalkAgent.maxDX, dy / WalkAgent.maxDY);
+            state.push(dx / DQNAgent.maxDX, dy / DQNAgent.maxDY);
         } else {
             //instead of a vector to the closest pickup:
             state.push(2, 2);
@@ -482,14 +553,14 @@ export class Bot extends Character {
             4,
             Tile.wallQTree,
             Tile.list,
-            WalkAgent.maxDist
+            DQNAgent.maxDist
         );
         for (const wallTile of nearestWallTiles) {
             if (!wallTile) {
                 state.push(2, 2);
             } else {
                 const { dx: w_dx, dy: w_dy } = this.getDxDy(wallTile);
-                state.push(w_dx / WalkAgent.maxDist, w_dy / WalkAgent.maxDist);
+                state.push(w_dx / DQNAgent.maxDist, w_dy / DQNAgent.maxDist);
             }
         }
 
@@ -502,7 +573,26 @@ export class Bot extends Character {
         const shootReward = this.getShootReward(characterGridState);
         this.combatReward += shootReward;
 
+        //bloodthirst reward:
+        const bloodthirstReward = -Math.tanh((this.stepsSinceDealingDMG - 40) * 0.05);
+        if(this.isSeeingOtherCharacters){
+            this.stepsSinceDealingDMG += 1;
 
+            //negative bloodthirst reward only if other characters in sight:
+            if(bloodthirstReward <= 0){
+                this.combatReward += bloodthirstReward;
+            }
+        }
+        else{
+            //reset negative bloodthirst if not seeing any characters:
+            if (bloodthirstReward <= 0) {
+                this.stepsSinceDealingDMG = 40;
+            }
+        }
+        //positive bloodthirst reward even if no characters in sight:
+        if(bloodthirstReward > 0){
+            this.combatReward += bloodthirstReward;
+        }
 
         //bullet grid-state:
         const bulletGridState = this.getGridState(Bullet.quadtree);
@@ -521,7 +611,7 @@ export class Bot extends Character {
                 const bullet = Bullet.list[ownBulletID];
 
                 let { dx, dy } = this.getDxDy(bullet);
-                state.push(dx / WalkAgent.maxDist, dy / WalkAgent.maxDist);
+                state.push(dx / DQNAgent.maxDist, dy / DQNAgent.maxDist);
 
                 const bulletTimeLeft = bullet.TTLNorm;
                 state.push(bulletTimeLeft);
@@ -543,7 +633,7 @@ export class Bot extends Character {
         //     3,
         //     Character.quadtree,
         //     Character.list,
-        //     WalkAgent.maxDist
+        //     DQNAgent.maxDist
         // );
         // for (const nearCharacter of nearestCharacters) {
         //     if (!nearCharacter) {
@@ -559,14 +649,14 @@ export class Bot extends Character {
         //         console.log('delta char dist reward', deltaNearCharDist/1000);
 
         //         state.push(
-        //             ch_dx / WalkAgent.maxDist,
-        //             ch_dy / WalkAgent.maxDist
+        //             ch_dx / DQNAgent.maxDist,
+        //             ch_dy / DQNAgent.maxDist
         //         );
 
         //         //negative reward for being close to other characters:
         //         const otherCharCloseReward =
-        //             5 * -(WalkAgent.maxDist - Math.sqrt(ch_dx ** 2 + ch_dy ** 2)) /
-        //             WalkAgent.maxDist;
+        //             5 * -(DQNAgent.maxDist - Math.sqrt(ch_dx ** 2 + ch_dy ** 2)) /
+        //             DQNAgent.maxDist;
         //         console.log('otherCharCloseReward', otherCharCloseReward);
         //         this.agentReward += otherCharCloseReward;
         //         // console.log('other char close reward', otherCharCloseReward * 5)
@@ -582,8 +672,8 @@ export class Bot extends Character {
         // this.needsUpdate = true;
         // console.log(move)
         const nowT = Date.now();
-        if(!this.lastActionT) this.lastActionT = nowT;
-        else{
+        if (!this.lastActionT) this.lastActionT = nowT;
+        else {
             // console.log(
             //     "time between actions: ",
             //     nowT - this.lastActionT,
@@ -591,10 +681,9 @@ export class Bot extends Character {
             // );
             this.lastActionT = nowT;
         }
-        
 
         //walking:
-        if (move.u != undefined){
+        if (move.u != undefined) {
             this.pressingUp = move.u;
             this.pressingDown = move.d;
             this.pressingLeft = move.l;
@@ -604,18 +693,18 @@ export class Bot extends Character {
         }
 
         //shooting:
-        if(move.att != undefined){
+        if (move.att != undefined) {
             // console.log('att move');
             if (this.isShooting.state != move.att) {
                 this.setShootingState(false, this.isShooting.noteID);
                 this.setShootingState(move.att, Math.round(7 * Math.random()));
-            }
-            else{
-                this.combatReward -= 0.5; //wasted move
-            }
+            } 
+            // else {
+            //     this.combatReward -= 0.5; //wasted move
+            // }
         }
 
-        if(move.changeWeaponDuration){
+        if (move.changeWeaponDuration) {
             // console.log('duration change move')
             // console.log(`setting ${move.changeWeaponDuration} weapon duration`);
             this.changeWeaponDuration(move.changeWeaponDuration);
@@ -624,47 +713,44 @@ export class Bot extends Character {
         this.agentStepCount += 1;
     }
 
-    changeWeaponDuration(direction){
+    changeWeaponDuration(direction) {
         const currentDuration = this.weapon.duration;
         const durationIndex = Weapon.allowedDurations.indexOf(currentDuration);
 
         let newDurationIndex;
 
-        switch(direction){
+        switch (direction) {
             case "shorter":
-                if(durationIndex < Weapon.allowedDurations.length - 1){
+                if (durationIndex < Weapon.allowedDurations.length - 1) {
                     newDurationIndex = durationIndex + 1;
-                }
-                else{
+                } else {
                     // console.log('duration cannot be shorter!!');
                     this.combatReward -= 0.5;
                     return;
                 }
                 break;
             case "longer":
-                if(durationIndex > 0){
+                if (durationIndex > 0) {
                     newDurationIndex = durationIndex - 1;
-                }
-                else{
+                } else {
                     // console.log('duration cannot be longer!!');
                     this.combatReward -= 0.5;
                     return;
                 }
                 break;
         }
-        
+
         const newDuration = Weapon.allowedDurations[newDurationIndex];
         this.updateShooterListOnDurationChange(currentDuration, newDuration);
-        this.weapon.setDuration(newDuration)
+        this.weapon.setDuration(newDuration);
         // console.log(currentDuration, durationIndex, newDurationIndex, newDuration);
     }
-
 
     startNewLearningCycle() {
         this.isLearningCycleDone = false;
     }
 
-    driftStartPos(){
+    driftStartPos() {
         //slowly moves starting position to current bot position,
         //used to encourage map exploration
         this.startX += 2 * Math.sign(this.x - this.startX);
@@ -679,13 +765,16 @@ export class Bot extends Character {
     takeDmg(damage, attacker) {
         super.takeDmg(damage, attacker);
 
-        const dmgReward =  1 * (damage / this.fullHP);
+        const dmgReward = 1 * (damage / this.fullHP);
         // console.log('dmgReward', dmgReward);
         this.combatReward -= dmgReward;
         this.wasHitByBullet = true;
 
-        attacker.combatReward += dmgReward + 1;
-        attacker.didBulletHit = true;
+        if(attacker.characterType == "bot"){
+            attacker.combatReward += dmgReward + 1;
+            attacker.stepsSinceDealingDMG = 0;
+            attacker.didBulletHit = true;
+        }
     }
 
     die(attacker) {
@@ -697,15 +786,16 @@ export class Bot extends Character {
         super.die(attacker);
         //random respawn time between 1s and 4s:
         const respawnTimeMs = Math.random() * 3000 + 1000;
-        setTimeout(()=>{
+        setTimeout(() => {
             this.spawn();
         }, respawnTimeMs);
     }
 
-    spawn(){
+    spawn() {
         super.spawn();
 
         this.stepsSinceLastPickup = 100000000;
+        this.stepsSinceDealingDMG = 40;
         this.agentStepCount = 0;
         this.giveRandomWeapon();
 
@@ -715,7 +805,6 @@ export class Bot extends Character {
         this.startX = this.x;
         this.startY = this.y;
     }
-    
 
     // shoot() {
     //     super.shoot();
@@ -750,7 +839,10 @@ export class Bot extends Character {
             this.startX = this.x;
             this.startY = this.y;
         }
-        const walkFarReward = 2 * (distTraveled / Bot.moveDistGoal - 0.5) * Math.tanh(this.agentStepCount / 240);
+        const walkFarReward =
+            2 *
+            (distTraveled / Bot.moveDistGoal - 0.5) *
+            Math.tanh(this.agentStepCount / 240);
         // console.log(
         //     "normalised dist: ",
         //     distTraveled / Bot.moveDistGoal - 0.5,
@@ -759,26 +851,26 @@ export class Bot extends Character {
         // );
         this.walkingReward += walkFarReward;
 
-        if(this.walkedIntoCollision){
+        if (this.walkedIntoCollision) {
             this.walkingReward -= 2;
             this.walkedIntoCollision = false;
         }
 
         //negative reward if bot's bullet was destroyed without hitting enemy & any other bullet did not hit
-        if(this.didBulletMiss){
-            if(!this.didBulletHit){
+        if (this.didBulletMiss) {
+            if (!this.didBulletHit) {
                 this.combatReward -= 0.5;
             }
             this.didBulletMiss = false;
         }
 
         //positive reward if bot did damage this step:
-        if(this.didBulletHit){
+        if (this.didBulletHit) {
             this.combatReward += 3;
             this.didBulletHit = false;
         }
 
-        if(this.wasHitByBullet){
+        if (this.wasHitByBullet) {
             this.combatReward -= 3;
             this.wasHitByBullet = false;
         }
@@ -791,7 +883,8 @@ export class Bot extends Character {
         // this.combatReward += stillAliveReward;
         // // console.log('stillAliveReward: ', stillAliveReward)
 
-        const reward = this.walkingReward + this.pickupsReward + this.combatReward;
+        const reward =
+            this.walkingReward + this.pickupsReward + this.combatReward;
         // fs.writeFileSync(
         //     "logs/rewards_specific.txt",
         //     "reward: " +

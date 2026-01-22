@@ -2,6 +2,10 @@ import Quadtree from "@timohausmann/quadtree-js";
 import { Map } from "../Map.js";
 import { v4 as uuidv4 } from "uuid";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const fs = require("fs");
+
 function screenToIso(x, y) {
   return {
     x: (2 * y + x) / 2,
@@ -45,7 +49,7 @@ export class Tile {
   }
 
   static createFloorQTree(rect){
-    Tile.floorQTree = new Quadtree(rect);
+    Tile.floorQTree = new Quadtree(rect, 10, 6);
     Tile.noPVPfloorQTree = new Quadtree(rect);
 
     const floorLayer = Map.loadLayer(Map.mapData, "floor");
@@ -73,6 +77,11 @@ export class Tile {
         });
       }
     }
+
+    // fs.writeFileSync(
+    //     "floor_quadtree.json",
+    //     JSON.stringify(Tile.floorQTree, null, 2)
+    // );
   }
 
   static createWallQTree(rect){
@@ -171,6 +180,8 @@ export class Tile {
 
     // this.x = scr.x;
     // this.y = scr.y;
+
+    this.entityType = "tile";
 
     this.isoX = scr.x;
     this.isoY = scr.y;

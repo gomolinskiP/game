@@ -5,13 +5,19 @@
 
 import { Graphics } from "./graphics.js";
 
-import { Player, Bot, Bullet, Pickup, Tile } from "./classes.js";
+// import { Player, Bot, Bullet, Pickup, Tile } from "./classes.js";
+import { Player } from "./object_classes/C_Character.js";
+import { Bullet } from "./object_classes/C_Bullet.js";
+import { Pickup } from "./object_classes/C_Pickup.js";
+import { Tile } from "./object_classes/C_Tile.js";
+
 import { Sounds, ClockSync } from "./sounds.js";
 import { addKeyboardListeners, Keyboard } from "./keyboard.js";
 // import { chatInit } from "./textChat.js";
 import { GameUI } from "./gameButtons.js";
 import { Socket } from "./clientSocket.js";
-import { TextChat } from "./textChat.js"
+import { TextChat } from "./textChat.js";
+import { GameMessages } from "./GameMessages.js";
 
 const socket = Socket.clientSocket;
 
@@ -41,6 +47,7 @@ socket.on("init", function (data) {
     GameUI.setSoundLabel(data.weapon.sound);
     GameUI.setDurationLabel(data.weapon.duration);
     GameUI.setWeaponType(data.weapon.type);
+    GameUI.setTop3(data.top3);
 
     //create game objects from initPack:
     for (let i = 0; i < data.entities.length; i++) {
@@ -51,9 +58,9 @@ socket.on("init", function (data) {
             case "player":
                 new Player(id, entity);
                 break;
-            case "bot":
-                new Bot(id, entity);
-                break;
+            // case "bot":
+            //     new Bot(id, entity);
+            //     break;
             case "bullet":
                 new Bullet(id, entity);
                 break;
@@ -74,12 +81,13 @@ socket.on("init", function (data) {
     requestAnimationFrame(Graphics.gameLoop);
     addKeyboardListeners(socket);
     TextChat.chatInit(socket);
+    GameMessages.init();
     // chatInit(socket, Graphics.canvas, isInChat);
 });
 
 socket.on("update", function (data) {
     //gets an array of objects to update and updates or creates them:
-    console.log("updatePack:", data)
+    // console.log("updatePack:", data)
 
     for(let id in data.player){
         let player = Player.list[id];
@@ -131,6 +139,10 @@ socket.on("update", function (data) {
     if(data.death){
         const pack = data.death;
         GameUI.showDeathMessage(pack);
+    }
+
+    if(data.top3){
+        GameUI.setTop3(data.top3);
     }
 });
 

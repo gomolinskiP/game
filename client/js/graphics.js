@@ -1,6 +1,12 @@
-import { Player, Bullet, Pickup, Tile,  StaticTileLayers } from './classes.js'
+// import { Player, Bullet, Pickup, Tile,  StaticTileLayers } from './classes.js'
 import { Socket } from './clientSocket.js';
 import { Images } from './Assets.js';
+import { Player } from './object_classes/C_Character.js';
+import { Bullet } from './object_classes/C_Bullet.js';
+import { Pickup } from './object_classes/C_Pickup.js';
+import { Tile } from './object_classes/C_Tile.js';
+import { StaticTileLayers } from './object_classes/C_Tile.js';
+import { GameMessages } from './GameMessages.js';
 
 
 export class Graphics {
@@ -108,7 +114,11 @@ export class Graphics {
         if (!Socket.selfId) return;
         if (!Player.list[Socket.selfId]) return;
 
-        for (let layerId in StaticTileLayers.canvases) {
+        const keysAsc = Object.keys(StaticTileLayers.canvases)
+            .map(Number)
+            .sort((a, b) => a - b);
+
+        for (let layerId of keysAsc) {
             const layer = StaticTileLayers.canvases[layerId];
             // console.log(layer.width, layer.height)
             // console.log('layer', layer)
@@ -120,8 +130,8 @@ export class Graphics {
                 layer.minY -
                     Player.list[Socket.selfId].y +
                     Graphics.gameHeight / 2,
-                layer.width / 0.1,
-                layer.height / 0.1
+                layer.width / 0.5,
+                layer.height / 0.5
             );
         }
 
@@ -171,12 +181,6 @@ export class Graphics {
             let aY = a.sortY;
             let bY = b.sortY;
 
-            // if(a.layerId){
-            //     aY = aY + (64)*a.layerId
-            // }
-            // if(b.layerId){
-            //     bY = bY + (64)*b.layerId
-            // }
             return aY - bY - 0.01;
         });
 

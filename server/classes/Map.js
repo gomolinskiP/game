@@ -19,7 +19,7 @@ export class Map {
   static boundRect = {};
 
   static async loadMapData() {
-    const filePath = resolve(__dirname, "../../client/map5.json");
+    const filePath = resolve(__dirname, "../../client/map6.json");
     const jsonData = JSON.parse(await readFile(filePath, "utf-8"));
 
     Map.mapData = jsonData;

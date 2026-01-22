@@ -59,8 +59,7 @@ export class Weapon {
                 );
                 break;
         }
-
-        // this.wielder.needsUpdate = true;
+        this.wielder.needsUpdate = true;
     }
 
     setSound(sound) {

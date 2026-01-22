@@ -18,6 +18,7 @@ const scoreLabel = document.querySelector("#score");
 const deathMessage = document.querySelector("#death-message");
 const deathMessageContainer = document.getElementById("death-message-container");
 const respawnBtn = document.querySelector("#respawn-btn");
+const top3Content = document.getElementById('top3-content')
 
 respawnBtn.onclick = ()=>{
     Socket.respawn();
@@ -218,8 +219,16 @@ export class GameUI {
         scoreLabel.innerText = `Score: ${Math.floor(score)}`;
     }
 
+    static setTop3(top3){
+        let content = '<b>CURRENT HIGHEST SCORES</b><br>'
+        for(let i = 0; i<3; i++){
+            content = content + `${top3[i][0]} : ${top3[i][1]}<br>`
+        }
+        top3Content.innerHTML = content;
+    }
+
     static showDeathMessage(info) {
-        deathMessage.innerText = "You were killed by " + info.killer + " who stole " + info.scoreStolen + " of your score...";
+        deathMessage.innerText = "You were killed by " + info.killer + " who stole " + parseInt(info.scoreStolen) + " of your score...";
         deathMessageContainer.style.display = "block";
         canvas.style.filter = "saturate(0)";
     }

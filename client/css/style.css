@@ -235,7 +235,7 @@ a:hover{
     padding: 30px;
 
     overflow-y: hidden;
-    overflow-x: scroll;
+    overflow-x: hidden;
 }
 
 /* #sidebar{
@@ -329,6 +329,40 @@ a:hover{
     border: none;
     border-top: 1px solid black;
     margin: 4px 0;
+}
+
+#game-messages-content{
+    position: absolute;
+
+    top: 125px;
+    left:10px;
+
+    width: 200px;
+    height: 100px;
+
+    text-align: left;
+    color: #ffd900;
+    text-shadow:
+            1px 1px 2px red,
+            0 0 1em blue,
+            0 0 0.2em blue;
+}
+
+#top3-content{
+    position: absolute;
+
+    bottom: 120px;
+    left: 10px;
+
+    width: 200px;
+    height: 100px;
+
+    text-align: left;
+    color: #ffd900;
+    text-shadow:
+            1px 1px 2px red,
+            0 0 1em blue,
+            0 0 0.2em blue;
 }
 
 #weapon-buttons, #sounds-info-buttons{

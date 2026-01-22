@@ -17,9 +17,12 @@ import { Tile } from "./classes/game-objects/Tile.js";
 import { Sounds } from "./classes/musical/Sounds.js";
 import { Map } from "./classes/Map.js";
 
+import { Logger } from "./classes/Logger.js";
+
 import cookie from "cookie";
 import signature from "cookie-signature";
 import { AdminCommand } from "./classes/AdminCommand.js";
+import { start } from "repl";
 
 //Start server-side metronome ticking:
 Sounds.metronomeTick();
@@ -42,12 +45,18 @@ Pickup.createQuadtree(Map.boundRect);
 
 Bot.startAgentStep();
 
-const gameUpdateTickTimeMs = 1000 / 25;
+const GAME_TICKS_PER_S = 25;
+const GAME_TICK_TIME_MS = 1000 / GAME_TICKS_PER_S;
+
+const outWSLogger = new Logger("logs/perf/WS-out.txt");
+const inWSLogger = new Logger("logs/perf/WS-in.txt");
+
+const isPerfTestMode = Boolean(Number(process.env.PERF_TESTING)); 
+const perfTestingType = process.env.PERF_TESTING_TYPE;
 
 export default async function webSocketSetUp(serv, ses, Progress) {
     //socket.io:
-
-    var io = require("socket.io")(serv, {
+    const io = require("socket.io")(serv, {
         cors: {
             origin: "http://localhost:2000",
             methods: ["GET", "POST"],
@@ -57,77 +66,18 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         allowEIO3: true,
     });
 
+    //use session:
     io.engine.use((req, res, next) => {
         ses(req, {}, next);
     });
 
-    // A to specjalny parser dla cookie z Artillery:
-    // io.use((socket, next) => {
-    //     try {
-    //         const rawCookie = socket.request.headers.cookie;
-    //         if (!rawCookie) {
-    //             console.error("❌ No cookie in socket handshake headers");
-    //             return next(new Error("No cookie in handshake"));
-    //         }
-
-    //         const cookies = cookie.parse(rawCookie);
-    //         const raw = cookies["cookieName"];
-    //         if (!raw) {
-    //             console.error(
-    //                 "❌ No cookieName found in cookie string:",
-    //                 cookies
-    //             );
-    //             return next(new Error("Session cookie not found"));
-    //         }
-
-    //         // raw wygląda np. jak: s%3AOjoWC8BRLSV1NnJr6J92_UqLlB75hZYT.yqkWGFShI%2BTDAZesD55Mqan9qKUXGoBLP%2B%2FmGzD%2BjF0
-    //         const decoded = decodeURIComponent(raw); // usuń %3A i %2B
-    //         if (!decoded.startsWith("s:")) {
-    //             console.error("❌ Cookie missing s: prefix", decoded);
-    //             return next(new Error("Malformed session cookie"));
-    //         }
-
-    //         const signedPart = decoded.slice(2); // usuwa "s:"
-    //         const unsigned = signature.unsign(
-    //             signedPart,
-    //             process.env.SESSION_SECRET
-    //         );
-
-    //         if (!unsigned) {
-    //             console.error("❌ Cookie signature invalid");
-    //             return next(new Error("Bad cookie signature"));
-    //         }
-
-    //         // zapisz ID w socket.request
-    //         socket.request.sessionID = unsigned;
-
-    //         // spróbuj wczytać sesję z MongoStore:
-    //         mongoStore.get(unsigned, (err, sessionObj) => {
-    //             if (err) {
-    //                 console.error("❌ Error reading session:", err);
-    //                 return next(err);
-    //             }
-    //             if (!sessionObj) {
-    //                 console.error("❌ No session found for ID", unsigned);
-    //                 return next(new Error("Session not found"));
-    //             }
-
-    //             console.log("✅ Session found for", unsigned, sessionObj);
-    //             socket.request.session = sessionObj;
-    //             next();
-    //         });
-    //     } catch (err) {
-    //         console.error("❌ Exception in socket auth middleware", err);
-    //         next(err);
-    //     }
-    // });
-
-    // io.use((socket, next) => {
-    //     ses(socket.request, {}, next);
-    // });
 
     //user connects to the game subpage:
     io.sockets.on("connection", async function (socket) {
+        if(isPerfTestMode){
+            perfTest();
+        }
+
 
         //for Artillery testing:
         const handshakeQuery = socket.handshake.query;
@@ -141,7 +91,7 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         let username = socket.request.session?.user?.username;
         
         //Artillery had problem with session cookies - handshake query fallback:
-        if (Boolean(process.env.PERF_TESTING) == true && handshakeQuery.username) {
+        if (Boolean(Number(process.env.PERF_TESTING)) == true && handshakeQuery.username) {
             username = handshakeQuery.username;
         }
 
@@ -215,6 +165,7 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         //notify client about finishing checking progress in DB:
         socket.emit("dbProgressChecked", {
             selfID: socket.id,
+            bpm: Sounds.bpm
         });
 
         //wait for player starting the game after preload:
@@ -223,6 +174,10 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         })
 
         socket.on("disconnect", async function () {
+            if (isPerfTestMode) {
+                perfTest();
+            }
+
             //socket disconnected
             console.log(`socket disconnected (id=${socket.id})...`);
 
@@ -230,9 +185,10 @@ export default async function webSocketSetUp(serv, ses, Progress) {
                 let player = Player.list[i];
                 player.addToRemovePack(socket.id, "player");
             }
-            delete Player.list[socket.id];
-            Character.list[socket.id].remove();
-            delete Character.list[socket.id];
+            
+            Player.list[socket.id].remove();
+            // Character.list[socket.id].remove();
+            // delete Character.list[socket.id];
 
             //update player progress on disconnect:
             try {
@@ -331,24 +287,221 @@ export default async function webSocketSetUp(serv, ses, Progress) {
         socket.on("initialized", () => {
             socket.initialized = true;
         });
+
+        //incoming ws traffic meassurement:
+        socket.onAny((eventName, payload)=>{
+            if(!isPerfTestMode) return;
+            if(perfTestingType != "WS") return;
+
+            const nameSize_B = eventName.length * 8;
+            let payloadSize_B;
+            if(payload){
+                payloadSize_B = Buffer.byteLength(JSON.stringify(payload));
+            }
+            else{
+                payloadSize_B = 0;
+            }
+
+            inWSLogger.pushRecent(nameSize_B + payloadSize_B);
+        });
+
+        //outgoing ws traffic meassurement:
+        socket.onAnyOutgoing((eventName, payload)=>{
+            if (!isPerfTestMode) return;
+            if (perfTestingType != "WS") return;
+
+            const nameSize_B = eventName.length * 8;
+            let payloadSize_B;
+            if(payload){
+                payloadSize_B = Buffer.byteLength(JSON.stringify(payload));
+                // console.log("outgoing", eventName, bytes, "bytes");
+            }
+            else{
+                // console.log("outgoing", eventName);
+                payloadSize_B = 0;
+            }
+
+            outWSLogger.pushRecent(nameSize_B + payloadSize_B);
+        });
     });
 
-    //main loop:
+    const isBotTrainingMode = Boolean(Number(process.env.BOT_TRAINING)); 
+    if(isBotTrainingMode) Bot.manageNumber();
+
+    let lastTickT;
+    let tickT;
+    let tickT_diff;
+    const tickTLogger = new Logger("logs/perf/tickT.txt");
+
+    // function gameTick(){
+    //     //reconstruct quadtrees for dynamic objects:
+    //     Character.refreshQuadtree();
+    //     Bullet.refreshQuadtree();
+    //     Pickup.refreshQuadtree();
+
+    //     //chance for random Pickup & Bot spawn:
+    //     Pickup.randomSpawn();
+    //     // Bot.randomSpawn();
+
+    //     //handle & update all game objects:
+    //     Pickup.handleAll();
+    //     Bullet.updateAll();
+    //     Player.updateAll();
+
+    //     //time between game loop ticks:
+    //     if (!lastTickT) {
+    //         lastTickT = process.hrtime.bigint();
+    //     } else {
+    //         tickT = process.hrtime.bigint();
+    //         tickT_diff = Number(tickT - lastTickT);
+    //         tickTLogger.pushRecent(Number(tickT - lastTickT) / 1e6); //in ms
+    //         lastTickT = tickT;
+    //     }
+
+    //     if (isPerfTestMode) {
+    //         tickTLogger.pushRecent(tickT_diff / 1e6); //in ms
+    //     }
+
+    //     // const nextGameTickIn_ms = tickT_diff ? 
+    //     //                             gameUpdateTickTimeMs - (tickT_diff/1e6 - gameUpdateTickTimeMs)
+    //     //                              : gameUpdateTickTimeMs;
+
+    //     // console.log(tickT_diff / 1e6, nextGameTickIn_ms)
+
+    //     setTimeout(gameTick, nextGameTickIn_ms);
+    // }
+
+    // gameTick();
+
+    //main game loop:
     setInterval(function () {
+        const startT = process.hrtime.bigint();
         //reconstruct quadtrees for dynamic objects:
         Character.refreshQuadtree();
         Bullet.refreshQuadtree();
         Pickup.refreshQuadtree();
 
+        const quadtreeRefreshT = process.hrtime.bigint();
+
         //chance for random Pickup & Bot spawn:
         Pickup.randomSpawn();
-        Bot.randomSpawn();
+        // Bot.randomSpawn();
 
         //handle & update all game objects:
         Pickup.handleAll();
+        const pickupHandleT = process.hrtime.bigint();
         Bullet.updateAll();
+        const bulletHandleT = process.hrtime.bigint();
         Player.updateAll();
-    }, gameUpdateTickTimeMs);
+        const playerHandleT = process.hrtime.bigint();
+
+        const entityHandleT = process.hrtime.bigint();
+
+        if (isPerfTestMode && perfTestingType=="tickT") {
+            logTickTime();
+        }
+
+        const endT = process.hrtime.bigint();
+
+        // console.log('tick took', Number(endT - startT) / 1e6, 'ms',
+        // 'qt refreshing took', Number(quadtreeRefreshT - startT) / 1e6, 'ms',
+        // 'handling obj took', Number(entityHandleT - quadtreeRefreshT) / 1e6, 'ms',
+        // 'handling pickups took', Number(pickupHandleT - quadtreeRefreshT) / 1e6, 'ms',
+        // 'handling bullets took', Number(bulletHandleT - pickupHandleT) / 1e6, 'ms',
+        // 'handling players took', Number(playerHandleT - bulletHandleT) / 1e6, 'ms')
+    }, GAME_TICK_TIME_MS);
+
+    
+    const cpuUserLogger = new Logger("logs/perf/cpu-User.txt");
+    const cpuSystemLogger = new Logger("logs/perf/cpu-system.txt");
+    const ramRSSLogger = new Logger("logs/perf/ram-rss.txt");
+    const ramHeapLogger = new Logger("logs/perf/ram-heapUsed.txt");
+    const ramExtLogger = new Logger("logs/perf/ram-external.txt");
+
+    
+    let playerNum = Object.keys(Player.list).length;
+    
+    function logTickTime(){
+        //time between game loop ticks:
+        if (!lastTickT) {
+            lastTickT = process.hrtime.bigint();
+        } else {
+            tickT = process.hrtime.bigint();
+            tickT_diff = Number(tickT - lastTickT);
+            tickTLogger.pushRecent(Number(tickT - lastTickT) / 1e6); //in ms
+            lastTickT = tickT;
+        }
+    }
+
+    function perfTest(){
+        //logg recent on player num change:
+        if (playerNum != Object.keys(Player.list).length) {
+            console.log("logging for", playerNum, "players");
+            switch(perfTestingType){
+                case "tickT":
+                    tickTLogger.logRecentAvarage();
+                    break;
+                case "CPU":
+                    cpuUserLogger.logRecentAvarage();
+                    cpuSystemLogger.logRecentAvarage();
+                    break;
+                case "RAM":
+                    ramRSSLogger.logRecentAvarage();
+                    ramHeapLogger.logRecentAvarage();
+                    ramExtLogger.logRecentAvarage();
+                    break;
+                case "WS":
+                    inWSLogger.logTotalPerSecond();
+                    outWSLogger.logTotalPerSecond();
+                    break;
+                default:
+                    console.warn("Unknown performance testing type!");
+                    break;
+            }
+
+            playerNum = Object.keys(Player.list).length;
+        }
+    }
+
+    let lastCPU = process.cpuUsage();
+    let lastCPUmeassureTime = process.hrtime.bigint();
+    let diffCPU;
+    let cpuMeassureDeltaTime;
+    let ramUsage;
+    
+    if (isPerfTestMode){
+        setInterval(() => {
+            switch (perfTestingType) {
+                case "tickT":
+                    break;
+                case "CPU":
+                    //CPU:
+                    diffCPU = process.cpuUsage(lastCPU);
+                    lastCPU = process.cpuUsage();
+                    cpuMeassureDeltaTime = Number(
+                        process.hrtime.bigint() - lastCPUmeassureTime
+                    );
+                    lastCPUmeassureTime = process.hrtime.bigint();
+
+                    cpuUserLogger.pushRecent((diffCPU.user * 1e3) / cpuMeassureDeltaTime);
+                    cpuSystemLogger.pushRecent((diffCPU.system * 1e3) / cpuMeassureDeltaTime);
+                    break;
+                case "RAM":
+                    //RAM:
+                    ramUsage = process.memoryUsage();
+                    ramRSSLogger.pushRecent(ramUsage.rss);
+                    ramHeapLogger.pushRecent(ramUsage.heapUsed);
+                    ramExtLogger.pushRecent(ramUsage.external);
+                    break;
+                case "WS":
+                    break;
+                default:
+                    console.warn("Unknown performance testing type!");
+                    break;
+            }       
+        }, 1000);
+    }
+        
 
     console.log("✅ WebSocket ready.");
 }

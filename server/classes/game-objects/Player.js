@@ -5,6 +5,9 @@ import { Sounds } from '../musical/Sounds.js';
 import { Socket } from '../Socket.js';
 import { Character } from './Character.js';
 import { Tile } from './Tile.js'
+import { Bot } from './Bot.js';
+import { HighScore } from '../HighScore.js';
+
 
 const loadDistance = 1000; //TODO: should be AT LEAST double the LONGEST distance a bullet can travel!!!
 const loadUnloadMargin = 600;
@@ -20,27 +23,39 @@ export class Player extends Character{
         }
 
         //for all human players:
-        for(var i in Player.list){ 
+        for (var i in Player.list) {
             var player = Player.list[i];
 
             //determine & emit update info about gamestate changes:
             player.getUpdatePack();
             player.emitUpdatePack();
-
             //add far away objects to be removed:
-            player.addFarToRemovePack();
+            if (Player.tileUpdateQueue[0] == player.id){
+                player.addFarToRemovePack();
+            }
+                
             //emit info about all removed objects' IDs:
             player.emitRemovePack();
         }
+        HighScore.hasChanged = false;
 
         //update all characters (bots & human players):
-        for(var i in Character.list){ 
+        for (var i in Character.list) {
             var character = Character.list[i];
 
             //reset character's updated parameter list:
             character.toUpdate = {};
+            character.needsUpdate = false;
+        }
+
+        if(Player.canShiftTileUpdateQueue){
+            Player.canShiftTileUpdateQueue = false;
+            Player.tileUpdateQueue.shift();
         }
     }
+
+    static tileUpdateQueue = [];
+    static canShiftTileUpdateQueue = false;
 
     constructor(socket, x, y, username, weapon = null, score = 0){
         super(socket.id, x, y, username, weapon, score);
@@ -51,9 +66,7 @@ export class Player extends Character{
 
         this.characterType = 'player';
 
-        Player.list[this.id] = this;
-
-        
+        Player.list[this.id] = this;        
 
         this.knownObjIDs = new Set(); //all objects' IDs known to this player
 
@@ -62,6 +75,9 @@ export class Player extends Character{
         // this.updatePack = []
         this.updatePack = {};
         this.removePack = [];
+
+        //wait in queue for tile updates:
+        Player.tileUpdateQueue.push(this.id);
 
         return this;
     }
@@ -73,6 +89,7 @@ export class Player extends Character{
         this.initPack = this.getInitPack();
         this.emitInitPack();
         
+        Bot.manageNumber( Object.keys(Player.list).length );
     }
 
     // getEnvironment(){
@@ -190,6 +207,7 @@ export class Player extends Character{
                 score: character.score,
                 direction: character.lastAngle,
             });
+            console.log(HighScore.top3);
 
             this.knownObjIDs.add(character.id);
         }
@@ -244,6 +262,8 @@ export class Player extends Character{
             type: this.weapon.type,
         }
 
+        initPack.top3 = HighScore.top3;
+
         return initPack;
     }
 
@@ -258,6 +278,7 @@ export class Player extends Character{
     getUpdatePack(){
         //skip, if client has not gotten & processed the init pack:
         if(!this.socket.initialized) return;
+        this.isAnyToUpdate = false;
 
 
         const loadRect = {
@@ -273,12 +294,11 @@ export class Player extends Character{
             const character = Character.list[c.id];
             if(character.characterType == "player" && character.isPlaying == false) continue;
 
-            if(!this.knownObjIDs.has(character.id)){
-                //player was not aware of this character - all info must be sent:
+            //update known only within unloadDistance:
+            if(!this.isWithinDistance(character, unloadDistance)) continue;
 
-                //only NEW if is within loadDistance:
-                if(!this.isWithinDistance(character, loadDistance)) continue;
-                
+            if(!this.knownObjIDs.has(character.id)){
+                //player was not aware of this character - all info must be sent:                
                 if (!this.updatePack.player) this.updatePack.player = {};
                 this.updatePack.player[character.id] = {
                     x: character.x,
@@ -296,21 +316,20 @@ export class Player extends Character{
                     direction: character.lastAngle,
                 };
 
+                this.isAnyToUpdate = true;
                 this.knownObjIDs.add(character.id);
             }
             else{
                 //player already knows about this character - info only about parameters that changed
                 
                 //skip this character, if there's nothing to update about them:
-                if(Object.keys(character.toUpdate).length == 0) continue;
-
-                //update known only within unloadDistance:
-                if(!this.isWithinDistance(character, unloadDistance)) continue;
+                if(!character.needsUpdate) continue;
 
                 if (!this.updatePack.player) this.updatePack.player = {};
                 //push all info to update about character to player's updatePack:
                 character.toUpdate.id = character.id;
                 this.updatePack.player[character.id] = character.toUpdate;
+                this.isAnyToUpdate = true;
             }
         }
 
@@ -320,16 +339,13 @@ export class Player extends Character{
         for(const b of bulletsToUpdate){
             const bullet = Bullet.list[b.id];
             if(!bullet) continue;
-            
+            if(!this.isWithinDistance(bullet, loadDistance)) continue;
 
+            this.isAnyToUpdate = true;
             if (!this.updatePack.bullet) this.updatePack.bullet = {};
 
             if(!this.knownObjIDs.has(bullet.id)){
                 //player was not aware of this bullet - all info must be sent:
-
-                //send NEW only within loadDistance:
-                if(!this.isWithinDistance(bullet, loadDistance)) continue;
-                
                 this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
@@ -343,11 +359,7 @@ export class Player extends Character{
             }
             else{
                 //player already knows about this bullet - info only about parameters that changed (position):
-
-                //update all known in unloadDistance:
-                if(!this.isWithinDistance(bullet, unloadDistance)) continue;
-                
-
+             
                 this.updatePack.bullet[bullet.id] = {
                     x: bullet.x,
                     y: bullet.y,
@@ -359,43 +371,53 @@ export class Player extends Character{
         let pickupsToUpdate = Pickup.quadtree.retrieve(loadRect)
 
         for(const pu of pickupsToUpdate){
+            //pickups need to be updated if they are not yet known to player (they're static):
+            
+            
             const pickup = Pickup.list[pu.id];
             if(!pickup) continue;
+            if(this.knownObjIDs.has(pickup.id)) continue;
+            
+            if(!this.isWithinDistance(pickup, loadDistance)) continue;
 
-            //pickups need to be updated if they are not yet known to player (they're static):
-            if(!this.knownObjIDs.has(pickup.id)){
-                if(!this.isWithinDistance(pickup, loadDistance)) continue;
-                if (!this.updatePack.pickup) this.updatePack.pickup = {};
+            this.isAnyToUpdate = true;
+            if (!this.updatePack.pickup) this.updatePack.pickup = {};
 
-                this.updatePack.pickup[pickup.id] = {
-                    x: pickup.x,
-                    y: pickup.y,
-                };
+            this.updatePack.pickup[pickup.id] = {
+                x: pickup.x,
+                y: pickup.y,
+            };
 
-                this.knownObjIDs.add(pickup.id);
-            }
+            this.knownObjIDs.add(pickup.id);
         }
 
 
+        //too many tiles in this implementation - wait in queue for tile updates:
+        if(Player.tileUpdateQueue[0] != this.id) return;
         let tilesToUpdate = Tile.quadtree.retrieve(loadRect)
 
         for(const t of tilesToUpdate){
-            const tile = Tile.list[t.id];
-            
             //tiles are static - need to be updated if player does not know about them yet:
-            if(!this.knownObjIDs.has(tile.id)){
-                if(!this.isWithinDistance(tile, loadDistance)) continue;
-                if (!this.updatePack.tile) this.updatePack.tile = {};
+            if(this.knownObjIDs.has(t.id)) continue;
+            const tile = Tile.list[t.id];
+            if(!this.isWithinDistance(tile, loadDistance)) continue;
 
-                this.updatePack.tile[tile.id] = {
-                    x: tile.x,
-                    y: tile.y,
-                    gid: tile.gid,
-                    layerId: tile.layerId
-                }
-
-                this.knownObjIDs.add(tile.id);
+            this.isAnyToUpdate = true;
+            if (!this.updatePack.tile) this.updatePack.tile = {};
+            this.updatePack.tile[tile.id] = {
+                x: tile.x,
+                y: tile.y,
+                gid: tile.gid,
+                layerId: tile.layerId
             }
+
+            this.knownObjIDs.add(tile.id);
+        }
+        Player.canShiftTileUpdateQueue = true;
+        Player.tileUpdateQueue.push(this.id);
+
+        if (HighScore.hasChanged) {
+            this.updatePack.top3 = HighScore.top3;
         }
     }
 
@@ -410,7 +432,7 @@ export class Player extends Character{
             return;
         }
 
-        if (Object.keys(this.updatePack).length > 0) {
+        if (this.isAnyToUpdate) {
             socket.emit("update", this.updatePack);
             this.updatePack = {};
         }
@@ -437,65 +459,91 @@ export class Player extends Character{
         //skip, if client has not gotten & processed the init pack:
         if (!this.socket.initialized) return;
 
-        const unloadRect = {
-            x: this.x - unloadDistance,
-            y: this.y - unloadDistance,
-            width: unloadDistance * 2,
-            height: unloadDistance * 2,
-        };
-
-        // //for characters:
-        let notToRemoveIDs = [];
-        let charactersNotToRemove = Character.quadtree.retrieve(unloadRect);
-        for (const c of charactersNotToRemove) {
-            if (!this.isWithinDistance(c, unloadDistance)) continue;
-            notToRemoveIDs.push(c.id);
-        }
-
-        for (let id in Character.list) {
-            const character = Character.list[id];
-            if (!this.knownObjIDs.has(character.id)) continue;
-            if (notToRemoveIDs.includes(character.id)) continue;
-            if (!this.isWithinDistance(character, unloadDistance)) {
-                this.addToRemovePack(character.id, "player");
+        //optimized:
+        for(let id of this.knownObjIDs){
+            let obj = undefined;
+            //characters:
+            if(Character.list[id]){
+                obj = Character.list[id];
+            } else if(Pickup.list[id]){
+                obj = Pickup.list[id];
+            } else if(Tile.list[id]){
+                obj = Tile.list[id];
+            } else{
+                //bullet or unknown type
             }
+            
+            if(obj == undefined) continue;
+
+            if(this.isWithinDistance(obj, unloadDistance)) continue;
+
+            this.addToRemovePack(id, obj.entityType);
+
+            //pickups:
+
+            //tiles:
+
         }
 
-        //skip bullets (let them just be removed by timeout)
+        // const unloadRect = {
+        //     x: this.x - unloadDistance,
+        //     y: this.y - unloadDistance,
+        //     width: unloadDistance * 2,
+        //     height: unloadDistance * 2,
+        // };
 
-        //for pickups:
-        let pickupsNotToRemove = Pickup.quadtree.retrieve(unloadRect);
-        notToRemoveIDs = [];
-        for (const pu of pickupsNotToRemove) {
-            if (!this.isWithinDistance(pu, unloadDistance)) continue;
-            notToRemoveIDs.push(pu.id);
-        }
+        // // //for characters:
+        // let notToRemoveIDs = [];
+        // let charactersNotToRemove = Character.quadtree.retrieve(unloadRect);
+        // for (const c of charactersNotToRemove) {
+        //     if (!this.isWithinDistance(c, unloadDistance)) continue;
+        //     notToRemoveIDs.push(c.id);
+        // }
 
-        for (let id in Pickup.list) {
-            const pickup = Pickup.list[id];
-            if (!this.knownObjIDs.has(pickup.id)) continue;
-            if (notToRemoveIDs.includes(pickup.id)) continue;
-            if (!this.isWithinDistance(pickup, unloadDistance)) {
-                this.addToRemovePack(pickup.id, "pickup");
-            }
-        }
+        // for (let id in Character.list) {
+        //     const character = Character.list[id];
+        //     if (!this.knownObjIDs.has(character.id)) continue;
+        //     if (notToRemoveIDs.includes(character.id)) continue;
+        //     if (!this.isWithinDistance(character, unloadDistance)) {
+        //         this.addToRemovePack(character.id, "player");
+        //     }
+        // }
 
-        // for tiles:
-        let tilesNotToRemove = Tile.quadtree.retrieve(unloadRect);
-        notToRemoveIDs = [];
-        for (const t of tilesNotToRemove) {
-            if (!this.isWithinDistance(t, unloadDistance)) continue;
-            notToRemoveIDs.push(t.id);
-        }
+        // //skip bullets (let them just be removed by timeout)
 
-        for (let id in Tile.list) {
-            const tile = Tile.list[id];
-            if (!this.knownObjIDs.has(tile.id)) continue;
-            if (notToRemoveIDs.includes(tile.id)) continue;
-            if (!this.isWithinDistance(tile, unloadDistance)) {
-                this.addToRemovePack(tile.id, "tile");
-            }
-        }
+        // //for pickups:
+        // let pickupsNotToRemove = Pickup.quadtree.retrieve(unloadRect);
+        // notToRemoveIDs = [];
+        // for (const pu of pickupsNotToRemove) {
+        //     if (!this.isWithinDistance(pu, unloadDistance)) continue;
+        //     notToRemoveIDs.push(pu.id);
+        // }
+
+        // for (let id in Pickup.list) {
+        //     const pickup = Pickup.list[id];
+        //     if (!this.knownObjIDs.has(pickup.id)) continue;
+        //     if (notToRemoveIDs.includes(pickup.id)) continue;
+        //     if (!this.isWithinDistance(pickup, unloadDistance)) {
+        //         this.addToRemovePack(pickup.id, "pickup");
+        //     }
+        // }
+
+        // // for tiles:
+        // let tilesNotToRemove = Tile.quadtree.retrieve(unloadRect);
+        // notToRemoveIDs = [];
+        // for (const t of tilesNotToRemove) {
+        //     if (!this.isWithinDistance(t, unloadDistance)) continue;
+        //     notToRemoveIDs.push(t.id);
+        // }
+
+        // for (let id in Tile.list) {
+        //     const tile = Tile.list[id];
+        //     if (!this.knownObjIDs.has(tile.id)) continue;
+        //     if (notToRemoveIDs.includes(tile.id)) continue;
+        //     if (!this.isWithinDistance(tile, unloadDistance)) {
+        //         this.addToRemovePack(tile.id, "tile");
+        //     }
+        // }
     }
 
     emitRemovePack(){
@@ -524,6 +572,14 @@ export class Player extends Character{
             socket.emit("remove", this.removePack);
             this.removePack = [];
         }
+    }
+
+    remove(){
+        super.remove();
+
+        Player.tileUpdateQueue = Player.tileUpdateQueue.filter((id) => this.id != id);
+        delete Player.list[this.id];
+        Bot.manageNumber( Object.keys(Player.list).length );
     }
 
     //moved to parent class:

@@ -133,7 +133,7 @@ export class Sounds {
                         5;
 
                 Sounds.setTargetBMP(newBPM);
-                console.log("change bpm to", newBPM);
+                // console.log("change bpm to", newBPM);
             }
         }
 

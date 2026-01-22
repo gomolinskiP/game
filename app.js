@@ -1,28 +1,22 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-import expressSetUp from './server/serverAPI.js'
-import webSocketSetUp from './server/serverWebSocket.js'
-import MongoStore from "connect-mongo";
-
-const session = require("express-session");
-
-
-
 //first start C:\Program Files\MongoDB\Server\8.0\bin> mongod
+//C:\Program Files\MongoDB\Server\8.0\bin>.\mongod --dbpath "C:\Program Files\MongoDB\Server\8.0\data"
+import Mongoose from "mongoose";
+import MongoStore from "connect-mongo";
+import session from "express-session";
+import dotenv from "dotenv";
 
-const mongoose = require('mongoose');
-import dotenv from 'dotenv';
+//load environment variables from .env file:
 dotenv.config();
 
-async function serverStart(){
+async function serverStart() {
     try {
         //mongoDB:
-        await mongoose.connect("mongodb://localhost:27017/mgrGame");
-        console.log("✅ MongoDB connected");
+        await Mongoose.connect("mongodb://localhost:27017/mgrGame");
+        console.log("✅ MongoDB connected!");
 
         //mongo session store:
         const mongoStore = MongoStore.create({
-            client: mongoose.connection.getClient(),
+            client: Mongoose.connection.getClient(),
             collectionName: "sessions",
             ttl: 60 * 60 * 24, // 24 hours
         });
@@ -43,7 +37,7 @@ async function serverStart(){
         });
 
         //schema definitions:
-        const AccountSchema = new mongoose.Schema(
+        const AccountSchema = new Mongoose.Schema(
             {
                 username: { type: String, unique: true, required: true },
                 password: { type: String, required: true },
@@ -51,27 +45,29 @@ async function serverStart(){
             { collection: "account" }
         );
 
-        const ProgressSchema = new mongoose.Schema(
+        const ProgressSchema = new Mongoose.Schema(
             {
                 username: { type: String, unique: true, required: true },
                 x: Number,
                 y: Number,
                 score: Number,
-                weapon: mongoose.Schema.Types.Mixed,
+                weapon: Mongoose.Schema.Types.Mixed,
             },
             { collection: "progress" }
         );
 
         //db collections models:
-        const Account = mongoose.model("account", AccountSchema);
-        const Progress = mongoose.model("progress", ProgressSchema);
+        const Account = Mongoose.model("account", AccountSchema);
+        const Progress = Mongoose.model("progress", ProgressSchema);
 
         Account.syncIndexes();
 
-        //set up server HTTP(S) server and API with Express:
+        //set up HTTP(S) server and API with Express:
+        const { default: expressSetUp } = await import("./server/serverAPI.js");
         var { serv } = expressSetUp(ses, Account);
 
         //set up WebSocket communcation and game logic:
+        const { default: webSocketSetUp } = await import("./server/serverWebSocket.js");
         webSocketSetUp(serv, ses, Progress);
     } catch (err) {
         console.error("STARTUP ERROR: ", err);
@@ -80,8 +76,3 @@ async function serverStart(){
 }
 
 serverStart();
-
-
-
-
-

@@ -1,5 +1,8 @@
 import { Socket } from "./clientSocket.js";
-import { Images } from "./Assets.js";
+import { Images, SoundAssets } from "./Assets.js";
+// import { Metronome } from "./Metronome.js";
+
+
 
 /*
 Pre-startup script should:
@@ -21,6 +24,8 @@ const progressInfoAll = document.getElementById("progress-all");
 const progressInfoConnect = document.getElementById("progress-info-connect");
 const progressInfoDB = document.getElementById("progress-info-db");
 const progressInfoImages = document.getElementById("progress-info-images");
+const progressInfoAudio = document.getElementById("progress-info-audio");
+// const progressInfoMetronome = document.getElementById("progress-info-metronome");
 let isConnected,
     isProgressLoaded,
     areImagesLoaded = false;
@@ -50,6 +55,18 @@ socket.on("connect", () => {
 socket.on("dbProgressChecked", (data) => {
     //set player's self ID:
     Socket.setSelfID(data.selfID);
+    //start syncing the metronome:
+    // Metronome.setBPM(data.bpm);
+    // socket.on("tick", (data)=>{
+    //         Metronome.handleMetronomeTick(data);
+    //         if(Metronome.isStarted){
+    //             progressInfoMetronome.innerText = "Server's metronome synchronized!";
+    //             isMetronomeStarted = true;
+    //         }
+    //         enableStartIfAllLoaded();
+    //     }
+    // );
+
     //notify user:
     progressInfoDB.innerText = "Player progress loaded!";
     isProgressLoaded = true;
@@ -61,6 +78,11 @@ socket.on("dbProgressChecked", (data) => {
 await Images.loadImages();
 //notify of all images load:
 progressInfoImages.innerText = "Graphical assets loaded!";
+
+//load audio assets:
+await SoundAssets.loadBuffers();
+progressInfoAudio.innerText = "Audio assets loaded!";
+
 areImagesLoaded = true;
 //check if all loaded now:
 enableStartIfAllLoaded();

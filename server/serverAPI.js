@@ -15,14 +15,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export default function expressSetUp(ses, Account){
-    var express = require("express");
-    var app = express();
+    const express = require("express");
+    const app = express();
 
     //use EJS view engine with "views" folder:
     app.set("views", "views");
     app.set("view engine", "ejs");
-    var favicon = require("serve-favicon");
+    const favicon = require("serve-favicon");
 
+    //middlewares:
     const { checkLoggedIn, bypassLogin } = require("./middlewares");
     //cert for httpS:
     const options = {
@@ -31,7 +32,7 @@ export default function expressSetUp(ses, Account){
     };
     // var serv = require("http").Server(app);
     const serv = https.createServer(options, app);
-    //TODO mkcert to make it work with VSCode DevTunnels
+    //TODO: mkcert to make it work with VSCode DevTunnels
 
     app.use(favicon("client/img/logo.svg"));
     app.use(express.json());

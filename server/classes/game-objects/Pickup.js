@@ -101,8 +101,8 @@ export class Pickup extends Entity{
             const character = Character.list[characterID];
 
             // character.giveWeapon(this.sound, this.duration, this.type);
-            character.addScore(10);
-            character.heal(10);
+            character.addScore(25);
+            character.heal(25);
 
             if(character.characterType == "bot"){
                 character.pickupsReward += 10;

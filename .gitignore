@@ -5,3 +5,5 @@ certs
 logs/*
 .env
 server/classes/ai/models
+backup*
+*.txt

@@ -90,6 +90,21 @@ export class Images {
     }
 }
 
-export class Sounds{
-    static 
+export class SoundAssets{
+    static buffers;
+
+    static async loadBuffers(){
+        SoundAssets.buffers = {
+            piano: await new Tone.Buffer("../audio/piano.mp3"),
+            guitar: await new Tone.Buffer("../audio/guitar.mp3"),
+            clarinet: await new Tone.Buffer("../audio/clarinet.mp3"),
+            flute: await new Tone.Buffer("../audio/flute.mp3"),
+            harp: await new Tone.Buffer("../audio/harp.mp3"),
+            organ: await new Tone.Buffer("../audio/organ.mp3"),
+            trumpet: await new Tone.Buffer("../audio/trumpet.mp3"),
+            violin: await new Tone.Buffer("../audio/violin.mp3"),
+            steps: await new Tone.Buffer("../audio/steps.mp3"),
+            pickup: await new Tone.Buffer("../audio/pickup.mp3"),
+        };
+    }
 }

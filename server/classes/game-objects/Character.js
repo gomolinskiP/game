@@ -1,12 +1,10 @@
 import { Entity } from "./Entity.js";
 import { Weapon } from "./Weapon.js";
-import { Pickup } from "./Pickup.js";
 import { Socket } from "../Socket.js";
 import { Sounds } from "../musical/Sounds.js";
 import { Tile } from "./Tile.js";
 import Quadtree from "@timohausmann/quadtree-js";
-
-const BOT_TRAINING = Boolean(process.env.BOT_TRAINING);
+import { HighScore } from "../HighScore.js";
 
 export class Character extends Entity {
   static list = {};
@@ -49,12 +47,12 @@ export class Character extends Entity {
     this.framesSinceDamage = 0;
 
     this.score = score;
-    // this.socketIDs = [id]; //bots won't have socket ids
+    HighScore.notify(this.name, this.score);
 
     this.entityType = "player";
 
-    // this.needsUpdate = true;
     this.toUpdate = {};
+    this.needsUpdate = false;
 
     this.pressingUp =
       this.pressingDown =
@@ -120,6 +118,7 @@ export class Character extends Entity {
       if(this.lastAngle != newAngle){
         this.lastAngle = newAngle;
         this.toUpdate.direction = this.lastAngle;
+        this.needsUpdate = true;
       }
       
       
@@ -139,6 +138,7 @@ export class Character extends Entity {
 
         this.toUpdate.x = this.x;
         this.toUpdate.y = this.y;
+        this.needsUpdate = true;
 
         //check if character entered nonPVP area while shooting:
         if (this.isInNonPVPArea() && this.isShooting.state) {
@@ -214,6 +214,7 @@ export class Character extends Entity {
 
     this.toUpdate.isShooting = this.isShooting.state;
     this.toUpdate.selectedNoteID = this.selectedNoteID;
+    this.needsUpdate = true;
 
     if(this.isShooting.state){
       //add character to list of characters shooting with current weapon duration
@@ -234,107 +235,8 @@ export class Character extends Entity {
     }
   }
 
-  // shoot() {
-  //   if(this.isDead) return;
-
-  //   //shooting not allowed on spawn:
-  //   if (this.isInNonPVPArea()) {
-  //       Socket.emitShootFeedbackMsg(
-  //           this,
-  //           "Shooting notes is not allowed near spawn area!",
-  //           "bad"
-  //       );
-  //       return;
-  //   }
-    
-  //   if(this.hasShotScheduled){
-  //     Socket.emitShootFeedbackMsg(this, 'Trying to shoot to early after your previous shot!', 'bad');
-
-  //     if (this.characterType == "bot") {
-  //         this.combatReward -= 0.5;
-  //     }
-  //     return;
-  //   }
-
-  //   if (BOT_TRAINING) {
-  //       //skip timing validation for bot training:
-  //       this.weapon.shoot(this.selectedNote);
-  //       this.hasShotScheduled = true;
-  //       return;
-  //   }
-
-  //   let timeInaccuracy = Sounds.evaluateNoteTimingAccuracy(this.weapon.duration, this.weapon.durationType);
-
-  //   let inaccuracyType;
-  //   if(timeInaccuracy >= 0){
-  //     //shot timing perfect or late:
-  //     inaccuracyType = 'late';
-  //   }
-  //   else{
-  //     //shot timing perfect or early:
-  //     inaccuracyType = "early";
-  //     timeInaccuracy = -timeInaccuracy; //we want absolute value for later
-  //   }
-
-  //   if(timeInaccuracy > Sounds.maxTimeInaccuracy){
-  //     Socket.emitShootFeedbackMsg(this, 'Shot to ' + inaccuracyType + ' to spawn a note!', 'bad');
-  //     return;
-  //   }
-
-  //   this.hasShotScheduled = true;
-  //   if(timeInaccuracy < Sounds.perfectTimeInaccuracy){
-  //     Socket.emitShootFeedbackMsg(this, 'Perfect timing!', 'good');
-  //   }
-  //   else{
-  //     Socket.emitShootFeedbackMsg(this, 'Timing ' + timeInaccuracy + ' to ' + inaccuracyType, 'ok');
-  //   }
-
-  //   this.weapon.shoot(this.selectedNote);
-
-
-  //   // //shooting not allowed on spawn:
-  //   // if (
-  //   //   this.isWithinDistance(
-  //   //     {
-  //   //       x: 0,
-  //   //       y: 0,
-  //   //     },
-  //   //     1600
-  //   //   )
-  //   // )
-  //   //   return;
-  //   // this.needsUpdate = true;
-  //   // if (!this.hasShotScheduled) {
-  //   //   this.hasShotScheduled = true;
-  //   //   let newBullets = this.weapon.shoot(this.selectedNote);
-  //   //   //add to this players scheduled bullet list:
-  //   //   this.scheduledBullets = this.scheduledBullets.concat(newBullets);
-  //   //   // console.log(`scheduledBullets for player ${this.scheduledBullets}`)
-
-  //   //   // setTimeout(()=>{
-  //   //   //     this.shootTimeout = false
-  //   //   // }, this.shootTimeoutTime)
-  //   // } else {
-  //   //   if (this.updatePack) {
-  //   //     this.updatePack.push({
-  //   //       msg: "To early to shoot!",
-  //   //       type: "gameMsg",
-  //   //     });
-  //   //   }
-  //   // }
-  // }
-
   giveWeapon(sound, duration, type) {
     this.weapon = new Weapon(sound, duration, type, this);
-    // let durationInt = parseInt(duration.replace("n", "").replace(".", ""));
-    // switch (this.weapon.durationType) {
-    //   case "normal":
-    //     this.shootTimeoutTime = (60000 / 120) * (4 / durationInt);
-    //     break;
-    //   case "dotted":
-    //     this.shootTimeoutTime = ((60000 / 120) * (4 / durationInt) * 3) / 2;
-    //     break;
-    // }
   }
 
   addScore(points) {
@@ -342,14 +244,11 @@ export class Character extends Entity {
     if (this.characterType == "player" && this.isPlaying == false) return;
 
     this.score += points;
+    HighScore.notify(this.name, this.score);
 
     this.toUpdate.score = this.score;
+    this.needsUpdate = true;
   }
-
-  // changeSelectedNote(note) {
-  //   //TODO check if note is allowed!
-  //   this.selectedNote = note;
-  // }
 
   takeDmg(damage, attacker) {
     if (this.isDead) return;
@@ -363,6 +262,7 @@ export class Character extends Entity {
       this.hp = 0;
     }
     this.toUpdate.hp = this.hp;
+    this.needsUpdate = true;
     // this.needsUpdate = true;
   }
 
@@ -378,6 +278,7 @@ export class Character extends Entity {
     }
 
     this.toUpdate.hp = this.hp;
+    this.needsUpdate = true;
     // this.needsUpdate = true;
   }
 
@@ -386,14 +287,16 @@ export class Character extends Entity {
     const scoreStolen = this.score / 2;
     byWho.addScore(scoreStolen);
     this.score -= scoreStolen;
+    HighScore.notify(this.name, this.score);
 
     this.toUpdate.score = this.score;
+    this.needsUpdate = true;
 
     //send info to all sockets:
     let killMsg = `<i>${byWho.name} killed ${this.name}</i>`;
     for (var i in Socket.list) {
       var socket = Socket.list[i];
-      socket.emit("chatBroadcast", killMsg);
+      socket.emit("gameMessageBroadcast", killMsg);
     }
 
     //send info to killed player:
@@ -410,9 +313,11 @@ export class Character extends Entity {
 
     //hp to update:
     this.toUpdate.hp = 0;
+    this.needsUpdate = true;
     // console.log('to update hp', this.toUpdate.hp);
 
     //set isDead flag to true:
+    this.hp = 0;
     this.isDead = true;
   }
 
@@ -427,6 +332,7 @@ export class Character extends Entity {
       this.toUpdate.y = this.y;
       this.toUpdate.direction = this.lastAngle;
       this.toUpdate.hp = this.hp;
+      this.needsUpdate = true;
 
       // this.needsUpdate = true;
 
@@ -435,5 +341,7 @@ export class Character extends Entity {
 
   remove(){
     Character.shooterList[this.weapon.duration].delete(this);
+
+    delete Character.list[this.id];
   }
 }

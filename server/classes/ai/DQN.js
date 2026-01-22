@@ -17,9 +17,10 @@ worker.on("message", (msg)=>{
     switch(msg.type){
         case 'action':
             const action = msg.action;
-            const move = WalkAgent.moves[action];
+            const move = DQNAgent.moves[action];
             //make move:
             const bot = Bot.list[msg.botID]
+            if(!bot) return;
 
             bot.applyAction_DQN(move);
 
@@ -28,27 +29,27 @@ worker.on("message", (msg)=>{
             let reward = bot.getReward();
 
             // console.log("reward: ", reward, ' bot: ', bot.id);
-            // WalkAgent.recentRewards.push(reward);
-            // if (WalkAgent.recentRewards.length > 1000) {
+            // DQNAgent.recentRewards.push(reward);
+            // if (DQNAgent.recentRewards.length > 1000) {
             //     const average = (array) =>
             //         array.reduce((a, b) => a + b) / array.length;
             //     console.log(
             //         `AVARAGE over 1000 REWARDS: ${average(
-            //             WalkAgent.recentRewards
+            //             DQNAgent.recentRewards
             //         )}`
             //     );
             //     fs.writeFileSync(
             //         "logs/rewards.txt",
-            //         average(WalkAgent.recentRewards) + "\n",
+            //         average(DQNAgent.recentRewards) + "\n",
             //         {
             //             encoding: "utf8",
             //             flag: "a+",
             //             mode: 0o666,
             //         }
             //     );
-            //     // console.log(`epsilon: `, this.walkAgent.epsilon);
+            //     // console.log(`epsilon: `, this.DQNAgent.epsilon);
 
-            //     WalkAgent.recentRewards = [];
+            //     DQNAgent.recentRewards = [];
             // }
             
             // console.log(
@@ -58,7 +59,7 @@ worker.on("message", (msg)=>{
             //     reward,
             //     bot.state
             // );
-            WalkAgent.requestWorkerRemember(
+            DQNAgent.requestWorkerRemember(
                 bot.lastState,
                 bot.lastAction,
                 reward,
@@ -68,12 +69,12 @@ worker.on("message", (msg)=>{
 
             if(bot.isLearningCycleDone) {
                 bot.startNewLearningCycle();
-                console.log('bot died - new cycle',
-                    'bot HP',
-                    bot.hp,
-                    'reward',
-                    reward
-                )
+                // console.log('bot died - new cycle',
+                //     'bot HP',
+                //     bot.hp,
+                //     'reward',
+                //     reward
+                // );
             }
             // console.log('lastState', bot.lastState, 'lastAction', bot.lastAction,'reward', reward, 'state', bot.state);
             // console.log(reward);
@@ -91,7 +92,7 @@ worker.on("message", (msg)=>{
 
 
 
-export class WalkAgent {
+export class DQNAgent {
     static actionsNum = process.env.AGENT_ACTIONS_NUM; //8-dir + not moving
     static statesNum = process.env.AGENT_STATES_NUM; //31
 
@@ -106,26 +107,26 @@ export class WalkAgent {
     };
 
     static mediumStateGrid = {
-        cellW: WalkAgent.bigStateGrid.cellW / 3,
-        cellH: WalkAgent.bigStateGrid.cellH / 3,
+        cellW: DQNAgent.bigStateGrid.cellW / 3,
+        cellH: DQNAgent.bigStateGrid.cellH / 3,
     };
 
     static smallStateGrid = {
-        cellW: WalkAgent.mediumStateGrid.cellW / 3,
-        cellH: WalkAgent.mediumStateGrid.cellH / 3,
+        cellW: DQNAgent.mediumStateGrid.cellW / 3,
+        cellH: DQNAgent.mediumStateGrid.cellH / 3,
     };
 
     static extraSmallStateGrid = {
-        cellW: WalkAgent.smallStateGrid.cellW / 3,
-        cellH: WalkAgent.smallStateGrid.cellH / 3,
+        cellW: DQNAgent.smallStateGrid.cellW / 3,
+        cellH: DQNAgent.smallStateGrid.cellH / 3,
     };
 
     static maxDistSq =
-        Math.pow((WalkAgent.gridDims * WalkAgent.bigStateGrid.cellW) / 2, 2) +
-        Math.pow((WalkAgent.gridDims * WalkAgent.bigStateGrid.cellH) / 2, 2);
-    static maxDX = (WalkAgent.gridDims * WalkAgent.bigStateGrid.cellW) / 2;
-    static maxDY = (WalkAgent.gridDims * WalkAgent.bigStateGrid.cellH) / 2;
-    static maxDist = Math.sqrt(WalkAgent.maxDistSq);
+        Math.pow((DQNAgent.gridDims * DQNAgent.bigStateGrid.cellW) / 2, 2) +
+        Math.pow((DQNAgent.gridDims * DQNAgent.bigStateGrid.cellH) / 2, 2);
+    static maxDX = (DQNAgent.gridDims * DQNAgent.bigStateGrid.cellW) / 2;
+    static maxDY = (DQNAgent.gridDims * DQNAgent.bigStateGrid.cellH) / 2;
+    static maxDist = Math.sqrt(DQNAgent.maxDistSq);
 
     static recentRewards = [];
 
@@ -190,11 +191,11 @@ export class WalkAgent {
         if (this.bot.isProcessingStep) return;
         this.bot.isProcessingStep = true;
         //get state:
-        const state = this.bot.getWalkAgentEnvironment();
+        const state = this.bot.getDQNAgentEnvironment();
         this.bot.state = state;
-        if (state.length != WalkAgent.statesNum) {
+        if (state.length != DQNAgent.statesNum) {
             throw new Error(
-                `State array length (${state.length}) is different than DQN input layer length (${WalkAgent.statesNum})`
+                `State array length (${state.length}) is different than DQN input layer length (${DQNAgent.statesNum})`
             );
         }
         if (!this.bot.lastState) this.bot.lastState = state;
